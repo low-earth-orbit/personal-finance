@@ -5,9 +5,9 @@ import Footer from "@/components/shared/Footer";
 import Header from "@/components/shared/Header";
 
 export const metadata: Metadata = {
-  title: "Lump-sum Allocation Optimizer",
+  title: "Where to Invest: TFSA, RRSP or Non-Reg?",
   description:
-    "Optimize a lump-sum allocation across TFSA, RRSP, and non-registered investments.",
+    "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
 };
 
 export default function AllocatorPage() {

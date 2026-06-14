@@ -41,7 +41,7 @@ const TOOLS: Tool[] = [
   },
   {
     emoji: "🛤️",
-    title: "Lifetime Allocation Optimizer",
+    title: "Lifetime Allocation (Glide Path)",
     description:
       "Find your optimal stock allocation across your lifetime. FOR NERDS.",
     href: "/glide-path",
@@ -57,11 +57,9 @@ const TOOLS: Tool[] = [
   },
   {
     emoji: "🧮",
-    title: "Lump-sum Allocation Optimizer",
+    title: "Where to Invest: TFSA, RRSP or Non-Reg?",
     description:
-      "Optimize a lump sum across RRSP, TFSA, and taxable investments.",
-    href: "/allocator",
-    status: "new",
+      "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
   },
 ];
 
