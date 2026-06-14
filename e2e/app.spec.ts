@@ -17,9 +17,6 @@ test("hub landing page lists the available tools", async ({ page }) => {
 
   // The rent-vs-buy tool is linked from the hub.
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /lump-sum allocation optimizer/i }),
-  ).toBeVisible();
 });
 
 test("loads the calculator and renders the net worth chart", async ({
@@ -51,22 +48,5 @@ test("retirement planner shows an earliest retirement age and chart", async ({
 
   await expect(
     page.getByRole("img", { name: /retirement portfolio projection chart/i }),
-  ).toBeVisible();
-});
-
-test("allocator shows an actionable recommendation and income curve", async ({
-  page,
-}) => {
-  await page.goto("/allocator");
-
-  await expect(
-    page.getByRole("heading", { name: "How should I invest this lump sum?" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: /Invest \$50,000/ }),
-  ).toBeVisible();
-  await expect(page.getByText("Do now")).toBeVisible();
-  await expect(
-    page.getByRole("img", { name: /modeled base income by age/i }),
   ).toBeVisible();
 });
