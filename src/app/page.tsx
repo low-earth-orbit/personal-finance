@@ -41,7 +41,7 @@ const TOOLS: Tool[] = [
   },
   {
     emoji: "🛤️",
-    title: "Lifetime Allocation Optimizer",
+    title: "Lifetime Allocation (Glide Path)",
     description:
       "Find your optimal stock allocation across your lifetime. FOR NERDS.",
     href: "/glide-path",
@@ -54,6 +54,12 @@ const TOOLS: Tool[] = [
       "Compute the adjusted cost basis of your non-registered holdings from a Wealthsimple activity export.",
     href: "/acb",
     status: "preview",
+  },
+  {
+    emoji: "🧮",
+    title: "Where to invest: TFSA, RRSP or Non-Reg?",
+    description:
+      "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
   },
 ];
 
