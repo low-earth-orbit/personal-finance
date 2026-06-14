@@ -47,11 +47,8 @@ export default function Result({
       <IncomeCurve allocation={allocation} input={input} />
       <Text size="xs" c="dimmed">
         Deterministic illustration — returns and tax rules are held constant.
-        Verify room and tax advice before acting.{" "}
-        <Anchor href="#model-assumptions" size="xs">
-          See full model assumptions
-        </Anchor>
-        .
+        May contain error. Not personalized advice. Verify room and tax advice
+        before acting.
       </Text>
     </Stack>
   );
