@@ -74,8 +74,6 @@ export default function InputForm({
 
   return (
     <>
-      <FormResetButton onReset={onReset} />
-
       <Accordion
         multiple
         defaultValue={["you", "retirement", "prefs"]}
@@ -287,6 +285,7 @@ export default function InputForm({
       >
         Generate allocation paths
       </Button>
+      <FormResetButton onReset={onReset} confirm mb={0} />
     </>
   );
 }

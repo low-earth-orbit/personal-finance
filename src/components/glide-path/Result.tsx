@@ -38,6 +38,7 @@ interface ResultProps {
   input: GlidePathInput;
   result: GlidePathResult | null;
   computing: boolean;
+  updating?: boolean;
   /** A re-roll is in flight: keep the current result visible, just spin the re-roll button. */
   rerolling?: boolean;
   error?: boolean;
@@ -349,13 +350,14 @@ export default function Result({
   input,
   result,
   computing,
+  updating = false,
   rerolling = false,
   error = false,
   hasErrors,
   seed = 0,
   onReroll,
 }: ResultProps) {
-  if (hasErrors) {
+  if (hasErrors && !result) {
     return (
       <Alert
         variant="light"
@@ -368,7 +370,7 @@ export default function Result({
     );
   }
 
-  if (error) {
+  if (error && !result) {
     return (
       <Alert
         variant="light"
@@ -382,7 +384,7 @@ export default function Result({
     );
   }
 
-  if (computing) {
+  if (computing && !result) {
     return (
       <Center mih={400}>
         <Stack align="center" gap="md">
@@ -479,6 +481,24 @@ export default function Result({
 
   return (
     <Stack gap="lg" pos="relative">
+      {updating && (
+        <Group gap="xs" aria-live="polite">
+          <Loader size="xs" />
+          <Text size="xs" c="dimmed">
+            Updating allocation paths...
+          </Text>
+        </Group>
+      )}
+      {hasErrors && (
+        <Text size="xs" c="orange" fw={600} aria-live="polite">
+          Update paused: fix the highlighted fields.
+        </Text>
+      )}
+      {error && (
+        <Text size="xs" c="red" fw={600} aria-live="polite">
+          Update failed. Change an input to retry.
+        </Text>
+      )}
       {planNeedsAdjustment && (
         <Card withBorder radius="md" padding="md">
           <Group gap="sm" wrap="nowrap" align="flex-start">
@@ -649,13 +669,14 @@ export default function Result({
             leftSection={<IconArrowsShuffle size={14} />}
             onClick={onReroll}
             loading={rerolling}
+            disabled={updating}
           >
-            Try a different random draw
+            Test another simulation sample
           </Button>
           <Text size="xs" c="dimmed" ta="center" maw={440}>
             {seed > 0
-              ? `Showing alternative draw #${seed}.`
-              : "Re-runs the Monte Carlo with a new random seed, so you can see how much the result depends on simulation luck."}
+              ? `Showing simulation sample #${seed + 1}. Compare it with the prior result to gauge stability.`
+              : "Optional stability check: rerun the same plan with a different simulation sample."}
           </Text>
         </Stack>
       )}

@@ -25,6 +25,8 @@ import type { FieldValue } from "@/types";
 interface Computed {
   data: GlidePathResult;
   input: GlidePathInput;
+  returnMode: GlidePathReturnMode;
+  seed: number;
 }
 
 export default function Main() {
@@ -36,7 +38,6 @@ export default function Main() {
   const [computing, setComputing] = useState(false);
   const [rerolling, setRerolling] = useState(false);
   const [error, setError] = useState(false);
-  const [seed, setSeed] = useState(0);
 
   const errors = validateGlidePathInput(input);
   const hasErrors = Object.keys(errors).length > 0;
@@ -44,16 +45,37 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const seedRef = useRef(0);
+  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function terminateWorker() {
     workerRef.current?.terminate();
     workerRef.current = null;
   }
 
-  useEffect(() => terminateWorker, []);
+  function cancelPendingComputation() {
+    if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+    updateTimerRef.current = null;
+    terminateWorker();
+    requestIdRef.current += 1;
+    setComputing(false);
+    setRerolling(false);
+  }
 
-  function compute(seedValue: number, isReroll: boolean) {
-    if (hasErrors) return;
+  useEffect(
+    () => () => {
+      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
+      terminateWorker();
+    },
+    [],
+  );
+
+  function compute(
+    seedValue: number,
+    isReroll: boolean,
+    inputSnapshot = input,
+    returnModeSnapshot = returnMode,
+  ) {
+    if (Object.keys(validateGlidePathInput(inputSnapshot)).length > 0) return;
     setError(false);
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
@@ -66,7 +88,12 @@ export default function Main() {
     worker.onmessage = (event: MessageEvent<GlidePathResponse>) => {
       const { requestId: responseId, result } = event.data;
       if (responseId === requestIdRef.current) {
-        setComputed({ data: result, input: event.data.input });
+        setComputed({
+          data: result,
+          input: inputSnapshot,
+          returnMode: returnModeSnapshot,
+          seed: seedValue,
+        });
         setComputing(false);
         setRerolling(false);
       }
@@ -76,7 +103,6 @@ export default function Main() {
       if (requestId === requestIdRef.current) {
         setComputing(false);
         setRerolling(false);
-        setComputed(null);
         setError(true);
       }
       if (workerRef.current === worker) terminateWorker();
@@ -86,55 +112,62 @@ export default function Main() {
     // swaps to the full loader.
     if (isReroll) setRerolling(true);
     else setComputing(true);
-    worker.postMessage({ input, requestId, seed: seedValue, returnMode });
+    worker.postMessage({
+      input: inputSnapshot,
+      requestId,
+      seed: seedValue,
+      returnMode: returnModeSnapshot,
+    });
+  }
+
+  function scheduleUpdate(
+    inputSnapshot: GlidePathInput,
+    returnModeSnapshot: GlidePathReturnMode,
+  ) {
+    if (!computed) return;
+    updateTimerRef.current = setTimeout(() => {
+      updateTimerRef.current = null;
+      compute(0, false, inputSnapshot, returnModeSnapshot);
+    }, 400);
   }
 
   function handleGenerate() {
+    cancelPendingComputation();
     seedRef.current = 0;
-    setSeed(0);
     compute(0, false);
   }
 
   // Opt-in: redraw the Monte Carlo with the next seed, leaving inputs untouched, so the user
   // can see how much the recommendation depends on simulation luck.
   function handleReroll() {
+    cancelPendingComputation();
     const next = seedRef.current + 1;
     seedRef.current = next;
-    setSeed(next);
     compute(next, true);
   }
 
   function handleChange(key: GlidePathInputKey, value: FieldValue) {
-    setInput((prev) => {
-      const next = {
-        ...prev,
-        [key]: value === "" ? value : +value,
-      } as GlidePathInput;
-      saveInput(next);
-      return next;
-    });
-    // Clear stale results whenever inputs change so the panel stays honest.
-    setComputed(null);
-    setComputing(false);
-    setRerolling(false);
+    const next = {
+      ...input,
+      [key]: value === "" ? value : +value,
+    } as GlidePathInput;
+    setInput(next);
+    saveInput(next);
+    cancelPendingComputation();
     setError(false);
     seedRef.current = 0;
-    setSeed(0);
-    terminateWorker();
-    requestIdRef.current += 1; // invalidate any in-flight worker response
+    if (Object.keys(validateGlidePathInput(next)).length === 0) {
+      scheduleUpdate(next, returnMode);
+    }
   }
 
   function handleReturnModeChange(mode: GlidePathReturnMode) {
     setReturnMode(mode);
     saveReturnMode(mode);
-    setComputed(null);
-    setComputing(false);
-    setRerolling(false);
+    cancelPendingComputation();
     setError(false);
     seedRef.current = 0;
-    setSeed(0);
-    terminateWorker();
-    requestIdRef.current += 1;
+    scheduleUpdate(input, mode);
   }
 
   function handleReset() {
@@ -142,14 +175,16 @@ export default function Main() {
     setInput(fresh);
     saveInput(fresh);
     setComputed(null);
-    setComputing(false);
-    setRerolling(false);
+    cancelPendingComputation();
     setError(false);
     seedRef.current = 0;
-    setSeed(0);
-    terminateWorker();
-    requestIdRef.current += 1;
   }
+
+  const updating =
+    computed !== null &&
+    (computing ||
+      computed.input !== input ||
+      computed.returnMode !== returnMode);
 
   return (
     <Container size="xl" pb="xl">
@@ -163,7 +198,7 @@ export default function Main() {
             onReturnModeChange={handleReturnModeChange}
             onReset={handleReset}
             onGenerate={handleGenerate}
-            generating={computing}
+            generating={computing && !computed}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, lg: 2 }}>
@@ -171,10 +206,11 @@ export default function Main() {
             input={computed?.input ?? input}
             result={computed?.data ?? null}
             computing={computing}
+            updating={updating}
             rerolling={rerolling}
             error={error}
             hasErrors={hasErrors}
-            seed={seed}
+            seed={computed?.seed ?? 0}
             onReroll={handleReroll}
           />
         </Grid.Col>

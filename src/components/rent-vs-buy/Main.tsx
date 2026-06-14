@@ -181,7 +181,7 @@ const Main = () => {
   }
 
   return (
-    <Container size="xl" py="md">
+    <Container size="xl">
       <Grid gap="xl">
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 2, md: 1 }}>
           <UserInputForm

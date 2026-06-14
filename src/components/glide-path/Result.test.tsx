@@ -403,23 +403,21 @@ describe("glide-path Result", () => {
     const onReroll = vi.fn();
     renderResult(makeResult(), { onReroll });
     fireEvent.click(
-      screen.getByRole("button", { name: /different random draw/i }),
+      screen.getByRole("button", { name: /another simulation sample/i }),
     );
     expect(onReroll).toHaveBeenCalledTimes(1);
-    expect(
-      screen.getByText(/how much the result depends on simulation luck/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Optional stability check/i)).toBeInTheDocument();
   });
 
-  it("labels the alternative draw after re-rolling", () => {
+  it("labels the alternative sample after re-rolling", () => {
     renderResult(makeResult(), { onReroll: () => {}, seed: 2 });
-    expect(screen.getByText(/alternative draw #2/i)).toBeInTheDocument();
+    expect(screen.getByText(/simulation sample #3/i)).toBeInTheDocument();
   });
 
   it("omits the re-roll control when no handler is provided", () => {
     renderResult(makeResult());
     expect(
-      screen.queryByRole("button", { name: /different random draw/i }),
+      screen.queryByRole("button", { name: /another simulation sample/i }),
     ).toBeNull();
   });
 
@@ -435,8 +433,22 @@ describe("glide-path Result", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows the incomplete-inputs alert when there are errors", () => {
+  it("keeps existing results visible while updating", () => {
+    renderResult(makeResult(), {
+      computing: true,
+      updating: true,
+      onReroll: () => {},
+    });
+    expect(screen.getByText(/Updating allocation paths/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /another simulation sample/i }),
+    ).toBeDisabled();
+  });
+
+  it("keeps existing results visible when an update is paused", () => {
     renderResult(makeResult(), { hasErrors: true });
-    expect(screen.getByText(/Incomplete inputs/i)).toBeInTheDocument();
+    expect(screen.getByText(/Update paused/i)).toBeInTheDocument();
+    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
   });
 });

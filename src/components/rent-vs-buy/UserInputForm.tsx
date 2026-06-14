@@ -11,7 +11,7 @@ import {
   Text,
   TextInput,
 } from "@mantine/core";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconRotate, IconX } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
@@ -137,8 +137,8 @@ export default function UserInputForm({
       : "—";
 
   return (
-    <Stack gap="md">
-      <Stack gap={4}>
+    <Stack>
+      <Stack>
         <Group gap="xs" role="group" aria-label="Scenario presets">
           {[...visibleBuiltins, ...customPresets].map((preset) => (
             <Group key={preset.id} gap={0} wrap="nowrap">
@@ -170,9 +170,6 @@ export default function UserInputForm({
             onClick={openSave}
           >
             Save as preset
-          </Button>
-          <Button variant="subtle" size="xs" color="red" onClick={openReset}>
-            Reset all
           </Button>
         </Group>
       </Stack>
@@ -459,6 +456,16 @@ export default function UserInputForm({
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
+      <Button
+        variant="transparent"
+        size="xs"
+        color="red"
+        onClick={openReset}
+        leftSection={<IconRotate size={14} />}
+        style={{ alignSelf: "flex-start" }}
+      >
+        Reset all
+      </Button>
     </Stack>
   );
 }
