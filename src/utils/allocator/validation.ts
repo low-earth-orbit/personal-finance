@@ -76,12 +76,6 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
       step: 1,
       label: "Capital gains tax rate",
     },
-    retirementIncome: {
-      min: 0,
-      max: 100_000_000,
-      step: 1_000,
-      label: "Expected retirement income",
-    },
   };
 
 export function validateAllocatorInput(input: AllocatorInput): AllocatorErrors {
@@ -91,11 +85,8 @@ export function validateAllocatorInput(input: AllocatorInput): AllocatorErrors {
     Constraint,
   ][]) {
     if (
-      (key === "retirementWithdrawalRatePct" &&
-        input.retirementRateMode === "income") ||
-      (key === "retirementIncome" && input.retirementRateMode === "rate") ||
-      ((key === "salaryGrowthPct" || key === "salaryGrowthYears") &&
-        input.salaryCurve !== "custom")
+      (key === "salaryGrowthPct" || key === "salaryGrowthYears") &&
+      input.salaryCurve !== "custom"
     ) {
       continue;
     }

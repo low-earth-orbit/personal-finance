@@ -1,10 +1,29 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Container, Paper, Stack, Text } from "@mantine/core";
 
 export default function TaxAssumptions() {
+  const [opened, setOpened] = useState(false);
+
+  useEffect(() => {
+    const openFromHash = () => {
+      if (window.location.hash === "#model-assumptions") {
+        setOpened(true);
+      }
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
+
   return (
     <Container size="xl" pt="xl" pb="xs" id="model-assumptions">
       <Paper withBorder p="md" radius="md">
-        <details>
+        <details
+          open={opened}
+          onToggle={(event) => setOpened(event.currentTarget.open)}
+        >
           <summary style={{ cursor: "pointer", fontWeight: 600 }}>
             Detailed model assumptions
           </summary>
@@ -51,10 +70,10 @@ export default function TaxAssumptions() {
               eligible dividend gross-up and credits are excluded. Reinvested
               after-tax distributions increase ACB. Capital losses receive no
               offset benefit. The RRSP withdrawal rate is a flat haircut on the
-              whole RRSP balance. The separate capital-gains tax rate applies
-              after the 50% inclusion rate to unrealized non-registered gains.
-              OAS clawback is not modeled; raise the RRSP withdrawal rate to
-              approximate it.
+              whole RRSP balance. The entered capital-gains tax rate is the
+              effective tax on the full unrealized non-registered gain after the
+              inclusion rate. OAS clawback is not modeled; raise the RRSP
+              withdrawal rate to approximate it.
             </Text>
             <Text size="sm" c="dimmed">
               Deduction claims are optimized only through the year before
@@ -62,12 +81,10 @@ export default function TaxAssumptions() {
               and their later refunds are outside the at-retirement objective.
             </Text>
             <Text size="sm" c="dimmed">
-              Result amounts are shown in nominal (future) dollars; the
-              income-curve chart is in real (today&apos;s) dollars to keep its
-              shape readable. Preset income curves hold real income flat or
-              compound at 1%, 2%, or 3% above inflation for 15 years, then
-              plateau. The custom curve uses the entered real growth rate and
-              growth period.
+              Result amounts are shown in nominal (future) dollars. Preset
+              income curves hold real income flat or compound at 1%, 2%, or 3%
+              above inflation for 15 years, then plateau. The custom curve uses
+              the entered real growth rate and growth period.
             </Text>
             <Text size="sm" c="dimmed">
               Deterministic illustration only. Returns, tax rules, room, and

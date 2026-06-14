@@ -1,9 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import {
   Accordion,
+  Button,
   Select,
-  SegmentedControl,
   SimpleGrid,
   Stack,
   Text,
@@ -15,6 +16,7 @@ import {
   PROVINCES,
   SALARY_CURVE_PRESETS,
 } from "@/utils/allocator/presets";
+import { TAX_YEAR } from "@/utils/allocator/taxConstants";
 import type {
   AllocatorErrors,
   AllocatorInput,
@@ -27,11 +29,54 @@ import type { FieldValue } from "@/types";
 interface Props {
   input: AllocatorInput;
   errors: AllocatorErrors;
+  started: boolean;
   onChange: (key: AllocatorInputKey, value: unknown) => void;
   onReset: () => void;
+  onShowRecommendation: () => void;
 }
 
-export default function InputForm({ input, errors, onChange, onReset }: Props) {
+const BASIC_KEYS: AllocatorInputKey[] = [
+  "currentAge",
+  "province",
+  "currentIncome",
+  "lumpSum",
+  "availableRrspRoom",
+  "availableTfsaRoom",
+];
+const PLANNING_KEYS: AllocatorInputKey[] = [
+  "retirementAge",
+  "salaryCurve",
+  "salaryGrowthPct",
+  "salaryGrowthYears",
+];
+
+function errorSections(errors: AllocatorErrors): string[] {
+  const keys = Object.keys(errors) as AllocatorInputKey[];
+  const sections = new Set<string>();
+  if (keys.some((key) => BASIC_KEYS.includes(key))) sections.add("basics");
+  if (keys.some((key) => PLANNING_KEYS.includes(key))) sections.add("planning");
+  if (
+    keys.some(
+      (key) => !BASIC_KEYS.includes(key) && !PLANNING_KEYS.includes(key),
+    )
+  ) {
+    sections.add("advanced");
+  }
+  return [...sections];
+}
+
+export default function InputForm({
+  input,
+  errors,
+  started,
+  onChange,
+  onReset,
+  onShowRecommendation,
+}: Props) {
+  const [openedSections, setOpenedSections] = useState<string[]>(() => {
+    const sections = errorSections(errors);
+    return sections.length > 0 ? sections : ["basics"];
+  });
   const num = (key: keyof typeof FIELD_CONSTRAINTS) => {
     const constraint = FIELD_CONSTRAINTS[key]!;
     return {
@@ -58,32 +103,47 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
   const selectedCurve = SALARY_CURVE_PRESETS.find(
     (curve) => curve.value === input.salaryCurve,
   );
+  const yearsToRetirement =
+    typeof input.currentAge === "number" &&
+    typeof input.retirementAge === "number" &&
+    Number.isFinite(input.currentAge) &&
+    Number.isFinite(input.retirementAge) &&
+    input.retirementAge > input.currentAge
+      ? input.retirementAge - input.currentAge
+      : null;
+  const showRecommendation = () => {
+    const sections = errorSections(errors);
+    if (sections.length > 0) {
+      setOpenedSections((current) => [...new Set([...current, ...sections])]);
+      return;
+    }
+    onShowRecommendation();
+  };
 
   return (
     <>
       <Accordion
         multiple
-        defaultValue={["you", "amount", "room", "returns", "retirement"]}
+        value={openedSections}
+        onChange={setOpenedSections}
         variant="contained"
       >
-        <Accordion.Item value="you">
-          <Accordion.Control>About you</Accordion.Control>
+        <Accordion.Item value="basics">
+          <Accordion.Control>Start with your numbers</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
+              <Text size="sm" c="dimmed">
+                Review these values before generating a recommendation.
+              </Text>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <UserInputFormItem
                   {...num("currentAge")}
                   label="Current age"
                   suffix=" yrs"
                 />
-                <UserInputFormItem
-                  {...num("retirementAge")}
-                  label="Retirement age"
-                  suffix=" yrs"
-                />
                 <Select
                   label="Province"
-                  description="Only NB, ON, and BC tax rules are modeled"
+                  description="Only BC, ON, and NB tax rules are modeled"
                   data={PROVINCES}
                   value={input.province}
                   onChange={(value) => value && onChange("province", value)}
@@ -91,12 +151,50 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 />
                 <UserInputFormItem
                   {...num("currentIncome")}
-                  label="This year's taxable income (before RRSP deduction)"
-                  description="Your full expected taxable income for the current tax year, before subtracting any RRSP deduction — employment, self-employment, and other recurring income, in today's dollars. The deduct-now refund is taxed at this year's rate. Investment distributions are modeled separately."
+                  label={`${TAX_YEAR} taxable income`}
+                  description={`Full expected taxable income before deductions for the ${TAX_YEAR} tax year.`}
+                  labelHelperText="Include employment, self-employment, and other recurring taxable income before subtracting any RRSP deduction. Investment distributions are modeled separately."
+                  prefix="$"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("lumpSum")}
+                  label="Lump sum to invest now"
+                  description="The full amount is invested this year."
+                  prefix="$"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("availableRrspRoom")}
+                  label="Available RRSP room"
+                  prefix="$"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("availableTfsaRoom")}
+                  label="Available TFSA room"
                   prefix="$"
                   thousandSeparator
                 />
               </SimpleGrid>
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="planning">
+          <Accordion.Control>Planning assumptions</Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="md">
+              <UserInputFormItem
+                {...num("retirementAge")}
+                label="Retirement age"
+                description={
+                  yearsToRetirement == null
+                    ? undefined
+                    : `About ${TAX_YEAR + yearsToRetirement} (${yearsToRetirement} years from now)`
+                }
+                suffix=" yrs"
+              />
               <Select
                 label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
@@ -107,8 +205,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 onChange={(value) => value && onChange("salaryCurve", value)}
               />
               <Text size="xs" c="dimmed">
-                {selectedCurve?.description} All growth rates are above
-                inflation.
+                {selectedCurve?.description}
               </Text>
               {input.salaryCurve === "custom" && (
                 <SimpleGrid cols={{ base: 1, sm: 2 }}>
@@ -130,68 +227,34 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
           </Accordion.Panel>
         </Accordion.Item>
 
-        <Accordion.Item value="amount">
-          <Accordion.Control>Amount to invest now</Accordion.Control>
-          <Accordion.Panel>
-            <UserInputFormItem
-              {...num("lumpSum")}
-              label="Lump sum to invest now"
-              description="The full amount is invested this year; only RRSP deduction claims may be delayed."
-              prefix="$"
-              thousandSeparator
-            />
-          </Accordion.Panel>
-        </Accordion.Item>
-
-        <Accordion.Item value="room">
-          <Accordion.Control>Room</Accordion.Control>
-          <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <UserInputFormItem
-                {...num("availableRrspRoom")}
-                label="Available RRSP room"
-                description="Current nominal dollars from your latest CRA notice"
-                prefix="$"
-                thousandSeparator
-              />
-              <UserInputFormItem
-                {...num("availableTfsaRoom")}
-                label="Available TFSA room"
-                description="Current nominal dollars from your latest CRA notice; unused room loses real value to inflation"
-                prefix="$"
-                thousandSeparator
-              />
-            </SimpleGrid>
-          </Accordion.Panel>
-        </Accordion.Item>
-
-        <Accordion.Item value="returns">
-          <Accordion.Control>Returns</Accordion.Control>
+        <Accordion.Item value="advanced">
+          <Accordion.Control>
+            Advanced tax &amp; return assumptions
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
+              <Text size="xs" c="dimmed">
+                Defaults are illustrations. Small changes can alter the
+                suggested split.
+              </Text>
               <Select
                 label="Portfolio"
                 data={PORTFOLIO_PRESETS.map((preset) => ({
                   value: preset.id,
-                  label: `${preset.label} · ${preset.returnPct}%`,
+                  label: `${preset.label} · ${preset.returnPct.toFixed(1)}%`,
                 })).concat({ value: "custom", label: "Custom return" })}
                 value={input.portfolioPresetId}
                 onChange={setPortfolio}
               />
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <UserInputFormItem
-                  {...num("portfolioReturn")}
-                  label="Nominal return"
-                  description="Editing this switches Portfolio to Custom return."
-                  suffix="%"
-                  onChange={(value) => {
-                    onChange("portfolioPresetId", "custom");
-                    onChange(
-                      "portfolioReturn",
-                      value === "" || value == null ? value : Number(value),
-                    );
-                  }}
-                />
+                {input.portfolioPresetId === "custom" && (
+                  <UserInputFormItem
+                    {...num("portfolioReturn")}
+                    label="Nominal return"
+                    description="Expected annual return before inflation."
+                    suffix="%"
+                  />
+                )}
                 <UserInputFormItem
                   {...num("inflationPct")}
                   label="Inflation"
@@ -203,49 +266,32 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                   suffix="%"
                 />
               </SimpleGrid>
-            </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
-
-        <Accordion.Item value="retirement">
-          <Accordion.Control>Retirement</Accordion.Control>
-          <Accordion.Panel>
-            <Stack gap="md">
-              <SegmentedControl
-                fullWidth
-                data={[
-                  { value: "rate", label: "Enter effective rate" },
-                  { value: "income", label: "Derive from income" },
-                ]}
-                value={input.retirementRateMode}
-                onChange={(value) => onChange("retirementRateMode", value)}
-                aria-label="Retirement tax-rate input method"
+              <UserInputFormItem
+                {...num("retirementWithdrawalRatePct")}
+                label="Effective RRSP withdrawal tax rate"
+                description="Estimated average tax applied to RRSP withdrawals at retirement. Consider pensions, CPP/OAS, other taxable income, and possible OAS clawback."
+                suffix="%"
               />
-              {input.retirementRateMode === "rate" ? (
-                <UserInputFormItem
-                  {...num("retirementWithdrawalRatePct")}
-                  label="Effective RRSP withdrawal tax rate"
-                  suffix="%"
-                />
-              ) : (
-                <UserInputFormItem
-                  {...num("retirementIncome")}
-                  label="Expected annual taxable retirement income"
-                  description="Include RRSP withdrawals, pensions, CPP/OAS, and other taxable income. The engine derives an average tax rate and applies it as a flat valuation haircut."
-                  prefix="$"
-                  thousandSeparator
-                />
-              )}
               <UserInputFormItem
                 {...num("capitalGainsTaxRatePct")}
-                label="Tax rate on taxable capital gains at retirement"
-                description="Applied after the 50% capital-gains inclusion rate"
+                label="Capital gains tax rate at retirement"
+                description="Effective tax on the full capital gain after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
                 suffix="%"
               />
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
+      {!started && (
+        <Button fullWidth mt="lg" onClick={showRecommendation}>
+          Show recommendation
+        </Button>
+      )}
+      {started && (
+        <Text size="xs" c="dimmed" mt="sm">
+          Recommendation updates automatically when inputs change.
+        </Text>
+      )}
       <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />
     </>
   );

@@ -5,7 +5,6 @@ export type SalaryCurvePreset =
   | "strong"
   | "fast"
   | "custom";
-export type RetirementRateMode = "rate" | "income";
 export type PortfolioPresetId =
   | "conservative"
   | "balanced"
@@ -28,10 +27,8 @@ export interface AllocatorInput {
   portfolioReturn: number;
   inflationPct: number;
   distributionYieldPct: number;
-  retirementRateMode: RetirementRateMode;
   retirementWithdrawalRatePct: number;
   capitalGainsTaxRatePct: number;
-  retirementIncome: number;
 }
 
 export type AllocatorInputKey = keyof AllocatorInput;

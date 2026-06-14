@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Loader, Paper, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
 import type { AllocatorStatus } from "./Main";
@@ -15,6 +15,17 @@ export default function Result({
   input: AllocatorInput;
   status: AllocatorStatus;
 }) {
+  if (status === "idle") {
+    return (
+      <Paper withBorder radius="md" p="lg">
+        <Text fw={700}>Review your numbers first</Text>
+        <Text size="sm" c="dimmed" mt={4}>
+          The values shown are examples. Review the starting inputs, then
+          generate a recommendation.
+        </Text>
+      </Paper>
+    );
+  }
   if (status === "invalid") {
     return (
       <Alert icon={<IconInfoCircle />} title="Complete the inputs">
@@ -44,9 +55,7 @@ export default function Result({
     <Stack gap="lg">
       <AllocationSplit allocation={allocation} input={input} />
       <Text size="xs" c="dimmed">
-        Deterministic illustration — returns and tax rules are held constant.
-        May contain error. Not personalized advice. Verify room and tax advice
-        before acting.
+        Deterministic illustration. Not personalized advice.
       </Text>
     </Stack>
   );

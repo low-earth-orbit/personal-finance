@@ -70,7 +70,7 @@ multi-resolution local search, not a proof of the global continuous optimum.
 
 ## Tax engine
 
-The engine uses 2026 federal and NB, ON, and BC rules. Federal and provincial
+The engine uses 2026 federal and BC, ON, and NB rules. Federal and provincial
 tax are separate statutory components, each floored at zero. Basic personal
 amounts are non-refundable credits. The federal BPA phases from its maximum to
 minimum through the top-bracket phaseout range.
@@ -102,8 +102,9 @@ price return = nominal total return - distribution yield
 ```
 
 At retirement, balance and ACB are deflated to real dollars internally. Positive
-gains are taxed at a 50% inclusion rate using the entered capital-gains tax rate.
-Capital losses receive no benefit in this model.
+gains are taxed using the entered effective capital-gains tax rate on the full
+gain. Users should enter their marginal tax rate multiplied by the applicable
+capital-gains inclusion rate. Capital losses receive no benefit in this model.
 
 ## Display basis
 
@@ -111,8 +112,9 @@ Result amounts — the projected after-tax value, total refunds, and the
 carry-forward benefit — are shown in nominal (future) dollars: the engine's
 internal real value multiplied by `(1 + inflation)^years`. Because the tax system
 is modeled as fully inflation-indexed, the nominal and real comparisons rank the
-options identically. The income-curve chart is shown in real (today's) dollars so
-its career shape and plateau stay legible.
+options identically. The interface rounds recommendation amounts for display,
+generally to the nearest `$100`, to avoid implying that the deterministic search
+is a filing instruction.
 
 ## Income curves
 

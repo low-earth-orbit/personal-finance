@@ -37,22 +37,13 @@ describe("allocator validation", () => {
     expect(errors.capitalGainsTaxRatePct).toBe("Must be between 0 and 60");
   });
 
-  it("validates only the selected retirement tax-rate input", () => {
+  it("requires an explicit retirement withdrawal tax rate", () => {
     expect(
       validateAllocatorInput({
         ...DEFAULTS,
-        retirementRateMode: "income",
         retirementWithdrawalRatePct: Number.NaN,
-        retirementIncome: 60_000,
       }).retirementWithdrawalRatePct,
-    ).toBeUndefined();
-    expect(
-      validateAllocatorInput({
-        ...DEFAULTS,
-        retirementRateMode: "income",
-        retirementIncome: Number.NaN,
-      }).retirementIncome,
-    ).toBe("Expected retirement income is required.");
+    ).toBe("Withdrawal tax rate is required.");
   });
 
   it("validates custom income terms only when custom is selected", () => {

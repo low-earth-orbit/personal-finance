@@ -3,7 +3,6 @@ import type {
   AllocatorInput,
   PortfolioPresetId,
   Province,
-  RetirementRateMode,
   SalaryCurvePreset,
 } from "./types";
 
@@ -17,7 +16,6 @@ const curves: SalaryCurvePreset[] = [
   "fast",
   "custom",
 ];
-const retirementRateModes: RetirementRateMode[] = ["rate", "income"];
 const portfolioIds = PORTFOLIO_PRESETS.map(
   (preset) => preset.id,
 ) as PortfolioPresetId[];
@@ -69,11 +67,6 @@ export function migrateInput(value: unknown): AllocatorInput {
       DEFAULTS.salaryCurve,
     );
   }
-  next.retirementRateMode = enumValue(
-    parsed.retirementRateMode,
-    retirementRateModes,
-    DEFAULTS.retirementRateMode,
-  );
   next.portfolioPresetId = enumValue(
     parsed.portfolioPresetId,
     portfolioIds,
@@ -92,11 +85,29 @@ export function loadInput(): AllocatorInput {
   }
 }
 
+export function hasSavedInput(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
 export function saveInput(input: AllocatorInput): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(input));
   } catch {
     // Storage may be unavailable or full.
+  }
+}
+
+export function clearInput(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // Storage may be unavailable.
   }
 }

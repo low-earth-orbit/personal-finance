@@ -6,6 +6,14 @@ import { allocateLumpSum } from "@/utils/allocator/allocate";
 import { renderWithMantine } from "@/test-utils";
 
 describe("Allocator Result", () => {
+  it("does not show a recommendation before inputs are reviewed", () => {
+    renderWithMantine(
+      <Result allocation={null} input={DEFAULTS} status="idle" />,
+    );
+    expect(screen.getByText("Review your numbers first")).toBeInTheDocument();
+    expect(screen.queryByText(/Invest about/)).not.toBeInTheDocument();
+  });
+
   it("guards incomplete inputs", () => {
     renderWithMantine(
       <Result allocation={null} input={DEFAULTS} status="invalid" />,
@@ -21,11 +29,14 @@ describe("Allocator Result", () => {
     );
 
     expect(
-      screen.getByRole("heading", { name: "Invest $20,000" }),
+      screen.getByRole("heading", { name: "Invest about $20,000" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Refunds of .* are additional invested cash/),
+      screen.getByText(/Future-dollar illustration, not a forecast/),
     ).toBeInTheDocument();
+    expect(screen.getByText("Why this split")).toBeInTheDocument();
+    expect(screen.getByText("Before acting")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("shows calculation progress instead of an input error", () => {

@@ -10,12 +10,16 @@ describe("allocator storage migration", () => {
       availableTfsaRoom: 45_000,
       lumpSum: 88_000,
       refundDestination: "non-registered",
+      retirementRateMode: "income",
+      retirementIncome: 60_000,
     });
 
     expect(migrated.availableRrspRoom).toBe(123_000);
     expect(migrated.availableTfsaRoom).toBe(45_000);
     expect(migrated.lumpSum).toBe(88_000);
     expect(migrated).not.toHaveProperty("refundDestination");
+    expect(migrated).not.toHaveProperty("retirementRateMode");
+    expect(migrated).not.toHaveProperty("retirementIncome");
   });
 
   it("preserves a custom portfolio return", () => {
