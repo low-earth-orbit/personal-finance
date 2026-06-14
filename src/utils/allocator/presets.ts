@@ -15,11 +15,29 @@ export const PROVINCES: { value: Province; label: string }[] = [
 export const SALARY_CURVE_PRESETS: {
   value: SalaryCurvePreset;
   label: string;
+  description: string;
 }[] = [
-  { value: "flat", label: "Flat" },
-  { value: "steady-climb", label: "Steady climb" },
-  { value: "early-peak", label: "Early peak" },
-  { value: "aggressive", label: "Aggressive" },
+  {
+    value: "flat",
+    label: "Flat",
+    description: "Income stays at its current real-dollar level.",
+  },
+  {
+    value: "steady-climb",
+    label: "Steady climb",
+    description:
+      "Income grows at the entered real growth rate until retirement.",
+  },
+  {
+    value: "early-peak",
+    label: "Early peak",
+    description: "Income grows for 10 years, then stays flat.",
+  },
+  {
+    value: "aggressive",
+    label: "Fast climb",
+    description: "Income grows at 1.5x the entered real growth rate.",
+  },
 ];
 
 export const PORTFOLIO_PRESETS: {
@@ -65,5 +83,6 @@ export const DEFAULTS: AllocatorInput = {
   distributionYieldPct: 2,
   retirementRateMode: "rate",
   retirementWithdrawalRatePct: 30,
+  capitalGainsTaxRatePct: 30,
   retirementIncome: 60_000,
 };

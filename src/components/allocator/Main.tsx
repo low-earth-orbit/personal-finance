@@ -15,40 +15,63 @@ import type {
 } from "@/utils/allocator/types";
 import { validateAllocatorInput } from "@/utils/allocator/validation";
 
+export type AllocatorStatus = "loading" | "invalid" | "ready" | "error";
+
 export default function Main() {
   const [input, setInput] = useState<AllocatorInput>(() => loadInput());
-  const [allocation, setAllocation] = useState<AllocationResult | null>(null);
+  const [response, setResponse] = useState<{
+    input: AllocatorInput;
+    allocation: AllocationResult;
+  } | null>(null);
+  const [errorInput, setErrorInput] = useState<AllocatorInput | null>(null);
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const errors = validateAllocatorInput(input);
   const [debouncedInput] = useDebouncedValue(input, 150);
   const inputsValid =
     Object.keys(validateAllocatorInput(debouncedInput)).length === 0;
-
-  useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("../../workers/allocationWorker.ts", import.meta.url),
-    );
-    workerRef.current.onmessage = (event: MessageEvent<AllocationResponse>) => {
-      if (event.data.requestId === requestIdRef.current) {
-        setAllocation(event.data.result);
-      }
-    };
-    return () => workerRef.current?.terminate();
-  }, []);
+  const status: AllocatorStatus = !inputsValid
+    ? "invalid"
+    : errorInput === debouncedInput
+      ? "error"
+      : response?.input === debouncedInput
+        ? "ready"
+        : "loading";
+  const allocation =
+    response?.input === debouncedInput ? response.allocation : null;
 
   useEffect(() => {
     requestIdRef.current += 1;
-    if (!inputsValid || !workerRef.current) {
-      setAllocation(null);
+    workerRef.current?.terminate();
+    workerRef.current = null;
+    if (!inputsValid) {
       return;
     }
-    setAllocation(null);
-    workerRef.current.postMessage({
+    const worker = new Worker(
+      new URL("../../workers/allocationWorker.ts", import.meta.url),
+    );
+    workerRef.current = worker;
+    worker.onmessage = (event: MessageEvent<AllocationResponse>) => {
+      if (event.data.requestId === requestIdRef.current) {
+        setResponse({ input: debouncedInput, allocation: event.data.result });
+        setErrorInput(null);
+        worker.terminate();
+        if (workerRef.current === worker) workerRef.current = null;
+      }
+    };
+    worker.onerror = () => {
+      setErrorInput(debouncedInput);
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+    };
+    worker.postMessage({
       input: debouncedInput,
-      lumpSum: debouncedInput.lumpSum,
       requestId: requestIdRef.current,
     });
+    return () => {
+      worker.terminate();
+      if (workerRef.current === worker) workerRef.current = null;
+    };
   }, [debouncedInput, inputsValid]);
 
   function handleChange(key: AllocatorInputKey, value: unknown) {
@@ -74,7 +97,10 @@ export default function Main() {
   return (
     <Container size="xl" pb="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 2, md: 1 }}>
+        <Grid.Col
+          span={{ base: 12, lg: 6 }}
+          order={{ base: status === "ready" ? 2 : 1, lg: 1 }}
+        >
           <InputForm
             input={input}
             errors={errors}
@@ -82,8 +108,15 @@ export default function Main() {
             onReset={handleReset}
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, md: 2 }}>
-          <Result allocation={allocation} input={debouncedInput} />
+        <Grid.Col
+          span={{ base: 12, lg: 6 }}
+          order={{ base: status === "ready" ? 1 : 2, lg: 2 }}
+        >
+          <Result
+            allocation={allocation}
+            input={debouncedInput}
+            status={status}
+          />
         </Grid.Col>
       </Grid>
     </Container>

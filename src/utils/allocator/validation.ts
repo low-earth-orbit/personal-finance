@@ -28,7 +28,7 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
       label: "Real salary growth",
     },
     lumpSum: {
-      min: 0,
+      min: 1,
       max: 10_000_000,
       step: 1_000,
       label: "Lump sum",
@@ -63,6 +63,12 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
       max: 60,
       step: 1,
       label: "Withdrawal tax rate",
+    },
+    capitalGainsTaxRatePct: {
+      min: 0,
+      max: 60,
+      step: 1,
+      label: "Capital gains tax rate",
     },
     retirementIncome: {
       min: 0,

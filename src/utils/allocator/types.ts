@@ -9,7 +9,8 @@ export type PortfolioPresetId =
   | "conservative"
   | "balanced"
   | "growth"
-  | "aggressive";
+  | "aggressive"
+  | "custom";
 
 export interface AllocatorInput {
   currentAge: number;
@@ -27,6 +28,7 @@ export interface AllocatorInput {
   distributionYieldPct: number;
   retirementRateMode: RetirementRateMode;
   retirementWithdrawalRatePct: number;
+  capitalGainsTaxRatePct: number;
   retirementIncome: number;
 }
 
@@ -36,16 +38,22 @@ export type AllocatorErrors = Partial<Record<AllocatorInputKey, string>>;
 export interface AllocationResult {
   tfsa: number;
   rrspDeductNow: number;
-  rrspCarryForward: { age: number; amount: number } | null;
+  rrspCarryForward: { age: number; amount: number }[];
   nonReg: number;
   projectedAfterTaxTotal: number;
   refundTotal: number;
-  grid: 1000;
+  refundSchedule: {
+    claimAge: number;
+    arrivalAge: number;
+    amountNominal: number;
+    amountToday: number;
+  }[];
+  carryForwardBenefit: number;
+  precision: number;
 }
 
 export interface AllocationRequest {
   input: AllocatorInput;
-  lumpSum: number;
   requestId: number;
 }
 

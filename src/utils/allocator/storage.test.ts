@@ -17,4 +17,24 @@ describe("allocator storage migration", () => {
     expect(migrated.lumpSum).toBe(88_000);
     expect(migrated).not.toHaveProperty("refundDestination");
   });
+
+  it("preserves a custom portfolio return", () => {
+    expect(
+      migrateInput({
+        ...DEFAULTS,
+        portfolioPresetId: "custom",
+        portfolioReturn: 7.25,
+      }),
+    ).toMatchObject({
+      portfolioPresetId: "custom",
+      portfolioReturn: 7.25,
+    });
+  });
+
+  it("falls back from an invalid portfolio preset", () => {
+    expect(
+      migrateInput({ ...DEFAULTS, portfolioPresetId: "not-a-preset" })
+        .portfolioPresetId,
+    ).toBe(DEFAULTS.portfolioPresetId);
+  });
 });

@@ -46,18 +46,25 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
   };
   const setPortfolio = (id: string | null) => {
     if (!id) return;
+    if (id === "custom") {
+      onChange("portfolioPresetId", id);
+      return;
+    }
     const preset = PORTFOLIO_PRESETS.find((item) => item.id === id);
     if (!preset) return;
     onChange("portfolioPresetId", id as PortfolioPresetId);
     onChange("portfolioReturn", preset.returnPct);
   };
+  const selectedCurve = SALARY_CURVE_PRESETS.find(
+    (curve) => curve.value === input.salaryCurve,
+  );
 
   return (
     <>
       <FormResetButton onReset={onReset} />
       <Accordion
         multiple
-        defaultValue={["you", "amount", "room", "returns", "retirement"]}
+        defaultValue={["you", "amount", "room"]}
         variant="contained"
       >
         <Accordion.Item value="you">
@@ -84,7 +91,8 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 />
                 <UserInputFormItem
                   {...num("currentIncome")}
-                  label="Current annual income"
+                  label="Current annual taxable income"
+                  description="Include employment, self-employment, and other recurring taxable income, in today's dollars. Investment distributions are modeled separately."
                   prefix="$"
                   thousandSeparator
                 />
@@ -92,12 +100,18 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
               <Text size="sm" fw={600}>
                 Real salary path
               </Text>
-              <SegmentedControl
-                fullWidth
-                data={SALARY_CURVE_PRESETS}
+              <Select
+                label="Income curve"
+                data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
+                  value,
+                  label,
+                }))}
                 value={input.salaryCurve}
-                onChange={(value) => onChange("salaryCurve", value)}
+                onChange={(value) => value && onChange("salaryCurve", value)}
               />
+              <Text size="xs" c="dimmed">
+                {selectedCurve?.description}
+              </Text>
               <UserInputFormItem
                 {...num("salaryGrowthPct")}
                 label="Real salary growth"
@@ -113,7 +127,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
             <UserInputFormItem
               {...num("lumpSum")}
               label="Lump sum to invest now"
-              description="One-time amount to split across accounts"
+              description="The full amount is invested this year; only RRSP deduction claims may be delayed."
               prefix="$"
               thousandSeparator
             />
@@ -127,14 +141,14 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
               <UserInputFormItem
                 {...num("availableRrspRoom")}
                 label="Available RRSP room"
-                description="From your latest CRA notice"
+                description="Current nominal dollars from your latest CRA notice"
                 prefix="$"
                 thousandSeparator
               />
               <UserInputFormItem
                 {...num("availableTfsaRoom")}
                 label="Available TFSA room"
-                description="From your latest CRA notice"
+                description="Current nominal dollars from your latest CRA notice; unused room loses real value to inflation"
                 prefix="$"
                 thousandSeparator
               />
@@ -151,7 +165,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 data={PORTFOLIO_PRESETS.map((preset) => ({
                   value: preset.id,
                   label: `${preset.label} · ${preset.returnPct}%`,
-                }))}
+                })).concat({ value: "custom", label: "Custom return" })}
                 value={input.portfolioPresetId}
                 onChange={setPortfolio}
               />
@@ -160,6 +174,13 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                   {...num("portfolioReturn")}
                   label="Nominal return"
                   suffix="%"
+                  onChange={(value) => {
+                    onChange("portfolioPresetId", "custom");
+                    onChange(
+                      "portfolioReturn",
+                      value === "" || value == null ? value : Number(value),
+                    );
+                  }}
                 />
                 <UserInputFormItem
                   {...num("inflationPct")}
@@ -188,6 +209,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 ]}
                 value={input.retirementRateMode}
                 onChange={(value) => onChange("retirementRateMode", value)}
+                aria-label="Retirement tax-rate input method"
               />
               {input.retirementRateMode === "rate" ? (
                 <UserInputFormItem
@@ -198,12 +220,18 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
               ) : (
                 <UserInputFormItem
                   {...num("retirementIncome")}
-                  label="Expected retirement income"
-                  description="The engine derives an average tax rate and applies it as a flat valuation haircut."
+                  label="Expected annual taxable retirement income"
+                  description="Include RRSP withdrawals, pensions, CPP/OAS, and other taxable income. The engine derives an average tax rate and applies it as a flat valuation haircut."
                   prefix="$"
                   thousandSeparator
                 />
               )}
+              <UserInputFormItem
+                {...num("capitalGainsTaxRatePct")}
+                label="Tax rate on taxable capital gains at retirement"
+                description="Applied after the 50% capital-gains inclusion rate"
+                suffix="%"
+              />
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

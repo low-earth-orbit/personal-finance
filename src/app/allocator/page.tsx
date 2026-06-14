@@ -15,7 +15,7 @@ export default function AllocatorPage() {
     <>
       <Header
         title="How should I invest this lump sum?"
-        subtitle="Optimize the split across TFSA, RRSP, and non-registered investments, including when to claim RRSP deductions."
+        subtitle="Invest the full amount now across TFSA, RRSP, and non-registered accounts, including when to claim RRSP deductions."
         showHomeLink
       />
       <main>

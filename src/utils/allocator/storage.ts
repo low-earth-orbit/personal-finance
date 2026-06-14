@@ -20,6 +20,7 @@ const retirementRateModes: RetirementRateMode[] = ["rate", "income"];
 const portfolioIds = PORTFOLIO_PRESETS.map(
   (preset) => preset.id,
 ) as PortfolioPresetId[];
+portfolioIds.push("custom");
 
 function enumValue<T extends string>(
   value: unknown,

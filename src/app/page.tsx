@@ -60,6 +60,8 @@ const TOOLS: Tool[] = [
     title: "Lump-sum Allocation Optimizer",
     description:
       "Optimize a lump sum across RRSP, TFSA, and taxable investments.",
+    href: "/allocator",
+    status: "new",
   },
 ];
 

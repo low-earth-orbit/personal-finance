@@ -11,6 +11,7 @@ Latest deployed version: [Click Me](https://low-earth-orbit.github.io/personal-f
 | **Rent vs Buy** — compare renting vs owning a home                              | `/rent-vs-buy` | Live   |
 | **When can I retire?** — quick retirement reality check                         | `/retirement`  | Live   |
 | **Lifetime Allocation Optimizer** — find your optimal lifetime stock allocation | `/glide-path`  | Live   |
+| **Lump-sum Allocation Optimizer** — split a lump sum across account types       | `/allocator`   | Live   |
 
 The site is a single statically-exported Next.js app: a hub landing page at `/`
 links to each tool, which lives at its own route.
@@ -46,10 +47,12 @@ src/
     page.tsx              # hub landing page (lists tools)
     rent-vs-buy/page.tsx  # rent-vs-buy tool route
     glide-path/page.tsx   # Lifetime Allocation Optimizer route
+    allocator/page.tsx    # Lump-sum Allocation Optimizer route
   components/
     shared/               # reusable chrome + form primitives (Header, Footer, inputs)
     rent-vs-buy/          # rent-vs-buy-specific components
     glide-path/           # Lifetime Allocation Optimizer components
+    allocator/            # Lump-sum Allocation Optimizer components
   utils/                  # math, formatting, Monte Carlo (shared) + tool-specific logic
   types.ts                # shared domain types
 analysis/                 # Python research, validation, and recommender tools
