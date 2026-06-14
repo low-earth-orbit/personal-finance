@@ -101,14 +101,15 @@ function settleDistributionAndDeduction(
   province: AllocatorInput["province"],
 ): number {
   const distributionReal = distributionNominal / inflationFactor;
-  // The deduction lowers taxable income first; distributions stack on top of the
-  // post-deduction income, matching how CRA orders a deduction and ordinary
-  // investment income in the same year.
-  const taxableBase = Math.max(0, incomeReal - claimedReal);
+  // Distributions stack on full salary, independent of the RRSP deduction-timing
+  // split. Making the base depend on the carried claim would couple non-reg
+  // distribution tax into the deduct-now-vs-carry decision and push the
+  // deduction past clean bracket edges; the coupling outweighs the small
+  // overstatement from not netting the deduction here.
   const distributionTaxReal = Math.max(
     0,
-    taxOwed(province, taxableBase + distributionReal) -
-      taxOwed(province, taxableBase),
+    taxOwed(province, incomeReal + distributionReal) -
+      taxOwed(province, incomeReal),
   );
   const distributionTaxNominal = distributionTaxReal * inflationFactor;
   const reinvested = Math.max(0, distributionNominal - distributionTaxNominal);

@@ -23,13 +23,14 @@ enumerating every dollar from zero. It respects the entered static RRSP and TFSA
 room. Amounts above available room spill into non-registered investments.
 
 For each year `Y`, non-registered distributions and the RRSP deduction refund are
-settled separately. The deduction lowers taxable income first; the distribution
-then stacks on the post-deduction income:
+settled separately. Distribution tax stacks on full salary, independent of the
+deduction-timing split — making the base depend on the carried claim would couple
+non-registered distribution tax into the deduct-now-vs-carry decision and push the
+deduction past clean bracket edges:
 
 ```text
 distributionTax_Y =
-  taxOwed(income_Y - deductionClaimed_Y + taxableDistribution_Y)
-  - taxOwed(income_Y - deductionClaimed_Y)
+  taxOwed(income_Y + taxableDistribution_Y) - taxOwed(income_Y)
 ```
 
 The deduction refund is taken against an income floor (see below). A refund
@@ -94,7 +95,7 @@ receives a full year of growth. Later tax refunds use a mid-year flow convention
 
 Every non-registered contribution and every reinvested after-tax distribution
 increases adjusted cost base. Distributions are treated as interest income and
-stacked on that year's post-deduction real-dollar salary:
+stacked on that year's real-dollar salary:
 
 ```text
 price return = nominal total return - distribution yield

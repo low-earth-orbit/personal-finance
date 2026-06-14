@@ -327,13 +327,11 @@ describe("one-time lump-sum allocator", () => {
     const refund =
       taxOwed(input.province, input.currentIncome) -
       taxOwed(input.province, input.currentIncome - 10_000);
-    // The deduction lowers taxable income first; the distribution then stacks on
-    // the post-deduction income.
+    // Distribution tax stacks on full salary, independent of the deduction.
     const distribution = 10_000 * 0.1;
-    const taxableBase = input.currentIncome - 10_000;
     const distributionTax =
-      taxOwed(input.province, taxableBase + distribution) -
-      taxOwed(input.province, taxableBase);
+      taxOwed(input.province, input.currentIncome + distribution) -
+      taxOwed(input.province, input.currentIncome);
     const reinvested = distribution - distributionTax;
     // Price return is zero (10% return − 10% yield), so the non-reg principal
     // holds at 10_000 and only the reinvested distribution adds to it. The
