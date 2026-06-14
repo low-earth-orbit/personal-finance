@@ -45,4 +45,33 @@ describe("Allocator Result", () => {
     );
     expect(screen.getByText("Calculating recommendation")).toBeInTheDocument();
   });
+
+  it("keeps the previous result visible while updating", () => {
+    const allocation = allocateLumpSum(DEFAULTS, DEFAULTS.lumpSum);
+    renderWithMantine(
+      <Result allocation={allocation} input={DEFAULTS} status="updating" />,
+    );
+
+    expect(screen.getByText("Updating recommendation…")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Invest about $50,000" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Calculating recommendation"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps the previous result visible when an edit is invalid", () => {
+    const allocation = allocateLumpSum(DEFAULTS, DEFAULTS.lumpSum);
+    renderWithMantine(
+      <Result allocation={allocation} input={DEFAULTS} status="invalid" />,
+    );
+
+    expect(
+      screen.getByText("Update paused: fix the highlighted fields."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Invest about $50,000" }),
+    ).toBeInTheDocument();
+  });
 });

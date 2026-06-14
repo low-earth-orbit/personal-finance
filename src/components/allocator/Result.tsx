@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Loader, Paper, Stack, Text } from "@mantine/core";
+import { Alert, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
 import type { AllocatorStatus } from "./Main";
@@ -26,21 +26,21 @@ export default function Result({
       </Paper>
     );
   }
-  if (status === "invalid") {
+  if (status === "invalid" && !allocation) {
     return (
       <Alert icon={<IconInfoCircle />} title="Complete the inputs">
         Fix the highlighted fields to optimize the allocation.
       </Alert>
     );
   }
-  if (status === "error") {
+  if (status === "error" && !allocation) {
     return (
       <Alert icon={<IconAlertCircle />} color="red" title="Calculation failed">
         Change an input to retry the recommendation.
       </Alert>
     );
   }
-  if (status === "loading" || !allocation) {
+  if (!allocation) {
     return (
       <Alert
         icon={<Loader size="sm" />}
@@ -53,6 +53,24 @@ export default function Result({
   }
   return (
     <Stack gap="lg">
+      {status === "updating" && (
+        <Group gap="xs" aria-live="polite">
+          <Loader size="xs" />
+          <Text size="xs" c="dimmed">
+            Updating recommendation…
+          </Text>
+        </Group>
+      )}
+      {status === "invalid" && (
+        <Text size="xs" c="orange" fw={600} aria-live="polite">
+          Update paused: fix the highlighted fields.
+        </Text>
+      )}
+      {status === "error" && (
+        <Text size="xs" c="red" fw={600} aria-live="polite">
+          Update failed. Change an input to retry.
+        </Text>
+      )}
       <AllocationSplit allocation={allocation} input={input} />
       <Text size="xs" c="dimmed">
         Deterministic illustration. Not personalized advice.

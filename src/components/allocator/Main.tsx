@@ -23,6 +23,7 @@ import { validateAllocatorInput } from "@/utils/allocator/validation";
 export type AllocatorStatus =
   | "idle"
   | "loading"
+  | "updating"
   | "invalid"
   | "ready"
   | "error";
@@ -38,20 +39,23 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const errors = validateAllocatorInput(input);
-  const [debouncedInput] = useDebouncedValue(input, 150);
+  const [debouncedInput] = useDebouncedValue(input, 400);
+  const currentInputsValid = Object.keys(errors).length === 0;
   const inputsValid =
     Object.keys(validateAllocatorInput(debouncedInput)).length === 0;
   const status: AllocatorStatus = !hasStarted
     ? "idle"
-    : !inputsValid
+    : !currentInputsValid
       ? "invalid"
       : errorInput === debouncedInput
         ? "error"
-        : response?.input === debouncedInput
+        : response?.input === input
           ? "ready"
-          : "loading";
-  const allocation =
-    response?.input === debouncedInput ? response.allocation : null;
+          : response
+            ? "updating"
+            : "loading";
+  const allocation = response?.allocation ?? null;
+  const resultInput = response?.input ?? debouncedInput;
 
   useEffect(() => {
     requestIdRef.current += 1;
@@ -122,7 +126,7 @@ export default function Main() {
       <Grid gap="xl">
         <Grid.Col
           span={{ base: 12, lg: 6 }}
-          order={{ base: status === "ready" ? 2 : 1, lg: 1 }}
+          order={{ base: allocation ? 2 : 1, lg: 1 }}
         >
           <InputForm
             input={input}
@@ -135,13 +139,9 @@ export default function Main() {
         </Grid.Col>
         <Grid.Col
           span={{ base: 12, lg: 6 }}
-          order={{ base: status === "ready" ? 1 : 2, lg: 2 }}
+          order={{ base: allocation ? 1 : 2, lg: 2 }}
         >
-          <Result
-            allocation={allocation}
-            input={debouncedInput}
-            status={status}
-          />
+          <Result allocation={allocation} input={resultInput} status={status} />
         </Grid.Col>
       </Grid>
     </Container>

@@ -45,6 +45,14 @@ test("allocator requires input review before showing a recommendation", async ({
   await expect(page.getByText("Why this split")).toBeVisible();
   await expect(page.getByText("Before acting")).toBeVisible();
 
+  await page.getByLabel("Lump sum to invest now").fill("51000");
+  await expect(
+    page.getByRole("heading", { name: "Invest about $50,000" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Invest about $51,000" }),
+  ).toBeVisible();
+
   await page.getByRole("link", { name: "Review detailed assumptions" }).click();
   await expect(page).toHaveURL(/#model-assumptions$/);
   await expect(page.locator("#model-assumptions details")).toHaveAttribute(
