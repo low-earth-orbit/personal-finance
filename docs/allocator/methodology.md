@@ -8,6 +8,14 @@ after-tax value at retirement as the objective. RRSP contributions happen now,
 but their deduction claims can be divided across the current and future years.
 The optimizer chooses both the account split and the deduction schedule.
 
+The entered income is the saver's full taxable income for the current tax year,
+**before** any RRSP deduction (the engine subtracts the claim itself). A
+deduct-now claim is applied to that income at this year's marginal rate, and its
+refund is dated to the following year — matching a contribution made this year,
+deducted on this year's return, refunded the next spring. The first-60-days rule
+(deducting an early-year contribution against the prior year) is not modeled; a
+saver using it should enter the prior year's income.
+
 The allocation search starts with a coarse grid sized to cap the initial pass at
 roughly 1,000 increments. It then progressively refines the best plan through
 smaller exchange grids down to `$1` precision. This avoids exhaustively
@@ -61,7 +69,7 @@ multi-resolution local search, not a proof of the global continuous optimum.
 
 ## Tax engine
 
-The engine uses 2025 federal and NB, ON, and BC rules. Federal and provincial
+The engine uses 2026 federal and NB, ON, and BC rules. Federal and provincial
 tax are separate statutory components, each floored at zero. Basic personal
 amounts are non-refundable credits. The federal BPA phases from its maximum to
 minimum through the top-bracket phaseout range.
@@ -73,7 +81,7 @@ using a one-sided finite difference of total tax owed, so surtax, health-premium
 tax-reduction, and BPA-phaseout effects appear. Marginal rates are not assumed
 to be monotonic.
 
-All 2025 brackets, rates, credits, surtax thresholds, premium thresholds, and
+All 2026 brackets, rates, credits, surtax thresholds, premium thresholds, and
 reduction thresholds are held constant in real dollars. This is equivalent to
 fully indexing the modeled tax system with inflation. Other credits and
 provinces are excluded.

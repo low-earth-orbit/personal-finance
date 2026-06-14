@@ -365,7 +365,7 @@ describe("one-time lump-sum allocator", () => {
     };
     // A carried-forward claim stacks below the fresh RRSP room assumed used that
     // future year: floor = income − min(18% income, dollar limit).
-    const freshRoom = Math.min(0.18 * input.currentIncome, 32_490);
+    const freshRoom = Math.min(0.18 * input.currentIncome, 33_810);
     const claimFloor = input.currentIncome - freshRoom;
     const expectedRefund =
       taxOwed(input.province, claimFloor) -

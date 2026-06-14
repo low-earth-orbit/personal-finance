@@ -10,7 +10,7 @@ export default function TaxAssumptions() {
           </summary>
           <Stack gap="xs" mt="sm">
             <Text size="sm" c="dimmed">
-              Uses 2025 federal, New Brunswick, Ontario, and British Columbia
+              Uses 2026 federal, New Brunswick, Ontario, and British Columbia
               personal tax rules. All brackets, rates, credits, surtax
               thresholds, premium thresholds, and reduction thresholds are held
               constant in today&apos;s dollars, equivalent to indexing the
@@ -19,6 +19,15 @@ export default function TaxAssumptions() {
               personal amounts, Ontario surtax, Ontario health premium, and
               Ontario/BC low-income tax reductions. Other credits and provinces
               are excluded.
+            </Text>
+            <Text size="sm" c="dimmed">
+              Enter your full taxable income for the current tax year, before
+              subtracting any RRSP deduction. A deduct-now claim is applied to
+              that income at this year&apos;s marginal rate, and its refund is
+              modeled as arriving the following year. A first-60-days
+              contribution deducted against last year&apos;s income is not
+              modeled separately — if that is your case, enter last year&apos;s
+              income instead.
             </Text>
             <Text size="sm" c="dimmed">
               The optimizer chooses how much to place in TFSA, RRSP with an

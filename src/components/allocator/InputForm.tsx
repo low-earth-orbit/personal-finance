@@ -91,8 +91,8 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 />
                 <UserInputFormItem
                   {...num("currentIncome")}
-                  label="Current annual taxable income"
-                  description="Include employment, self-employment, and other recurring taxable income, in today's dollars. Investment distributions are modeled separately."
+                  label="This year's taxable income (before RRSP deduction)"
+                  description="Your full expected taxable income for the current tax year, before subtracting any RRSP deduction — employment, self-employment, and other recurring income, in today's dollars. The deduct-now refund is taxed at this year's rate. Investment distributions are modeled separately."
                   prefix="$"
                   thousandSeparator
                 />

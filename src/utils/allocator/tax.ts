@@ -49,13 +49,11 @@ function onHealthPremium(income: number): number {
   return 900;
 }
 
-function onReduction(income: number): number {
-  return Math.max(
-    0,
-    ON_TAX_REDUCTION.max -
-      Math.max(0, income - ON_TAX_REDUCTION.phaseoutStart) *
-        ON_TAX_REDUCTION.phaseoutRate,
-  );
+function onReduction(taxAfterSurtax: number): number {
+  // 2026 rule: doubled basic amount, less Ontario tax after surtax, floored at
+  // zero and capped at the tax itself (it can only reduce tax to zero).
+  const credit = Math.max(0, 2 * ON_TAX_REDUCTION.basicAmount - taxAfterSurtax);
+  return Math.min(Math.max(0, taxAfterSurtax), credit);
 }
 
 function bcReduction(income: number): number {
@@ -89,7 +87,7 @@ export function taxOwed(province: Province, income: number): number {
       0,
     );
     provincial =
-      Math.max(0, basic + surtax - onReduction(taxableIncome)) +
+      Math.max(0, basic + surtax - onReduction(basic + surtax)) +
       onHealthPremium(taxableIncome);
   } else if (province === "BC") {
     provincial = Math.max(0, basic - bcReduction(taxableIncome));

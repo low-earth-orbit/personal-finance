@@ -50,7 +50,7 @@ export default function Result({
           Deterministic illustration. Result amounts (projected value, refunds,
           and the carry-forward benefit) are shown in nominal (future) dollars;
           the income-curve chart below is in real (today&apos;s) dollars to keep
-          its shape readable. The 2025 tax brackets and thresholds are modeled
+          its shape readable. The 2026 tax brackets and thresholds are modeled
           as fully indexed to inflation, so they keep their real value over
           time. Registered room is static and carried deductions stay fixed
           nominal amounts. Returns are constant. Deduction claims are optimized
