@@ -7,9 +7,9 @@ import type {
 } from "./types";
 
 export const PROVINCES: { value: Province; label: string }[] = [
-  { value: "NB", label: "New Brunswick" },
-  { value: "ON", label: "Ontario" },
   { value: "BC", label: "British Columbia" },
+  { value: "ON", label: "Ontario" },
+  { value: "NB", label: "New Brunswick" },
 ];
 
 export const SALARY_CURVE_PRESETS: {
@@ -20,25 +20,30 @@ export const SALARY_CURVE_PRESETS: {
   {
     value: "flat",
     label: "Flat",
-    description: "Income stays at its current real-dollar level.",
+    description: "Income keeps pace with inflation.",
   },
   {
-    value: "steady-climb",
-    label: "Steady climb",
+    value: "modest",
+    label: "Modest career growth",
     description:
-      "Income grows at the entered real growth rate until retirement.",
+      "Income grows 1% yearly for 15 years, reaching about 16% above today's level, then stays flat.",
   },
   {
-    value: "early-peak",
-    label: "Early peak",
+    value: "strong",
+    label: "Strong career growth",
     description:
-      "Income grows for 15 years, then plateaus for the rest of your career.",
+      "Income grows 2% yearly for 15 years, reaching about 35% above today's level, then stays flat.",
   },
   {
-    value: "aggressive",
-    label: "Fast climb",
+    value: "fast",
+    label: "Fast career growth",
     description:
-      "Income grows at 1.5x the entered real growth rate for 20 years, then plateaus.",
+      "Income grows 3% yearly for 15 years, reaching about 56% above today's level, then stays flat.",
+  },
+  {
+    value: "custom",
+    label: "Custom",
+    description: "Choose a real growth rate and years of growth.",
   },
 ];
 
@@ -74,17 +79,16 @@ export const DEFAULTS: AllocatorInput = {
   retirementAge: 65,
   province: "ON",
   currentIncome: 100_000,
-  salaryCurve: "steady-climb",
-  salaryGrowthPct: 2,
+  salaryCurve: "modest",
+  salaryGrowthPct: 1,
+  salaryGrowthYears: 15,
   lumpSum: 50_000,
-  availableRrspRoom: 50_000,
-  availableTfsaRoom: 40_000,
-  portfolioPresetId: "growth",
-  portfolioReturn: ALLOCATIONS["80/20"].returnPct,
+  availableRrspRoom: 40_000,
+  availableTfsaRoom: 20_000,
+  portfolioPresetId: "balanced",
+  portfolioReturn: ALLOCATIONS["60/40"].returnPct,
   inflationPct: 2.1,
   distributionYieldPct: 2,
-  retirementRateMode: "rate",
   retirementWithdrawalRatePct: 30,
-  capitalGainsTaxRatePct: 30,
-  retirementIncome: 60_000,
+  capitalGainsTaxRatePct: 15,
 };

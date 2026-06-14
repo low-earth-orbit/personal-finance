@@ -1,20 +1,64 @@
 import {
-  Alert,
+  Anchor,
   Card,
   Divider,
   Group,
   List,
+  Paper,
   Stack,
   Text,
   Title,
 } from "@mantine/core";
 import { formatCAD } from "@/utils/format";
 import { taxOwed } from "@/utils/allocator/tax";
+import { TAX_YEAR } from "@/utils/allocator/taxConstants";
 import type { AllocationResult, AllocatorInput } from "@/utils/allocator/types";
 
 interface Row {
   label: string;
   amount: number;
+}
+
+const DISPLAY_INCREMENT = 100;
+
+function roundDisplay(value: number, increment = DISPLAY_INCREMENT): number {
+  return Math.round(value / increment) * increment;
+}
+
+function formatApproxCAD(value: number, increment = DISPLAY_INCREMENT): string {
+  return formatCAD(roundDisplay(value, increment));
+}
+
+function actionIncrement(lumpSum: number): number {
+  if (lumpSum < 1_000) return 1;
+  if (lumpSum < 10_000) return 10;
+  return DISPLAY_INCREMENT;
+}
+
+function taxYearForAge(input: AllocatorInput, age: number): number {
+  return TAX_YEAR + age - input.currentAge;
+}
+
+function roundedRows(rows: Row[], lumpSum: number, increment: number): Row[] {
+  const rounded = rows.map((row) => ({
+    ...row,
+    amount: roundDisplay(row.amount, increment),
+  }));
+  const difference =
+    roundDisplay(lumpSum, increment) -
+    rounded.reduce((sum, row) => sum + row.amount, 0);
+  if (difference === 0 || rounded.length === 0) {
+    return rounded.filter((row) => row.amount > 0);
+  }
+  const largest = rounded.reduce(
+    (best, row, index) => (row.amount > rounded[best]!.amount ? index : best),
+    0,
+  );
+  rounded[largest] = {
+    ...rounded[largest]!,
+    amount: rounded[largest]!.amount + difference,
+  };
+  return rounded.filter((row) => row.amount > 0);
 }
 
 export default function AllocationSplit({
@@ -24,22 +68,37 @@ export default function AllocationSplit({
   allocation: AllocationResult;
   input: AllocatorInput;
 }) {
-  const rows: Row[] = [
-    { label: "TFSA", amount: allocation.tfsa },
-    {
-      label: "RRSP contribution now — claim deduction now",
-      amount: allocation.rrspDeductNow,
-    },
-    ...allocation.rrspCarryForward.map((claim) => ({
-      label: `RRSP contribution now — claim deduction at age ${claim.age}`,
-      amount: claim.amount,
-    })),
-    { label: "Non-registered", amount: allocation.nonReg },
-  ].filter((row) => row.amount > 0);
-  const registeredAllocated =
-    allocation.tfsa +
+  const displayIncrement = actionIncrement(input.lumpSum);
+  const rows = roundedRows(
+    [
+      { label: "TFSA", amount: allocation.tfsa },
+      {
+        label: "RRSP contribution",
+        amount:
+          allocation.rrspDeductNow +
+          allocation.rrspCarryForward.reduce(
+            (sum, claim) => sum + claim.amount,
+            0,
+          ),
+      },
+      { label: "Non-registered", amount: allocation.nonReg },
+    ].filter((row) => row.amount > 0),
+    input.lumpSum,
+    displayIncrement,
+  );
+  const rrspAllocated =
     allocation.rrspDeductNow +
     allocation.rrspCarryForward.reduce((sum, claim) => sum + claim.amount, 0);
+  const displayTfsa = rows.find((row) => row.label === "TFSA")?.amount ?? 0;
+  const displayRrsp =
+    rows.find((row) => row.label === "RRSP contribution")?.amount ?? 0;
+  const displayNonReg =
+    rows.find((row) => row.label === "Non-registered")?.amount ?? 0;
+  const displayDeductNow = roundDisplay(
+    allocation.rrspDeductNow,
+    displayIncrement,
+  );
+  const registeredAllocated = allocation.tfsa + rrspAllocated;
   const registeredRoom = input.availableTfsaRoom + input.availableRrspRoom;
   const registeredRoomFull =
     allocation.nonReg > 0 && registeredAllocated >= registeredRoom - 0.01;
@@ -54,25 +113,24 @@ export default function AllocationSplit({
     allocation.rrspDeductNow > 0
       ? estimatedCurrentRefund / allocation.rrspDeductNow
       : 0;
-  const rrspWithdrawalRate =
-    input.retirementRateMode === "income" && input.retirementIncome > 0
-      ? taxOwed(input.province, input.retirementIncome) / input.retirementIncome
-      : input.retirementRateMode === "income"
-        ? 0
-        : input.retirementWithdrawalRatePct / 100;
+  const rrspWithdrawalRate = input.retirementWithdrawalRatePct / 100;
+  const hasFutureActions =
+    allocation.rrspCarryForward.length > 0 ||
+    allocation.refundSchedule.length > 0;
 
   return (
     <Card withBorder radius="md" padding="lg">
       <Stack gap="sm">
         <Text size="sm" fw={600}>
-          Invest the full lump sum now
+          Approximate account split
         </Text>
         <Text size="xs" c="dimmed">
-          Every amount below is contributed or invested now. Only RRSP deduction
-          claims may be delayed.
+          Invest the full lump sum now. Only RRSP deduction claims may be
+          delayed. Account split and action amounts are rounded to the nearest{" "}
+          {formatCAD(displayIncrement)}.
         </Text>
         <Title order={2} c="teal">
-          Invest {formatCAD(input.lumpSum)}
+          Invest about {formatApproxCAD(input.lumpSum, displayIncrement)}
         </Title>
         <Stack gap={6}>
           {rows.map((row) => (
@@ -82,7 +140,7 @@ export default function AllocationSplit({
               wrap="wrap"
               px="sm"
               py={6}
-              bg="teal.0"
+              bg="var(--mantine-color-teal-light)"
               style={{ borderLeft: "4px solid var(--mantine-color-teal-6)" }}
             >
               <Text size="sm">{row.label}</Text>
@@ -93,73 +151,148 @@ export default function AllocationSplit({
           ))}
         </Stack>
         {registeredRoomFull && (
-          <Text size="sm" c="orange.8" fw={600}>
+          <Text size="sm" c="orange" fw={600}>
             {registeredRoom <= 0.01
-              ? "No registered room — the full amount goes to non-registered."
-              : "Registered room full — remainder in non-registered."}
+              ? "No registered room: the full amount goes to non-registered."
+              : "Registered room is full; the remainder goes to non-registered."}
           </Text>
         )}
-        <Alert variant="light" title="Do now (today's dollars)">
+
+        <Paper withBorder radius="md" p="md">
+          <Text size="sm" fw={700} mb={6}>
+            Why this split
+          </Text>
           <List size="sm" spacing={4}>
-            {allocation.tfsa > 0 && (
+            {displayTfsa > 0 && (
               <List.Item>
-                Contribute {formatCAD(allocation.tfsa)} to TFSA.
+                TFSA growth and withdrawals avoid the modeled retirement tax
+                haircut.
               </List.Item>
             )}
-            {registeredAllocated - allocation.tfsa > 0 && (
+            {displayRrsp > 0 && (
               <List.Item>
-                Contribute {formatCAD(registeredAllocated - allocation.tfsa)} to
-                RRSP now.
+                RRSP deductions create modeled tax refunds while the balance
+                grows tax-deferred.
               </List.Item>
             )}
-            {allocation.nonReg > 0 && (
+            {allocation.rrspCarryForward.length > 0 && (
               <List.Item>
-                Invest {formatCAD(allocation.nonReg)} in non-registered.
+                Some deductions wait because the entered income path produces
+                more valuable future claim years.
               </List.Item>
             )}
-            {allocation.rrspDeductNow > 0 && (
+            {displayNonReg > 0 && (
               <List.Item>
-                Claim {formatCAD(allocation.rrspDeductNow)} of RRSP deductions
-                now.
+                Non-registered receives the amount not favored for available
+                registered room under these assumptions.
               </List.Item>
             )}
           </List>
-        </Alert>
-        {(allocation.rrspCarryForward.length > 0 ||
-          allocation.refundTotal > 0) && (
-          <Alert
-            variant="light"
-            color="orange"
-            title="Do later (future dollars)"
-          >
-            <List size="sm" spacing={4}>
-              {allocation.rrspCarryForward.map((claim) => (
-                <List.Item key={claim.age}>
-                  Claim {formatCAD(claim.amount)} nominal of RRSP deductions at
-                  age {claim.age}.
-                </List.Item>
-              ))}
-              {allocation.refundSchedule.map((refund) => (
-                <List.Item key={`${refund.claimAge}-${refund.arrivalAge}`}>
-                  At age {refund.arrivalAge}, invest the projected{" "}
-                  {formatCAD(refund.amountNominal)} nominal refund from the age{" "}
-                  {refund.claimAge} tax return, using remaining TFSA room first,
-                  then non-registered.
-                </List.Item>
-              ))}
-            </List>
-          </Alert>
+        </Paper>
+
+        <Paper withBorder radius="md" p="md">
+          <Text size="sm" fw={700} mb={6}>
+            Do now
+          </Text>
+          <List size="sm" spacing={4}>
+            {displayTfsa > 0 && (
+              <List.Item>
+                Contribute about {formatCAD(displayTfsa)} to TFSA.
+              </List.Item>
+            )}
+            {displayRrsp > 0 && (
+              <List.Item>
+                Contribute about {formatCAD(displayRrsp)} to RRSP.
+              </List.Item>
+            )}
+            {displayNonReg > 0 && (
+              <List.Item>
+                Invest about {formatCAD(displayNonReg)} in non-registered.
+              </List.Item>
+            )}
+            {displayDeductNow > 0 && (
+              <List.Item>
+                On your {TAX_YEAR} tax return, claim about{" "}
+                {formatCAD(displayDeductNow)} of RRSP deductions.
+              </List.Item>
+            )}
+          </List>
+        </Paper>
+
+        {hasFutureActions && (
+          <details>
+            <summary
+              style={{ cursor: "pointer", fontWeight: 600, fontSize: 14 }}
+            >
+              Future tax-year timeline
+            </summary>
+            <Stack gap="sm" mt="sm">
+              {allocation.rrspCarryForward.length > 0 && (
+                <Paper withBorder radius="md" p="md">
+                  <Text size="sm" fw={700} mb={6}>
+                    Claim deductions
+                  </Text>
+                  <List size="sm" spacing={4}>
+                    {allocation.rrspCarryForward.map((claim) => (
+                      <List.Item key={claim.age}>
+                        On your {taxYearForAge(input, claim.age)} tax return,
+                        claim about{" "}
+                        {formatApproxCAD(claim.amount, displayIncrement)}.
+                      </List.Item>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+              {allocation.refundSchedule.length > 0 && (
+                <Paper withBorder radius="md" p="md">
+                  <Text size="sm" fw={700} mb={6}>
+                    Invest projected refunds
+                  </Text>
+                  <List size="sm" spacing={4}>
+                    {allocation.refundSchedule.map((refund) => (
+                      <List.Item
+                        key={`${refund.claimAge}-${refund.arrivalAge}`}
+                      >
+                        In {taxYearForAge(input, refund.arrivalAge)}, invest
+                        about{" "}
+                        {formatApproxCAD(
+                          refund.amountNominal,
+                          displayIncrement,
+                        )}{" "}
+                        using remaining TFSA room first, then non-registered.
+                      </List.Item>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+            </Stack>
+          </details>
         )}
         {allocation.carryForwardBenefitNominal > 0 && (
           <Text size="sm" c="dimmed">
             Delaying some deductions adds about{" "}
             <Text span fw={700}>
-              {formatCAD(allocation.carryForwardBenefitNominal)}
+              {formatApproxCAD(allocation.carryForwardBenefitNominal)}
             </Text>{" "}
-            to projected after-tax value versus claiming all RRSP deductions
-            now.
+            to modeled after-tax value versus claiming all RRSP deductions now.
           </Text>
         )}
+
+        <Paper withBorder radius="md" p="md">
+          <Text size="sm" fw={700}>
+            Before acting
+          </Text>
+          <Text size="xs" c="dimmed" mt={4}>
+            Only BC, ON, and NB are supported. The model holds returns and tax
+            law constant and excludes annual room accrual, pension adjustments,
+            dividend credits, OAS clawback, and market uncertainty. Small
+            assumption changes can change the split. Verify room and tax advice.
+          </Text>
+          <Anchor href="#model-assumptions" size="xs" mt={6}>
+            Review detailed assumptions
+          </Anchor>
+        </Paper>
+
         <Divider />
         <details>
           <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
@@ -171,35 +304,33 @@ export default function AllocationSplit({
                 The current RRSP claim reduces modeled base taxable income from{" "}
                 {formatCAD(input.currentIncome)} to{" "}
                 {formatCAD(incomeAfterCurrentClaim)}. Its estimated current tax
-                refund is {formatCAD(estimatedCurrentRefund)}, an effective{" "}
-                {(effectiveCurrentRefundRate * 100).toFixed(1)}% refund rate
-                before investment distributions and unmodeled credits.
+                refund is {formatApproxCAD(estimatedCurrentRefund)}, an
+                effective {(effectiveCurrentRefundRate * 100).toFixed(1)}%
+                refund rate before investment distributions and unmodeled
+                credits.
               </Text>
             )}
             <Text size="sm">
-              Retirement valuation rates — RRSP balance haircut:{" "}
-              {(rrspWithdrawalRate * 100).toFixed(1)}%. Taxable capital gains:{" "}
-              {input.capitalGainsTaxRatePct.toFixed(1)}% after the 50% inclusion
-              rate.
+              Retirement valuation rates: RRSP balance haircut{" "}
+              {(rrspWithdrawalRate * 100).toFixed(1)}%; effective tax on the
+              full capital gain {input.capitalGainsTaxRatePct.toFixed(1)}%.
             </Text>
           </Stack>
         </details>
         <Group justify="space-between" align="baseline">
           <Text size="sm" fw={600}>
-            Projected after-tax at retirement
+            Modeled after-tax value at retirement
           </Text>
-          <Text fw={700} c="teal.8">
-            {formatCAD(allocation.projectedAfterTaxTotalNominal)}
+          <Text fw={700} c="teal">
+            About{" "}
+            {formatApproxCAD(allocation.projectedAfterTaxTotalNominal, 1_000)}
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
-          All amounts are in nominal (future) dollars at the time they occur;
-          tax brackets are modeled as fully indexed to inflation. Searched to{" "}
-          {formatCAD(allocation.precision)} precision. Refunds of{" "}
-          {formatCAD(allocation.refundTotalNominal)} are additional invested
-          cash, not part of the split above. The full entered lump sum is
-          invested now using this year&apos;s room; only RRSP deduction claims
-          may be delayed.
+          Future-dollar illustration, not a forecast. Projected refunds of about{" "}
+          {formatApproxCAD(allocation.refundTotalNominal, 1_000)} are additional
+          invested cash, not part of the split above. The search uses finer
+          internal precision than the rounded display.
         </Text>
       </Stack>
     </Card>

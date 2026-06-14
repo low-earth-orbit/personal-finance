@@ -73,7 +73,6 @@ export default function InputForm({
 
   return (
     <>
-      <FormResetButton onReset={onReset} />
       <Accordion
         multiple
         defaultValue={["you", "goals", "assumptions"]}
@@ -394,6 +393,7 @@ export default function InputForm({
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
+      <FormResetButton onReset={onReset} confirm mb={0} />
     </>
   );
 }

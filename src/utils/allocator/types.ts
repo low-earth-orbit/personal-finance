@@ -1,10 +1,10 @@
 export type Province = "NB" | "ON" | "BC";
 export type SalaryCurvePreset =
   | "flat"
-  | "steady-climb"
-  | "early-peak"
-  | "aggressive";
-export type RetirementRateMode = "rate" | "income";
+  | "modest"
+  | "strong"
+  | "fast"
+  | "custom";
 export type PortfolioPresetId =
   | "conservative"
   | "balanced"
@@ -19,6 +19,7 @@ export interface AllocatorInput {
   currentIncome: number;
   salaryCurve: SalaryCurvePreset;
   salaryGrowthPct: number;
+  salaryGrowthYears: number;
   lumpSum: number;
   availableRrspRoom: number;
   availableTfsaRoom: number;
@@ -26,10 +27,8 @@ export interface AllocatorInput {
   portfolioReturn: number;
   inflationPct: number;
   distributionYieldPct: number;
-  retirementRateMode: RetirementRateMode;
   retirementWithdrawalRatePct: number;
   capitalGainsTaxRatePct: number;
-  retirementIncome: number;
 }
 
 export type AllocatorInputKey = keyof AllocatorInput;

@@ -27,10 +27,9 @@ import {
   YAxis,
   Tooltip,
   ReferenceLine,
+  ReferenceDot,
   ResponsiveContainer,
-  LabelList,
 } from "recharts";
-import type { ReactElement } from "react";
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import type {
   MonteCarloResponse,
@@ -180,7 +179,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const [mcData, setMcData] = useState<MonteCarloYear[] | null>(null);
-  const [debouncedInput] = useDebouncedValue(userInput, 150);
+  const [debouncedInput] = useDebouncedValue(userInput, 300);
   const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => {
@@ -225,8 +224,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   // Early return if chartData isn't ready yet.
   if (!chartData) return null;
 
-  // Non-null alias so nested closures (endLabel, downloadCSV) keep the narrowing.
+  // Non-null alias so nested closures keep the narrowing.
   const points: ChartPoint[] = chartData;
+  const lastPoint = points[points.length - 1];
   const saleYear = userInput.holdingPeriod;
 
   const allValues = chartData
@@ -240,28 +240,6 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
     Math.floor((yMin - yPad) / 50000) * 50000,
     Math.ceil((yMax + yPad) / 50000) * 50000,
   ];
-
-  function endLabel(name: string, fill: string) {
-    // Recharts LabelList `content` callback, not a React component.
-    // eslint-disable-next-line react/display-name
-    return (props: {
-      x?: number | string;
-      y?: number | string;
-      index?: number;
-      value?: unknown;
-    }): ReactElement | null => {
-      const { index, value } = props;
-      const x = Number(props.x);
-      const y = Number(props.y);
-      if (index !== points.length - 1) return null;
-      if (value == null || !isFinite(x) || !isFinite(y)) return null;
-      return (
-        <text x={x + 6} y={y} dy={4} fill={fill} fontSize={11} fontWeight={600}>
-          {name}
-        </text>
-      );
-    };
-  }
 
   function downloadCSV() {
     const esc = (v: unknown) => {
@@ -345,6 +323,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               stroke="none"
               legendType="none"
               name=""
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
             />
             <Area
               type="linear"
@@ -355,6 +336,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               stroke="none"
               legendType="none"
               name=""
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
             />
             <Area
               type="linear"
@@ -364,6 +348,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               stroke="none"
               legendType="none"
               name=""
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
             />
             <Area
               type="linear"
@@ -374,6 +361,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               stroke="none"
               legendType="none"
               name=""
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
             />
 
             <Line
@@ -384,12 +374,10 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
-            >
-              <LabelList
-                dataKey="renterMedian"
-                content={endLabel("Rent", "#12b886")}
-              />
-            </Line>
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
+            />
             <Line
               type="linear"
               dataKey="ownerMedian"
@@ -398,12 +386,36 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
-            >
-              <LabelList
-                dataKey="ownerMedian"
-                content={endLabel("Buy", "#4c6ef5")}
-              />
-            </Line>
+              isAnimationActive
+              animationDuration={300}
+              animationEasing="ease-out"
+            />
+            <ReferenceDot
+              x={lastPoint.year}
+              y={lastPoint.renterMedian}
+              r={0}
+              ifOverflow="visible"
+              label={{
+                value: "Rent",
+                position: "right",
+                fill: "#12b886",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            />
+            <ReferenceDot
+              x={lastPoint.year}
+              y={lastPoint.ownerMedian}
+              r={0}
+              ifOverflow="visible"
+              label={{
+                value: "Buy",
+                position: "right",
+                fill: "#4c6ef5",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+            />
             <ReferenceLine
               x={saleYear}
               stroke="#fd7e14"

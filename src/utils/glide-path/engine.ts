@@ -39,7 +39,7 @@ const SEED = 0x9e3779b9;
 const STATS_SEED = 0x85ebca6b;
 const SELECT_SEED = 0xc2b2ae35;
 const MIN_OPT_PATHS = 200;
-const MAX_OPT_PATHS = 10000;
+export const MAX_OPT_PATHS = 50000;
 const MAX_STATS_PATHS = 8000;
 
 // ── small numeric helpers ─────────────────────────────────────────────────────

@@ -17,6 +17,48 @@ test("hub landing page lists the available tools", async ({ page }) => {
 
   // The rent-vs-buy tool is linked from the hub.
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /where to invest/i }),
+  ).toHaveCount(0);
+  await expect(page.getByText("Coming soon")).toBeVisible();
+});
+
+test("allocator requires input review before showing a recommendation", async ({
+  page,
+}) => {
+  await page.goto("/allocator");
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Where to invest: TFSA, RRSP or Non-Reg?",
+    }),
+  ).toBeVisible();
+  await expect(page.getByText("Review your numbers first")).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Invest about/ })).toHaveCount(
+    0,
+  );
+
+  await page.getByRole("button", { name: "Show recommendation" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Invest about $50,000" }),
+  ).toBeVisible();
+  await expect(page.getByText("Why this split")).toBeVisible();
+  await expect(page.getByText("Before acting")).toBeVisible();
+
+  await page.getByLabel("Lump sum to invest now").fill("51000");
+  await expect(
+    page.getByRole("heading", { name: "Invest about $50,000" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Invest about $51,000" }),
+  ).toBeVisible();
+
+  await page.getByRole("link", { name: "Review detailed assumptions" }).click();
+  await expect(page).toHaveURL(/#model-assumptions$/);
+  await expect(page.locator("#model-assumptions details")).toHaveAttribute(
+    "open",
+    "",
+  );
 });
 
 test("loads the calculator and renders the net worth chart", async ({

@@ -21,7 +21,6 @@ const fixture = (overrides: Partial<AllocatorInput> = {}): AllocatorInput => ({
   portfolioReturn: 5,
   inflationPct: 2,
   distributionYieldPct: 2,
-  retirementRateMode: "rate",
   retirementWithdrawalRatePct: 30,
   ...overrides,
 });
@@ -76,8 +75,9 @@ describe("one-time lump-sum allocator", () => {
     {
       province: "NB" as const,
       currentIncome: 118_000,
-      salaryCurve: "steady-climb" as const,
+      salaryCurve: "custom" as const,
       salaryGrowthPct: 2,
+      salaryGrowthYears: 3,
     },
     {
       province: "ON" as const,
@@ -88,8 +88,9 @@ describe("one-time lump-sum allocator", () => {
     {
       province: "BC" as const,
       currentIncome: 210_000,
-      salaryCurve: "early-peak" as const,
+      salaryCurve: "custom" as const,
       salaryGrowthPct: 1.5,
+      salaryGrowthYears: 15,
       inflationPct: 5,
       availableTfsaRoom: 0,
     },
@@ -198,8 +199,9 @@ describe("one-time lump-sum allocator", () => {
       ...DEFAULTS,
       currentAge: 25,
       currentIncome: 55_000,
-      salaryCurve: "steady-climb" as const,
+      salaryCurve: "custom" as const,
       salaryGrowthPct: 6,
+      salaryGrowthYears: 40,
       lumpSum: 50_000,
       availableTfsaRoom: 0,
       availableRrspRoom: 50_000,
@@ -426,7 +428,7 @@ describe("one-time lump-sum allocator", () => {
     const tfsaAtRetirement = (input.availableTfsaRoom * 1.05) / 1.1 ** 2;
     const nonRegBalance = (remainingRefundNominal * 1.05) / 1.1 ** 2;
     const nonRegAcb = remainingRefundNominal / 1.1 ** 2;
-    const nonRegTax = (nonRegBalance - nonRegAcb) * 0.5 * 0.6;
+    const nonRegTax = (nonRegBalance - nonRegAcb) * 0.6;
 
     expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
       rrspAtRetirement + tfsaAtRetirement + nonRegBalance - nonRegTax,
@@ -442,16 +444,16 @@ describe("one-time lump-sum allocator", () => {
       retirementAge: 60,
       province: "NB",
       currentIncome: 118_000,
-      salaryCurve: "steady-climb",
+      salaryCurve: "custom",
       salaryGrowthPct: 2,
+      salaryGrowthYears: 26,
       lumpSum: 50_000,
       availableRrspRoom: 200_000,
       availableTfsaRoom: 8_000,
       portfolioReturn: 6.87,
       inflationPct: 2.1,
       distributionYieldPct: 1.5,
-      retirementRateMode: "income",
-      retirementIncome: 80_000,
+      retirementWithdrawalRatePct: taxOwed("NB", 80_000) / 800,
     });
     const result = allocateLumpSum(input, input.lumpSum);
 
@@ -487,8 +489,9 @@ describe("one-time lump-sum allocator", () => {
       currentAge: 40,
       retirementAge: 44,
       currentIncome: 79_000,
-      salaryCurve: "early-peak",
+      salaryCurve: "custom",
       salaryGrowthPct: 0.4,
+      salaryGrowthYears: 15,
       lumpSum: 7_100,
       availableRrspRoom: 7_100,
       availableTfsaRoom: 100_000,
@@ -525,7 +528,7 @@ describe("one-time lump-sum allocator", () => {
         { ...input, capitalGainsTaxRatePct: 60 },
         nonRegPlan,
       ),
-    ).toBe(10_700);
+    ).toBe(10_400);
   });
 
   it("invests the full lump sum now, including a remainder", () => {
@@ -544,11 +547,9 @@ describe("one-time lump-sum allocator", () => {
     expect(result.precision).toBe(1);
   });
 
-  it("derives a zero withdrawal haircut from zero retirement income", () => {
+  it("uses an explicit zero withdrawal haircut", () => {
     const input = fixture({
-      retirementRateMode: "income",
-      retirementIncome: 0,
-      retirementWithdrawalRatePct: 60,
+      retirementWithdrawalRatePct: 0,
       availableTfsaRoom: 0,
       availableRrspRoom: 5_000,
     });

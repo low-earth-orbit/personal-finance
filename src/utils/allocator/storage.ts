@@ -3,7 +3,6 @@ import type {
   AllocatorInput,
   PortfolioPresetId,
   Province,
-  RetirementRateMode,
   SalaryCurvePreset,
 } from "./types";
 
@@ -12,11 +11,11 @@ export const KEY = "alloc_input";
 const provinces: Province[] = ["NB", "ON", "BC"];
 const curves: SalaryCurvePreset[] = [
   "flat",
-  "steady-climb",
-  "early-peak",
-  "aggressive",
+  "modest",
+  "strong",
+  "fast",
+  "custom",
 ];
-const retirementRateModes: RetirementRateMode[] = ["rate", "income"];
 const portfolioIds = PORTFOLIO_PRESETS.map(
   (preset) => preset.id,
 ) as PortfolioPresetId[];
@@ -46,16 +45,28 @@ export function migrateInput(value: unknown): AllocatorInput {
     }
   }
   next.province = enumValue(parsed.province, provinces, DEFAULTS.province);
-  next.salaryCurve = enumValue(
-    parsed.salaryCurve,
-    curves,
-    DEFAULTS.salaryCurve,
-  );
-  next.retirementRateMode = enumValue(
-    parsed.retirementRateMode,
-    retirementRateModes,
-    DEFAULTS.retirementRateMode,
-  );
+  if (
+    parsed.salaryCurve === "steady-climb" ||
+    parsed.salaryCurve === "early-peak" ||
+    parsed.salaryCurve === "aggressive"
+  ) {
+    next.salaryCurve = "custom";
+    next.salaryGrowthYears =
+      parsed.salaryCurve === "early-peak"
+        ? 15
+        : parsed.salaryCurve === "aggressive"
+          ? 20
+          : Math.max(0, next.retirementAge - next.currentAge);
+    if (parsed.salaryCurve === "aggressive") {
+      next.salaryGrowthPct *= 1.5;
+    }
+  } else {
+    next.salaryCurve = enumValue(
+      parsed.salaryCurve,
+      curves,
+      DEFAULTS.salaryCurve,
+    );
+  }
   next.portfolioPresetId = enumValue(
     parsed.portfolioPresetId,
     portfolioIds,
@@ -74,11 +85,29 @@ export function loadInput(): AllocatorInput {
   }
 }
 
+export function hasSavedInput(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(KEY) != null;
+  } catch {
+    return false;
+  }
+}
+
 export function saveInput(input: AllocatorInput): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(input));
   } catch {
     // Storage may be unavailable or full.
+  }
+}
+
+export function clearInput(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(KEY);
+  } catch {
+    // Storage may be unavailable.
   }
 }

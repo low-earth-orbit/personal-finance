@@ -127,12 +127,7 @@ function settleDistributionAndDeduction(
 }
 
 function withdrawalRate(input: AllocatorInput): number {
-  if (input.retirementRateMode === "rate") {
-    return input.retirementWithdrawalRatePct / 100;
-  }
-  return input.retirementIncome > 0
-    ? taxOwed(input.province, input.retirementIncome) / input.retirementIncome
-    : 0;
+  return input.retirementWithdrawalRatePct / 100;
 }
 
 function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
@@ -156,6 +151,7 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       input.salaryCurve,
       input.currentIncome,
       input.salaryGrowthPct,
+      input.salaryGrowthYears,
     );
     const arrivingRefundNominal = pendingRefundsNominal.get(age) ?? 0;
     const refundToTfsaNominal = Math.min(
@@ -197,6 +193,7 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       input.salaryCurve,
       input.currentIncome,
       input.salaryGrowthPct,
+      input.salaryGrowthYears,
     );
     const claimIncomeFloor =
       age === input.currentAge
@@ -247,7 +244,6 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
   const rateAtWithdrawal = withdrawalRate(input);
   const nonRegTax =
     Math.max(0, nonRegBalance - nonRegAcb) *
-    0.5 *
     (input.capitalGainsTaxRatePct / 100);
   return {
     afterTaxValue:

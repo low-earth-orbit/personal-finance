@@ -74,8 +74,6 @@ export default function InputForm({
 
   return (
     <>
-      <FormResetButton onReset={onReset} />
-
       <Accordion
         multiple
         defaultValue={["you", "retirement", "prefs"]}
@@ -237,14 +235,14 @@ export default function InputForm({
               <Stack gap={4}>
                 <FieldHeader
                   label="Return model"
-                  description="Independent (IID Monte Carlo, default) draws each year independently from our forward capital-market assumptions — its recommendation holds up across historical regimes. Sequence-aware (forward-block) replays real historical return sequences rescaled to the same assumptions, preserving multi-year patterns like mean reversion and inflation decades; treat it as the what-if-history's-patterns-repeat scenario."
+                  description="Independent (IID Monte Carlo, default) draws each year independently from our forward capital-market assumptions. Historical sequences (forward-block) replays real historical return sequences rescaled to the same assumptions, preserving multi-year patterns like mean reversion and inflation decades."
                 />
                 <SegmentedControl
                   value={returnMode}
                   onChange={(v) => onReturnModeChange(v as GlidePathReturnMode)}
                   data={[
                     { value: "iid-mc", label: "Independent" },
-                    { value: "forward-block", label: "Sequence-aware" },
+                    { value: "forward-block", label: "Historical sequences" },
                   ]}
                   size="sm"
                 />
@@ -287,6 +285,7 @@ export default function InputForm({
       >
         Generate allocation paths
       </Button>
+      <FormResetButton onReset={onReset} confirm mb={0} />
     </>
   );
 }

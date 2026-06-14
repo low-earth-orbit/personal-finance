@@ -23,9 +23,15 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
     },
     salaryGrowthPct: {
       min: 0,
-      max: 6,
+      max: 10,
       step: 0.1,
-      label: "Real salary growth",
+      label: "Real income growth",
+    },
+    salaryGrowthYears: {
+      min: 0,
+      max: 82,
+      step: 1,
+      label: "Growth period",
     },
     lumpSum: {
       min: 1,
@@ -70,12 +76,6 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
       step: 1,
       label: "Capital gains tax rate",
     },
-    retirementIncome: {
-      min: 0,
-      max: 100_000_000,
-      step: 1_000,
-      label: "Expected retirement income",
-    },
   };
 
 export function validateAllocatorInput(input: AllocatorInput): AllocatorErrors {
@@ -85,9 +85,8 @@ export function validateAllocatorInput(input: AllocatorInput): AllocatorErrors {
     Constraint,
   ][]) {
     if (
-      (key === "retirementWithdrawalRatePct" &&
-        input.retirementRateMode === "income") ||
-      (key === "retirementIncome" && input.retirementRateMode === "rate")
+      (key === "salaryGrowthPct" || key === "salaryGrowthYears") &&
+      input.salaryCurve !== "custom"
     ) {
       continue;
     }

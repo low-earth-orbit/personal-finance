@@ -35,7 +35,7 @@ export const PRESETS: Preset[] = [
   { id: "defaults", label: "Base Case", values: DEFAULTS },
   {
     id: "bay-street",
-    label: "Bay Street condo",
+    label: "Bay Street",
     values: {
       ...DEFAULTS,
       monthlyRent: 2700,
@@ -49,7 +49,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "vancouver",
-    label: "Raincouver townhouse",
+    label: "Vancouver",
     values: {
       ...DEFAULTS,
       monthlyRent: 4500,
@@ -63,7 +63,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "calgary",
-    label: "Calgary SFH",
+    label: "Calgary",
     values: {
       ...DEFAULTS,
       monthlyRent: 2800,
@@ -76,7 +76,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "fred",
-    label: "Freddy little home",
+    label: "Fredericton",
     values: {
       ...DEFAULTS,
       monthlyRent: 1800,

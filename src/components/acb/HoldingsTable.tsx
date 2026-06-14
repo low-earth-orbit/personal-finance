@@ -85,7 +85,7 @@ const HoldingsTable = ({
           {expandable && <Table.Th w={36} aria-label="Year breakdown" />}
           <Table.Th>Symbol</Table.Th>
           <Table.Th ta="right">Shares</Table.Th>
-          <Table.Th ta="right">ACB/share</Table.Th>
+          <Table.Th ta="right">ACB per share</Table.Th>
           <Table.Th ta="right">Total cost basis</Table.Th>
           {adjustments && anyTransferred && <Table.Th>Transfer lots</Table.Th>}
           {adjustments && <Table.Th>T3 slips</Table.Th>}
@@ -110,7 +110,7 @@ const HoldingsTable = ({
                 {expandable && (
                   <Table.Td>
                     <ActionIcon
-                      variant="subtle"
+                      variant="transparent"
                       size="sm"
                       aria-label={`Toggle year-by-year ACB for ${holding.symbol}`}
                       aria-expanded={expanded}
@@ -159,7 +159,7 @@ const HoldingsTable = ({
                     {hasTransfers ? (
                       <Group gap="xs" wrap="nowrap">
                         <Button
-                          variant="subtle"
+                          variant="transparent"
                           size="xs"
                           onClick={() =>
                             adjustments.onEditTransfers(holding.symbol)
@@ -184,7 +184,7 @@ const HoldingsTable = ({
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
                       <Button
-                        variant="subtle"
+                        variant="transparent"
                         size="xs"
                         onClick={() => adjustments.onEditT3(holding.symbol)}
                       >

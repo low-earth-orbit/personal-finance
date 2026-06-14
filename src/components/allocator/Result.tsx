@@ -1,9 +1,8 @@
 "use client";
 
-import { Alert, Anchor, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
-import IncomeCurve from "./IncomeCurve";
 import type { AllocatorStatus } from "./Main";
 import type { AllocationResult, AllocatorInput } from "@/utils/allocator/types";
 
@@ -16,21 +15,32 @@ export default function Result({
   input: AllocatorInput;
   status: AllocatorStatus;
 }) {
-  if (status === "invalid") {
+  if (status === "idle") {
+    return (
+      <Paper withBorder radius="md" p="lg">
+        <Text fw={700}>Review your numbers first</Text>
+        <Text size="sm" c="dimmed" mt={4}>
+          The values shown are examples. Review the starting inputs, then
+          generate a recommendation.
+        </Text>
+      </Paper>
+    );
+  }
+  if (status === "invalid" && !allocation) {
     return (
       <Alert icon={<IconInfoCircle />} title="Complete the inputs">
         Fix the highlighted fields to optimize the allocation.
       </Alert>
     );
   }
-  if (status === "error") {
+  if (status === "error" && !allocation) {
     return (
       <Alert icon={<IconAlertCircle />} color="red" title="Calculation failed">
         Change an input to retry the recommendation.
       </Alert>
     );
   }
-  if (status === "loading" || !allocation) {
+  if (!allocation) {
     return (
       <Alert
         icon={<Loader size="sm" />}
@@ -43,15 +53,27 @@ export default function Result({
   }
   return (
     <Stack gap="lg">
+      {status === "updating" && (
+        <Group gap="xs" aria-live="polite">
+          <Loader size="xs" />
+          <Text size="xs" c="dimmed">
+            Updating recommendation…
+          </Text>
+        </Group>
+      )}
+      {status === "invalid" && (
+        <Text size="xs" c="orange" fw={600} aria-live="polite">
+          Update paused: fix the highlighted fields.
+        </Text>
+      )}
+      {status === "error" && (
+        <Text size="xs" c="red" fw={600} aria-live="polite">
+          Update failed. Change an input to retry.
+        </Text>
+      )}
       <AllocationSplit allocation={allocation} input={input} />
-      <IncomeCurve allocation={allocation} input={input} />
       <Text size="xs" c="dimmed">
-        Deterministic illustration — returns and tax rules are held constant.
-        Verify room and tax advice before acting.{" "}
-        <Anchor href="#model-assumptions" size="xs">
-          See full model assumptions
-        </Anchor>
-        .
+        Deterministic illustration. Not personalized advice.
       </Text>
     </Stack>
   );

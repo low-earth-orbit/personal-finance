@@ -72,11 +72,11 @@ const FileUpload = ({
                 </Badge>
               )}
               <Button
-                variant="subtle"
+                variant="transparent"
                 size="xs"
                 onClick={() => onPreview(index)}
               >
-                Preview
+                Edit transactions
               </Button>
               <CloseButton
                 size="sm"

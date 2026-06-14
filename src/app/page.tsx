@@ -29,7 +29,6 @@ const TOOLS: Tool[] = [
     description:
       "Compare the long-run net worth of renting versus owning a home.",
     href: "/rent-vs-buy",
-    status: "updated",
   },
   {
     emoji: "🏖",
@@ -59,7 +58,7 @@ const TOOLS: Tool[] = [
     emoji: "🧮",
     title: "Where to invest: TFSA, RRSP or Non-Reg?",
     description:
-      "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
+      "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
   },
 ];
 

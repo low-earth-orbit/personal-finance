@@ -10,12 +10,16 @@ describe("allocator storage migration", () => {
       availableTfsaRoom: 45_000,
       lumpSum: 88_000,
       refundDestination: "non-registered",
+      retirementRateMode: "income",
+      retirementIncome: 60_000,
     });
 
     expect(migrated.availableRrspRoom).toBe(123_000);
     expect(migrated.availableTfsaRoom).toBe(45_000);
     expect(migrated.lumpSum).toBe(88_000);
     expect(migrated).not.toHaveProperty("refundDestination");
+    expect(migrated).not.toHaveProperty("retirementRateMode");
+    expect(migrated).not.toHaveProperty("retirementIncome");
   });
 
   it("preserves a custom portfolio return", () => {
@@ -37,4 +41,27 @@ describe("allocator storage migration", () => {
         .portfolioPresetId,
     ).toBe(DEFAULTS.portfolioPresetId);
   });
+
+  it.each([
+    ["steady-climb", 2, 30, 2],
+    ["early-peak", 1, 15, 1],
+    ["aggressive", 2, 20, 3],
+  ])(
+    "migrates the legacy %s curve to an equivalent custom path",
+    (salaryCurve, salaryGrowthPct, salaryGrowthYears, expectedGrowthPct) => {
+      expect(
+        migrateInput({
+          ...DEFAULTS,
+          currentAge: 35,
+          retirementAge: 65,
+          salaryCurve,
+          salaryGrowthPct,
+        }),
+      ).toMatchObject({
+        salaryCurve: "custom",
+        salaryGrowthPct: expectedGrowthPct,
+        salaryGrowthYears,
+      });
+    },
+  );
 });

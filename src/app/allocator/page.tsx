@@ -7,15 +7,15 @@ import Header from "@/components/shared/Header";
 export const metadata: Metadata = {
   title: "Where to invest: TFSA, RRSP or Non-Reg?",
   description:
-    "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
+    "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
 };
 
 export default function AllocatorPage() {
   return (
     <>
       <Header
-        title="How should I invest this lump sum?"
-        subtitle="Invest the full amount now across TFSA, RRSP, and non-registered accounts, including when to claim RRSP deductions."
+        title="Where to invest: TFSA, RRSP or Non-Reg?"
+        subtitle="Explore a tax-aware split across TFSA, RRSP, and non-registered accounts."
         showHomeLink
       />
       <main>

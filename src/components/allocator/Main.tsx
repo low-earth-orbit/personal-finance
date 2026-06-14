@@ -6,7 +6,12 @@ import { useDebouncedValue } from "@mantine/hooks";
 import InputForm from "./InputForm";
 import Result from "./Result";
 import { DEFAULTS } from "@/utils/allocator/presets";
-import { loadInput, saveInput } from "@/utils/allocator/storage";
+import {
+  clearInput,
+  hasSavedInput,
+  loadInput,
+  saveInput,
+} from "@/utils/allocator/storage";
 import type {
   AllocatorInput,
   AllocatorInputKey,
@@ -15,10 +20,17 @@ import type {
 } from "@/utils/allocator/types";
 import { validateAllocatorInput } from "@/utils/allocator/validation";
 
-export type AllocatorStatus = "loading" | "invalid" | "ready" | "error";
+export type AllocatorStatus =
+  | "idle"
+  | "loading"
+  | "updating"
+  | "invalid"
+  | "ready"
+  | "error";
 
 export default function Main() {
   const [input, setInput] = useState<AllocatorInput>(() => loadInput());
+  const [hasStarted, setHasStarted] = useState(() => hasSavedInput());
   const [response, setResponse] = useState<{
     input: AllocatorInput;
     allocation: AllocationResult;
@@ -27,24 +39,29 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const errors = validateAllocatorInput(input);
-  const [debouncedInput] = useDebouncedValue(input, 150);
+  const [debouncedInput] = useDebouncedValue(input, 400);
+  const currentInputsValid = Object.keys(errors).length === 0;
   const inputsValid =
     Object.keys(validateAllocatorInput(debouncedInput)).length === 0;
-  const status: AllocatorStatus = !inputsValid
-    ? "invalid"
-    : errorInput === debouncedInput
-      ? "error"
-      : response?.input === debouncedInput
-        ? "ready"
-        : "loading";
-  const allocation =
-    response?.input === debouncedInput ? response.allocation : null;
+  const status: AllocatorStatus = !hasStarted
+    ? "idle"
+    : !currentInputsValid
+      ? "invalid"
+      : errorInput === debouncedInput
+        ? "error"
+        : response?.input === input
+          ? "ready"
+          : response
+            ? "updating"
+            : "loading";
+  const allocation = response?.allocation ?? null;
+  const resultInput = response?.input ?? debouncedInput;
 
   useEffect(() => {
     requestIdRef.current += 1;
     workerRef.current?.terminate();
     workerRef.current = null;
-    if (!inputsValid) {
+    if (!hasStarted || !inputsValid) {
       return;
     }
     const worker = new Worker(
@@ -72,7 +89,7 @@ export default function Main() {
       worker.terminate();
       if (workerRef.current === worker) workerRef.current = null;
     };
-  }, [debouncedInput, inputsValid]);
+  }, [debouncedInput, hasStarted, inputsValid]);
 
   function handleChange(key: AllocatorInputKey, value: unknown) {
     setInput((previous) => {
@@ -91,7 +108,17 @@ export default function Main() {
   function handleReset() {
     const next = { ...DEFAULTS };
     setInput(next);
-    saveInput(next);
+    clearInput();
+    setHasStarted(false);
+    setResponse(null);
+    setErrorInput(null);
+  }
+
+  function handleShowRecommendation() {
+    if (Object.keys(errors).length === 0) {
+      saveInput(input);
+      setHasStarted(true);
+    }
   }
 
   return (
@@ -99,24 +126,22 @@ export default function Main() {
       <Grid gap="xl">
         <Grid.Col
           span={{ base: 12, lg: 6 }}
-          order={{ base: status === "ready" ? 2 : 1, lg: 1 }}
+          order={{ base: allocation ? 2 : 1, lg: 1 }}
         >
           <InputForm
             input={input}
             errors={errors}
+            started={hasStarted}
             onChange={handleChange}
             onReset={handleReset}
+            onShowRecommendation={handleShowRecommendation}
           />
         </Grid.Col>
         <Grid.Col
           span={{ base: 12, lg: 6 }}
-          order={{ base: status === "ready" ? 1 : 2, lg: 2 }}
+          order={{ base: allocation ? 1 : 2, lg: 2 }}
         >
-          <Result
-            allocation={allocation}
-            input={debouncedInput}
-            status={status}
-          />
+          <Result allocation={allocation} input={resultInput} status={status} />
         </Grid.Col>
       </Grid>
     </Container>
