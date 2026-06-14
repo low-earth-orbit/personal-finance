@@ -1,3 +1,4 @@
+import { MAX_OPT_PATHS } from "./engine";
 import { DEFAULTS } from "./presets";
 import type {
   GlidePathErrors,
@@ -56,9 +57,13 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
   },
   maxEquityPct: { min: 100, max: 200, step: 5, label: "Max equity %" },
   borrowCost: { min: 0, max: 10, step: 0.25, label: "Borrow cost" },
-  // Max matches the engine's MAX_OPT_PATHS hard cap — a larger value would be
-  // silently clamped, misleading the user about the precision they asked for.
-  numPaths: { min: 5000, max: 10000, step: 5000, label: "Monte Carlo paths" },
+  // Max matches the engine's MAX_OPT_PATHS hard cap
+  numPaths: {
+    min: 5000,
+    max: MAX_OPT_PATHS,
+    step: 5000,
+    label: "Monte Carlo paths",
+  },
   inflation: { min: 0, max: 5, step: 0.1, label: "Inflation" },
 };
 
