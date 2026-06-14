@@ -50,7 +50,8 @@ export default function Result({
           Deterministic illustration using 2025 tax brackets and thresholds held
           constant in today&apos;s dollars, static registered room, and a
           constant return. Registered room and carried deductions remain fixed
-          nominal amounts. Verify room and tax advice before acting.
+          nominal amounts. Deduction claims are optimized only through the year
+          before retirement. Verify room and tax advice before acting.
         </Text>
       </Alert>
     </Stack>

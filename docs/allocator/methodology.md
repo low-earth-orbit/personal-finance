@@ -90,6 +90,7 @@ the entered withdrawal rate can approximate it.
 - FHSA
 - Return variance and sequence risk
 - Same-after-tax-cost RRSP gross-up
+- Retirement-year and post-retirement RRSP deduction claims
 - Future changes in real tax brackets, rates, credits, or tax law
 
 Results are deterministic illustrations, not tax or investment advice.

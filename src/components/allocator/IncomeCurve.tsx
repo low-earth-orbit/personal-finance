@@ -177,7 +177,8 @@ export default function IncomeCurve({
         </div>
         <Group gap="lg" wrap="wrap">
           <Text size="xs" c="dimmed">
-            All amounts in today&apos;s dollars.
+            Income axis in today&apos;s dollars; claims are fixed nominal
+            dollars.
           </Text>
           <Text size="xs" c="dimmed">
             Vertical line marks retirement.

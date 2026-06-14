@@ -437,10 +437,26 @@ describe("one-time lump-sum allocator", () => {
     const result = allocateLumpSum(input, input.lumpSum);
 
     expect(result.tfsa).toBe(0);
-    expect(result.rrspDeductNow).toBeLessThan(input.lumpSum);
-    expect(result.rrspCarryForward.length).toBeGreaterThan(0);
     expect(result.rrspDeductNow).toBe(24_647);
-    expect(result.carryForwardBenefit).toBeGreaterThan(1_400);
+    expect(result.rrspCarryForward).toEqual([
+      { age: 35, amount: 5_736 },
+      { age: 36, amount: 8_391 },
+      { age: 37, amount: 11_226 },
+    ]);
+    expect(
+      result.refundSchedule.map((refund) => ({
+        claimAge: refund.claimAge,
+        arrivalAge: refund.arrivalAge,
+        amountNominal: Math.round(refund.amountNominal),
+      })),
+    ).toEqual([
+      { claimAge: 34, arrivalAge: 35, amountNominal: 8_990 },
+      { claimAge: 35, arrivalAge: 36, amountNominal: 2_406 },
+      { claimAge: 36, arrivalAge: 37, amountNominal: 3_510 },
+      { claimAge: 37, arrivalAge: 38, amountNominal: 4_681 },
+    ]);
+    expect(result.projectedAfterTaxTotal).toBeCloseTo(174_216.026, 3);
+    expect(result.carryForwardBenefit).toBeCloseTo(1_427.361, 3);
   });
 
   it("invests an RRSP contribution now even when its deduction is claimed later", () => {

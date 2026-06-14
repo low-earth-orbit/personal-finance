@@ -97,11 +97,8 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                   thousandSeparator
                 />
               </SimpleGrid>
-              <Text size="sm" fw={600}>
-                Real salary path
-              </Text>
               <Select
-                label="Income curve"
+                label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
                   value,
                   label,
