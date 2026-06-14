@@ -29,7 +29,6 @@ const TOOLS: Tool[] = [
     description:
       "Compare the long-run net worth of renting versus owning a home.",
     href: "/rent-vs-buy",
-    status: "updated",
   },
   {
     emoji: "🏖",
