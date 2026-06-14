@@ -1,6 +1,18 @@
 import { incomeAtAge } from "./salaryCurve";
 import { taxOwed } from "./tax";
+import { RRSP_CONTRIBUTION } from "./taxConstants";
 import type { AllocationResult, AllocatorInput } from "./types";
+
+// Fresh RRSP room the saver earns in a given year. We assume they fill it with
+// new contributions deducted at that year's top rate, so a deduction carried
+// forward to this year stacks *below* it rather than on top — preventing the
+// optimizer from double-counting the same high bracket.
+function freshRrspRoom(incomeReal: number): number {
+  return Math.min(
+    RRSP_CONTRIBUTION.earnedIncomeRate * Math.max(0, incomeReal),
+    RRSP_CONTRIBUTION.dollarLimit,
+  );
+}
 
 export const FINAL_ALLOCATION_PRECISION = 1 as const;
 const MIN_INITIAL_GRID = 1_000;
@@ -83,20 +95,30 @@ function settleDistributionAndDeduction(
   distributionNominal: number,
   incomeReal: number,
   claimedReal: number,
+  claimIncomeFloor: number,
   inflationFactor: number,
   province: AllocatorInput["province"],
 ): number {
   const distributionReal = distributionNominal / inflationFactor;
-  const taxChange =
-    taxOwed(
-      province,
-      Math.max(0, incomeReal + distributionReal - claimedReal),
-    ) - taxOwed(province, incomeReal);
-  const distributionTaxNominal = Math.max(0, taxChange) * inflationFactor;
+  // Distribution tax stacks on this year's salary at its top.
+  const distributionTaxReal = Math.max(
+    0,
+    taxOwed(province, incomeReal + distributionReal) -
+      taxOwed(province, incomeReal),
+  );
+  const distributionTaxNominal = distributionTaxReal * inflationFactor;
   const reinvested = Math.max(0, distributionNominal - distributionTaxNominal);
   ledger.balance += reinvested;
   ledger.acb += reinvested;
-  return Math.max(0, -taxChange);
+  // The deduction refund is taken against income reduced by claimIncomeFloor
+  // (the fresh RRSP room already used in future years), so a carried-forward
+  // deduction cannot reclaim a high bracket that fresh contributions occupy.
+  const refundReal = Math.max(
+    0,
+    taxOwed(province, claimIncomeFloor) -
+      taxOwed(province, Math.max(0, claimIncomeFloor - claimedReal)),
+  );
+  return refundReal;
 }
 
 function withdrawalRate(input: AllocatorInput): number {
@@ -160,12 +182,20 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
 
     const claimedNominal = plan.claimedDeductionByAge.get(age) ?? 0;
     const claimedReal = claimedNominal / inflationFactor;
+    // Deduct-now (current year) is this lump's actual decision and stacks at the
+    // top of current income. A deferred claim stacks below the fresh RRSP room
+    // the saver is assumed to fill that future year.
+    const claimIncomeFloor =
+      age === input.currentAge
+        ? incomeReal
+        : Math.max(0, incomeReal - freshRrspRoom(incomeReal));
     if (claimedReal > 0 || distribution > 0) {
       const refund = settleDistributionAndDeduction(
         nonReg,
         distribution,
         incomeReal,
         claimedReal,
+        claimIncomeFloor,
         inflationFactor,
         input.province,
       );

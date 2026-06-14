@@ -71,3 +71,12 @@ export const BC_TAX_REDUCTION = {
   phaseoutStart: 25_020,
   phaseoutRate: 0.0356,
 } as const;
+
+// 2025 RRSP contribution limit: 18% of earned income, capped at the dollar
+// limit. Used to model that, in any future year, the saver already fills that
+// year's fresh RRSP room with new contributions deducted at that year's top
+// rate — so a carried-forward deduction stacks *below* it, not on top.
+export const RRSP_CONTRIBUTION = {
+  earnedIncomeRate: 0.18,
+  dollarLimit: 32_490,
+} as const;

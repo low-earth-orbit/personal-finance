@@ -308,7 +308,7 @@ describe("one-time lump-sum allocator", () => {
     );
   });
 
-  it("settles deductions and taxable distributions together", () => {
+  it("settles a deduction and taxable distributions in the same year", () => {
     const input = fixture({
       currentAge: 40,
       retirementAge: 41,
@@ -323,12 +323,24 @@ describe("one-time lump-sum allocator", () => {
       claimedDeductionByAge: new Map([[input.currentAge, 10_000]]),
       nonRegDirect: 10_000,
     };
-    const expectedRefund =
+    // Deduct-now stacks the deduction at the top of current income.
+    const refund =
       taxOwed(input.province, input.currentIncome) -
-      taxOwed(input.province, input.currentIncome - 9_000);
+      taxOwed(input.province, input.currentIncome - 10_000);
+    // Distribution tax stacks on current income at its top, separately.
+    const distribution = 10_000 * 0.1;
+    const distributionTax =
+      taxOwed(input.province, input.currentIncome + distribution) -
+      taxOwed(input.province, input.currentIncome);
+    const reinvested = distribution - distributionTax;
+    // Price return is zero (10% return − 10% yield), so the non-reg principal
+    // holds at 10_000 and only the reinvested distribution adds to it. The
+    // refund arrives the next year, which is the terminal year here.
+    const rrsp = 10_000 * 1.1;
+    const nonReg = 10_000 + reinvested;
 
     expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
-      11_000 + 11_000 + expectedRefund,
+      rrsp + nonReg + refund,
     );
   });
 
@@ -349,9 +361,13 @@ describe("one-time lump-sum allocator", () => {
       claimedDeductionByAge: new Map([[41, 10_000]]),
       nonRegDirect: 0,
     };
+    // A carried-forward claim stacks below the fresh RRSP room assumed used that
+    // future year: floor = income − min(18% income, dollar limit).
+    const freshRoom = Math.min(0.18 * input.currentIncome, 32_490);
+    const claimFloor = input.currentIncome - freshRoom;
     const expectedRefund =
-      taxOwed(input.province, input.currentIncome) -
-      taxOwed(input.province, input.currentIncome - 10_000 / 1.05);
+      taxOwed(input.province, claimFloor) -
+      taxOwed(input.province, claimFloor - 10_000 / 1.05);
 
     expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
       10_000 + expectedRefund / 1.05,
@@ -417,7 +433,10 @@ describe("one-time lump-sum allocator", () => {
     );
   });
 
-  it("uses rising NB income to reserve deductions for future top-rate slices", () => {
+  it("deducts now for a high steady income because fresh room fills future top brackets", () => {
+    // With a high, steadily rising income the saver already fills each future
+    // year's fresh RRSP room at that year's top rate, so a carried-forward
+    // deduction stacks below it and gains nothing — the optimizer deducts now.
     const input = fixture({
       currentAge: 34,
       retirementAge: 60,
@@ -437,26 +456,9 @@ describe("one-time lump-sum allocator", () => {
     const result = allocateLumpSum(input, input.lumpSum);
 
     expect(result.tfsa).toBe(0);
-    expect(result.rrspDeductNow).toBe(24_647);
-    expect(result.rrspCarryForward).toEqual([
-      { age: 35, amount: 5_736 },
-      { age: 36, amount: 8_391 },
-      { age: 37, amount: 11_226 },
-    ]);
-    expect(
-      result.refundSchedule.map((refund) => ({
-        claimAge: refund.claimAge,
-        arrivalAge: refund.arrivalAge,
-        amountNominal: Math.round(refund.amountNominal),
-      })),
-    ).toEqual([
-      { claimAge: 34, arrivalAge: 35, amountNominal: 8_990 },
-      { claimAge: 35, arrivalAge: 36, amountNominal: 2_406 },
-      { claimAge: 36, arrivalAge: 37, amountNominal: 3_510 },
-      { claimAge: 37, arrivalAge: 38, amountNominal: 4_681 },
-    ]);
-    expect(result.projectedAfterTaxTotal).toBeCloseTo(174_216.026, 3);
-    expect(result.carryForwardBenefit).toBeCloseTo(1_427.361, 3);
+    expect(result.rrspDeductNow).toBe(50_000);
+    expect(result.rrspCarryForward).toEqual([]);
+    expect(result.carryForwardBenefit).toBe(0);
   });
 
   it("invests an RRSP contribution now even when its deduction is claimed later", () => {
