@@ -46,7 +46,7 @@ describe("allocator InputForm", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Advanced tax & return assumptions",
+        name: "Investment assumptions",
       }),
     );
     expect(screen.queryByLabelText("Nominal return")).not.toBeInTheDocument();
@@ -95,7 +95,7 @@ describe("allocator InputForm", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Advanced tax & return assumptions",
+        name: "Retirement tax assumptions",
       }),
     );
 

@@ -35,34 +35,30 @@ interface Props {
   onShowRecommendation: () => void;
 }
 
-const BASIC_KEYS: AllocatorInputKey[] = [
-  "currentAge",
-  "province",
-  "currentIncome",
-  "lumpSum",
-  "availableRrspRoom",
-  "availableTfsaRoom",
-];
-const PLANNING_KEYS: AllocatorInputKey[] = [
-  "retirementAge",
-  "salaryCurve",
-  "salaryGrowthPct",
-  "salaryGrowthYears",
-];
+type InputSection = "money" | "profile" | "investment" | "retirement-tax";
+
+const SECTION_BY_KEY: Record<AllocatorInputKey, InputSection> = {
+  lumpSum: "money",
+  availableRrspRoom: "money",
+  availableTfsaRoom: "money",
+  currentAge: "profile",
+  retirementAge: "profile",
+  province: "profile",
+  currentIncome: "profile",
+  salaryCurve: "profile",
+  salaryGrowthPct: "profile",
+  salaryGrowthYears: "profile",
+  portfolioPresetId: "investment",
+  portfolioReturn: "investment",
+  inflationPct: "investment",
+  distributionYieldPct: "investment",
+  retirementWithdrawalRatePct: "retirement-tax",
+  capitalGainsTaxRatePct: "retirement-tax",
+};
 
 function errorSections(errors: AllocatorErrors): string[] {
   const keys = Object.keys(errors) as AllocatorInputKey[];
-  const sections = new Set<string>();
-  if (keys.some((key) => BASIC_KEYS.includes(key))) sections.add("basics");
-  if (keys.some((key) => PLANNING_KEYS.includes(key))) sections.add("planning");
-  if (
-    keys.some(
-      (key) => !BASIC_KEYS.includes(key) && !PLANNING_KEYS.includes(key),
-    )
-  ) {
-    sections.add("advanced");
-  }
-  return [...sections];
+  return [...new Set(keys.map((key) => SECTION_BY_KEY[key]))];
 }
 
 export default function InputForm({
@@ -75,7 +71,9 @@ export default function InputForm({
 }: Props) {
   const [openedSections, setOpenedSections] = useState<string[]>(() => {
     const sections = errorSections(errors);
-    return sections.length > 0 ? sections : ["basics"];
+    return sections.length > 0
+      ? sections
+      : ["money", "profile", "investment", "retirement-tax"];
   });
   const num = (key: keyof typeof FIELD_CONSTRAINTS) => {
     const constraint = FIELD_CONSTRAINTS[key]!;
@@ -128,17 +126,56 @@ export default function InputForm({
         onChange={setOpenedSections}
         variant="contained"
       >
-        <Accordion.Item value="basics">
-          <Accordion.Control>Start with your numbers</Accordion.Control>
+        <Accordion.Item value="money">
+          <Accordion.Control>Money to invest</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="sm" c="dimmed">
-                Review these values before generating a recommendation.
+                The full lump sum is invested now. Amounts above registered
+                account room go to non-registered.
               </Text>
+              <UserInputFormItem
+                {...num("lumpSum")}
+                label="Lump sum to invest now"
+                prefix="$"
+                thousandSeparator
+              />
+              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                <UserInputFormItem
+                  {...num("availableRrspRoom")}
+                  label="Available RRSP room"
+                  prefix="$"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("availableTfsaRoom")}
+                  label="Available TFSA room"
+                  prefix="$"
+                  thousandSeparator
+                />
+              </SimpleGrid>
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="profile">
+          <Accordion.Control>Tax profile &amp; timeline</Accordion.Control>
+          <Accordion.Panel>
+            <Stack gap="md">
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <UserInputFormItem
                   {...num("currentAge")}
                   label="Current age"
+                  suffix=" yrs"
+                />
+                <UserInputFormItem
+                  {...num("retirementAge")}
+                  label="Retirement age"
+                  description={
+                    yearsToRetirement == null
+                      ? undefined
+                      : `About ${TAX_YEAR + yearsToRetirement} (${yearsToRetirement} years from now)`
+                  }
                   suffix=" yrs"
                 />
                 <Select
@@ -157,44 +194,7 @@ export default function InputForm({
                   prefix="$"
                   thousandSeparator
                 />
-                <UserInputFormItem
-                  {...num("lumpSum")}
-                  label="Lump sum to invest now"
-                  description="The full amount is invested this year."
-                  prefix="$"
-                  thousandSeparator
-                />
-                <UserInputFormItem
-                  {...num("availableRrspRoom")}
-                  label="Available RRSP room"
-                  prefix="$"
-                  thousandSeparator
-                />
-                <UserInputFormItem
-                  {...num("availableTfsaRoom")}
-                  label="Available TFSA room"
-                  prefix="$"
-                  thousandSeparator
-                />
               </SimpleGrid>
-            </Stack>
-          </Accordion.Panel>
-        </Accordion.Item>
-
-        <Accordion.Item value="planning">
-          <Accordion.Control>Planning assumptions</Accordion.Control>
-          <Accordion.Panel>
-            <Stack gap="md">
-              <UserInputFormItem
-                {...num("retirementAge")}
-                label="Retirement age"
-                description={
-                  yearsToRetirement == null
-                    ? undefined
-                    : `About ${TAX_YEAR + yearsToRetirement} (${yearsToRetirement} years from now)`
-                }
-                suffix=" yrs"
-              />
               <Select
                 label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
@@ -227,10 +227,8 @@ export default function InputForm({
           </Accordion.Panel>
         </Accordion.Item>
 
-        <Accordion.Item value="advanced">
-          <Accordion.Control>
-            Advanced tax &amp; return assumptions
-          </Accordion.Control>
+        <Accordion.Item value="investment">
+          <Accordion.Control>Investment assumptions</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
@@ -266,6 +264,14 @@ export default function InputForm({
                   suffix="%"
                 />
               </SimpleGrid>
+            </Stack>
+          </Accordion.Panel>
+        </Accordion.Item>
+
+        <Accordion.Item value="retirement-tax">
+          <Accordion.Control>Retirement tax assumptions</Accordion.Control>
+          <Accordion.Panel>
+            <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <UserInputFormItem
                 {...num("retirementWithdrawalRatePct")}
                 label="Effective RRSP withdrawal tax rate"
@@ -278,7 +284,7 @@ export default function InputForm({
                 description="Effective tax on the full capital gain after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
                 suffix="%"
               />
-            </Stack>
+            </SimpleGrid>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
