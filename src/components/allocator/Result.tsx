@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Anchor, Loader, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
 import IncomeCurve from "./IncomeCurve";
@@ -45,19 +45,14 @@ export default function Result({
     <Stack gap="lg">
       <AllocationSplit allocation={allocation} input={input} />
       <IncomeCurve allocation={allocation} input={input} />
-      <Alert variant="light" color="gray" title="Model scope">
-        <Text size="sm">
-          Deterministic illustration. Result amounts (projected value, refunds,
-          and the carry-forward benefit) are shown in nominal (future) dollars;
-          the income-curve chart below is in real (today&apos;s) dollars to keep
-          its shape readable. The 2026 tax brackets and thresholds are modeled
-          as fully indexed to inflation, so they keep their real value over
-          time. Registered room is static and carried deductions stay fixed
-          nominal amounts. Returns are constant. Deduction claims are optimized
-          only through the year before retirement. Verify room and tax advice
-          before acting.
-        </Text>
-      </Alert>
+      <Text size="xs" c="dimmed">
+        Deterministic illustration — returns and tax rules are held constant.
+        Verify room and tax advice before acting.{" "}
+        <Anchor href="#model-assumptions" size="xs">
+          See full model assumptions
+        </Anchor>
+        .
+      </Text>
     </Stack>
   );
 }
