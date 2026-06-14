@@ -27,7 +27,9 @@ describe("FileUpload", () => {
       screen.getByText("12 transactions · 2024-01-02 – 2024-12-30"),
     ).toBeInTheDocument();
     expect(screen.getByText("1 transaction")).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: "Preview" })).toHaveLength(2);
+    expect(
+      screen.getAllByRole("button", { name: "Edit transactions" }),
+    ).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "Remove 2024.csv" }),
     ).toBeInTheDocument();
@@ -77,7 +79,9 @@ describe("FileUpload", () => {
       />,
     );
 
-    await user.click(screen.getAllByRole("button", { name: "Preview" })[1]);
+    await user.click(
+      screen.getAllByRole("button", { name: "Edit transactions" })[1],
+    );
     expect(onPreview).toHaveBeenCalledWith(1);
   });
 

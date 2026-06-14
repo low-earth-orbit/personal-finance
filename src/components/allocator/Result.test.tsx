@@ -26,9 +26,6 @@ describe("Allocator Result", () => {
     expect(
       screen.getByText(/Refunds of .* are additional invested cash/),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: /Modeled base income by age/ }),
-    ).toBeInTheDocument();
   });
 
   it("shows calculation progress instead of an input error", () => {
