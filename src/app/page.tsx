@@ -55,6 +55,12 @@ const TOOLS: Tool[] = [
     href: "/acb",
     status: "preview",
   },
+  {
+    emoji: "🧮",
+    title: "Lump-sum Allocation Optimizer",
+    description:
+      "Optimize a lump sum across RRSP, TFSA, and taxable investments.",
+  },
 ];
 
 function ToolCardBody({ tool }: { tool: Tool }) {
