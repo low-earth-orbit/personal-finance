@@ -7,9 +7,9 @@ import type {
 } from "./types";
 
 export const PROVINCES: { value: Province; label: string }[] = [
-  { value: "NB", label: "New Brunswick" },
-  { value: "ON", label: "Ontario" },
   { value: "BC", label: "British Columbia" },
+  { value: "ON", label: "Ontario" },
+  { value: "NB", label: "New Brunswick" },
 ];
 
 export const SALARY_CURVE_PRESETS: {
