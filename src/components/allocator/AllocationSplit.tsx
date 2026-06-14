@@ -94,10 +94,12 @@ export default function AllocationSplit({
         </Stack>
         {registeredRoomFull && (
           <Text size="sm" c="orange.8" fw={600}>
-            Registered room full — remainder in non-registered.
+            {registeredRoom <= 0.01
+              ? "No registered room — the full amount goes to non-registered."
+              : "Registered room full — remainder in non-registered."}
           </Text>
         )}
-        <Alert variant="light" title="Do now">
+        <Alert variant="light" title="Do now (today's dollars)">
           <List size="sm" spacing={4}>
             {allocation.tfsa > 0 && (
               <List.Item>
@@ -125,7 +127,11 @@ export default function AllocationSplit({
         </Alert>
         {(allocation.rrspCarryForward.length > 0 ||
           allocation.refundTotal > 0) && (
-          <Alert variant="light" color="orange" title="Do later">
+          <Alert
+            variant="light"
+            color="orange"
+            title="Do later (future dollars)"
+          >
             <List size="sm" spacing={4}>
               {allocation.rrspCarryForward.map((claim) => (
                 <List.Item key={claim.age}>
@@ -154,30 +160,30 @@ export default function AllocationSplit({
             now.
           </Text>
         )}
-        {allocation.rrspDeductNow > 0 && (
-          <Alert
-            variant="light"
-            color="blue"
-            title="Why claim this amount now?"
-          >
-            <Text size="sm">
-              The current RRSP claim reduces modeled base taxable income from{" "}
-              {formatCAD(input.currentIncome)} to{" "}
-              {formatCAD(incomeAfterCurrentClaim)}. Its estimated current tax
-              refund is {formatCAD(estimatedCurrentRefund)}, an effective{" "}
-              {(effectiveCurrentRefundRate * 100).toFixed(1)}% refund rate
-              before investment distributions and unmodeled credits.
-            </Text>
-          </Alert>
-        )}
         <Divider />
-        <Alert variant="light" color="gray" title="Retirement valuation rates">
-          <Text size="sm">
-            RRSP balance haircut: {(rrspWithdrawalRate * 100).toFixed(1)}%.
-            Taxable capital gains: {input.capitalGainsTaxRatePct.toFixed(1)}%
-            after the 50% inclusion rate.
-          </Text>
-        </Alert>
+        <details>
+          <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: 14 }}>
+            Show calculation detail
+          </summary>
+          <Stack gap="sm" mt="sm">
+            {allocation.rrspDeductNow > 0 && (
+              <Text size="sm">
+                The current RRSP claim reduces modeled base taxable income from{" "}
+                {formatCAD(input.currentIncome)} to{" "}
+                {formatCAD(incomeAfterCurrentClaim)}. Its estimated current tax
+                refund is {formatCAD(estimatedCurrentRefund)}, an effective{" "}
+                {(effectiveCurrentRefundRate * 100).toFixed(1)}% refund rate
+                before investment distributions and unmodeled credits.
+              </Text>
+            )}
+            <Text size="sm">
+              Retirement valuation rates — RRSP balance haircut:{" "}
+              {(rrspWithdrawalRate * 100).toFixed(1)}%. Taxable capital gains:{" "}
+              {input.capitalGainsTaxRatePct.toFixed(1)}% after the 50% inclusion
+              rate.
+            </Text>
+          </Stack>
+        </details>
         <Group justify="space-between" align="baseline">
           <Text size="sm" fw={600}>
             Projected after-tax at retirement

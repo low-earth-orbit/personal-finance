@@ -61,10 +61,9 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
 
   return (
     <>
-      <FormResetButton onReset={onReset} />
       <Accordion
         multiple
-        defaultValue={["you", "amount", "room"]}
+        defaultValue={["you", "amount", "room", "returns", "retirement"]}
         variant="contained"
       >
         <Accordion.Item value="you">
@@ -84,6 +83,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 />
                 <Select
                   label="Province"
+                  description="Only NB, ON, and BC tax rules are modeled"
                   data={PROVINCES}
                   value={input.province}
                   onChange={(value) => value && onChange("province", value)}
@@ -113,6 +113,13 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 <UserInputFormItem
                   {...num("salaryGrowthPct")}
                   label="Real salary growth"
+                  description={
+                    input.salaryCurve === "aggressive"
+                      ? "Fast climb applies 1.5x this rate for 20 years, then plateaus."
+                      : input.salaryCurve === "early-peak"
+                        ? "Early peak applies this rate for 15 years, then plateaus."
+                        : "Compounds at this rate every year until retirement."
+                  }
                   suffix="%"
                 />
               )}
@@ -172,6 +179,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 <UserInputFormItem
                   {...num("portfolioReturn")}
                   label="Nominal return"
+                  description="Editing this switches Portfolio to Custom return."
                   suffix="%"
                   onChange={(value) => {
                     onChange("portfolioPresetId", "custom");
@@ -235,6 +243,7 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
+      <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />
     </>
   );
 }

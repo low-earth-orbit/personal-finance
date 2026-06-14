@@ -2,7 +2,7 @@ import { Container, Paper, Stack, Text } from "@mantine/core";
 
 export default function TaxAssumptions() {
   return (
-    <Container size="xl" pt="xl" pb="xs">
+    <Container size="xl" pt="xl" pb="xs" id="model-assumptions">
       <Paper withBorder p="md" radius="md">
         <details>
           <summary style={{ cursor: "pointer", fontWeight: 600 }}>

@@ -178,12 +178,38 @@ export default function IncomeCurve({
           </ResponsiveContainer>
         </div>
         <Group gap="lg" wrap="wrap">
+          <Group gap={6} wrap="nowrap">
+            <span
+              style={{
+                width: 14,
+                height: 3,
+                borderRadius: 2,
+                background: TEAL,
+                display: "inline-block",
+              }}
+            />
+            <Text size="xs" c="dimmed">
+              Base income
+            </Text>
+          </Group>
+          <Group gap={6} wrap="nowrap">
+            <span
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: "50%",
+                background: ORANGE,
+                border: "1px solid white",
+                display: "inline-block",
+              }}
+            />
+            <Text size="xs" c="dimmed">
+              RRSP deduction claim
+            </Text>
+          </Group>
           <Text size="xs" c="dimmed">
             Income axis in today&apos;s dollars; claims are fixed nominal
-            dollars.
-          </Text>
-          <Text size="xs" c="dimmed">
-            Vertical line marks retirement.
+            dollars. Vertical line marks retirement.
           </Text>
         </Group>
         {claims.length > 0 && (
