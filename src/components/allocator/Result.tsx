@@ -1,9 +1,8 @@
 "use client";
 
-import { Alert, Anchor, Loader, Stack, Text } from "@mantine/core";
+import { Alert, Loader, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
-import IncomeCurve from "./IncomeCurve";
 import type { AllocatorStatus } from "./Main";
 import type { AllocationResult, AllocatorInput } from "@/utils/allocator/types";
 
@@ -44,7 +43,6 @@ export default function Result({
   return (
     <Stack gap="lg">
       <AllocationSplit allocation={allocation} input={input} />
-      <IncomeCurve allocation={allocation} input={input} />
       <Text size="xs" c="dimmed">
         Deterministic illustration — returns and tax rules are held constant.
         May contain error. Not personalized advice. Verify room and tax advice

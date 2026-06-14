@@ -19,18 +19,18 @@ export const SALARY_CURVE_PRESETS: {
 }[] = [
   {
     value: "flat",
-    label: "Income stays flat",
+    label: "Flat",
     description: "Income keeps pace with inflation.",
   },
   {
     value: "modest",
-    label: "Slow career growth",
+    label: "Modest career growth",
     description:
       "Income grows 1% yearly for 15 years, reaching about 16% above today's level, then stays flat.",
   },
   {
     value: "strong",
-    label: "Moderate career growth",
+    label: "Strong career growth",
     description:
       "Income grows 2% yearly for 15 years, reaching about 35% above today's level, then stays flat.",
   },
