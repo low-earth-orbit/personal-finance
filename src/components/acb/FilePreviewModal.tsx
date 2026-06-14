@@ -1,7 +1,7 @@
 import {
-  ActionIcon,
   Box,
   Button,
+  CloseButton,
   Group,
   Modal,
   NumberInput,
@@ -9,7 +9,6 @@ import {
   Table,
   Text,
 } from "@mantine/core";
-import { IconTrash } from "@tabler/icons-react";
 import type { AcbTransaction, ParsedFile } from "@/utils/acb/parser";
 
 const TYPE_OPTIONS: AcbTransaction["type"][] = [
@@ -142,18 +141,15 @@ const FilePreviewModal = ({
                 </Table.Td>
                 <Table.Td>{tx.currency ?? "CAD"}</Table.Td>
                 <Table.Td>
-                  <ActionIcon
+                  <CloseButton
                     aria-label={`Delete row ${rowIndex + 1}`}
-                    color="red"
-                    variant="subtle"
+                    size="sm"
                     onClick={() => {
                       if (fileIndex !== null) {
                         onDeleteTransaction(fileIndex, rowIndex);
                       }
                     }}
-                  >
-                    <IconTrash size={16} />
-                  </ActionIcon>
+                  />
                 </Table.Td>
               </Table.Tr>
             ))}

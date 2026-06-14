@@ -55,7 +55,7 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
       opened={symbol !== null}
       onClose={onClose}
       title={`T3 Slips — ${symbol ?? ""}`}
-      size="lg"
+      size="xl"
     >
       <Stack gap="sm">
         {entries.length > 0 && (
