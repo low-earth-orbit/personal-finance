@@ -1,10 +1,10 @@
 import {
-  Box,
   Button,
   CloseButton,
   Group,
   Modal,
   NumberInput,
+  ScrollArea,
   Select,
   Table,
   Text,
@@ -56,12 +56,19 @@ const FilePreviewModal = ({
       opened={file !== null && fileIndex !== null}
       onClose={onClose}
       title={`Preview — ${file?.name ?? ""}`}
-      size="xl"
+      size="min(1200px, calc(100vw - 2rem))"
+      xOffset="md"
+      yOffset="md"
+      styles={{ content: { overflow: "hidden" } }}
     >
-      {/* Horizontal scroll stays inside the modal body so the header (title +
-          close button) keeps its position. */}
-      <Box style={{ overflowX: "auto" }}>
-        <Table striped highlightOnHover withTableBorder>
+      <ScrollArea.Autosize
+        mah="calc(100dvh - 10rem)"
+        type="auto"
+        offsetScrollbars="present"
+        scrollbarSize={8}
+        viewportProps={{ "aria-label": "Transactions", role: "region" }}
+      >
+        <Table miw={900} striped highlightOnHover stickyHeader withTableBorder>
           <Table.Thead>
             <Table.Tr>
               <Table.Th>Date</Table.Th>
@@ -155,7 +162,7 @@ const FilePreviewModal = ({
             ))}
           </Table.Tbody>
         </Table>
-      </Box>
+      </ScrollArea.Autosize>
       <Group justify="space-between" mt="md">
         <Text size="sm" c="dimmed">
           {transactions.length} transaction

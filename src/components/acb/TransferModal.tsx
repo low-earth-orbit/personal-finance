@@ -51,7 +51,7 @@ const TransferModal = ({
       opened={symbol !== null}
       onClose={onClose}
       title={`Transfer lots — ${symbol ?? ""}`}
-      size="xl"
+      size="lg"
     >
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
