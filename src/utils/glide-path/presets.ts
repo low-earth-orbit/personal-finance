@@ -67,7 +67,7 @@ export const DEFAULTS = {
 
   // ── Engine / Monte Carlo ──────────────────────────────────
   /** Monte Carlo paths (more = steadier, slower). */
-  numPaths: 10000,
+  numPaths: 5000,
   /** Inflation used to deflate the curve to real. */
   inflation: 2.1,
 } as const;
