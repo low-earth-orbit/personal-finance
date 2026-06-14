@@ -57,7 +57,7 @@ const TOOLS: Tool[] = [
   },
   {
     emoji: "🧮",
-    title: "Where to Invest: TFSA, RRSP or Non-Reg?",
+    title: "Where to invest: TFSA, RRSP or Non-Reg?",
     description:
       "Split a lump sum across TFSA, RRSP, and non-registered the tax-smart way.",
   },

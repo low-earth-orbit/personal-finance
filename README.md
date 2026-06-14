@@ -12,7 +12,7 @@ Latest deployed version: [Click Me](https://low-earth-orbit.github.io/personal-f
 | **When can I retire?** — quick retirement reality check                             | `/retirement`  | Live        |
 | **Lifetime Allocation (Glide Path)** — find your optimal lifetime stock allocation  | `/glide-path`  | Live        |
 | **ACB Calculator** — adjusted cost base from a Wealthsimple activity export         | `/acb`         | Live        |
-| **Where to Invest: TFSA, RRSP or Non-Reg?** — split a lump sum across account types | `/allocator`   | Coming soon |
+| **Where to invest: TFSA, RRSP or Non-Reg?** — split a lump sum across account types | `/allocator`   | Coming soon |
 
 The site is a single statically-exported Next.js app: a hub landing page at `/`
 links to each tool, which lives at its own route.
@@ -48,12 +48,12 @@ src/
     page.tsx              # hub landing page (lists tools)
     rent-vs-buy/page.tsx  # rent-vs-buy tool route
     glide-path/page.tsx   # Lifetime Allocation (Glide Path) route
-    allocator/page.tsx    # Where to Invest: TFSA, RRSP or Non-Reg? route
+    allocator/page.tsx    # Where to invest: TFSA, RRSP or Non-Reg? route
   components/
     shared/               # reusable chrome + form primitives (Header, Footer, inputs)
     rent-vs-buy/          # rent-vs-buy-specific components
     glide-path/           # Lifetime Allocation (Glide Path) components
-    allocator/            # Where to Invest: TFSA, RRSP or Non-Reg? components
+    allocator/            # Where to invest: TFSA, RRSP or Non-Reg? components
   utils/                  # math, formatting, Monte Carlo (shared) + tool-specific logic
   types.ts                # shared domain types
 analysis/                 # Python research, validation, and recommender tools
