@@ -31,12 +31,14 @@ export const SALARY_CURVE_PRESETS: {
   {
     value: "early-peak",
     label: "Early peak",
-    description: "Income grows for 10 years, then stays flat.",
+    description:
+      "Income grows for 15 years, then plateaus for the rest of your career.",
   },
   {
     value: "aggressive",
     label: "Fast climb",
-    description: "Income grows at 1.5x the entered real growth rate.",
+    description:
+      "Income grows at 1.5x the entered real growth rate for 20 years, then plateaus.",
   },
 ];
 

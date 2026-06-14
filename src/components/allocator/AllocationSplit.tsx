@@ -144,11 +144,11 @@ export default function AllocationSplit({
             </List>
           </Alert>
         )}
-        {allocation.carryForwardBenefit > 0 && (
+        {allocation.carryForwardBenefitNominal > 0 && (
           <Text size="sm" c="dimmed">
             Delaying some deductions adds about{" "}
             <Text span fw={700}>
-              {formatCAD(allocation.carryForwardBenefit)}
+              {formatCAD(allocation.carryForwardBenefitNominal)}
             </Text>{" "}
             to projected after-tax value versus claiming all RRSP deductions
             now.
@@ -183,15 +183,17 @@ export default function AllocationSplit({
             Projected after-tax at retirement
           </Text>
           <Text fw={700} c="teal.8">
-            {formatCAD(allocation.projectedAfterTaxTotal)}
+            {formatCAD(allocation.projectedAfterTaxTotalNominal)}
           </Text>
         </Group>
         <Text size="xs" c="dimmed">
-          Searched to {formatCAD(allocation.precision)} precision. Refunds of{" "}
-          {formatCAD(allocation.refundTotal)} are additional invested cash and
-          are shown in today&apos;s dollars. They are not part of the split
-          above. The full entered lump sum is invested now using this
-          year&apos;s room; only RRSP deduction claims may be delayed.
+          All amounts are in nominal (future) dollars at the time they occur;
+          tax brackets are modeled as fully indexed to inflation. Searched to{" "}
+          {formatCAD(allocation.precision)} precision. Refunds of{" "}
+          {formatCAD(allocation.refundTotalNominal)} are additional invested
+          cash, not part of the split above. The full entered lump sum is
+          invested now using this year&apos;s room; only RRSP deduction claims
+          may be delayed.
         </Text>
       </Stack>
     </Card>

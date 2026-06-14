@@ -116,7 +116,9 @@ export default function IncomeCurve({
   return (
     <Card withBorder radius="md" padding="md">
       <Stack gap="xs">
-        <Text fw={600}>Modeled base income before retirement</Text>
+        <Text fw={600}>
+          Modeled base income before retirement (real, today&apos;s dollars)
+        </Text>
         <Text size="sm" c="dimmed">
           RRSP deduction timing follows this real-dollar income curve plus
           modeled taxable investment distributions. Orange dots mark deduction

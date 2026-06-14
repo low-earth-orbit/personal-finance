@@ -37,6 +37,7 @@ interface Evaluation {
   afterTaxValue: number;
   refundTotal: number;
   refundSchedule: AllocationResult["refundSchedule"];
+  retirementDeflator: number;
 }
 
 type Bucket =
@@ -100,11 +101,14 @@ function settleDistributionAndDeduction(
   province: AllocatorInput["province"],
 ): number {
   const distributionReal = distributionNominal / inflationFactor;
-  // Distribution tax stacks on this year's salary at its top.
+  // The deduction lowers taxable income first; distributions stack on top of the
+  // post-deduction income, matching how CRA orders a deduction and ordinary
+  // investment income in the same year.
+  const taxableBase = Math.max(0, incomeReal - claimedReal);
   const distributionTaxReal = Math.max(
     0,
-    taxOwed(province, incomeReal + distributionReal) -
-      taxOwed(province, incomeReal),
+    taxOwed(province, taxableBase + distributionReal) -
+      taxOwed(province, taxableBase),
   );
   const distributionTaxNominal = distributionTaxReal * inflationFactor;
   const reinvested = Math.max(0, distributionNominal - distributionTaxNominal);
@@ -184,11 +188,19 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
     const claimedReal = claimedNominal / inflationFactor;
     // Deduct-now (current year) is this lump's actual decision and stacks at the
     // top of current income. A deferred claim stacks below the fresh RRSP room
-    // the saver is assumed to fill that future year.
+    // the saver is assumed to fill that future year. That year's room derives
+    // from the prior year's earned income (CRA's 18%-of-prior-year rule).
+    const priorIncomeReal = incomeAtAge(
+      age - 1,
+      input.currentAge,
+      input.salaryCurve,
+      input.currentIncome,
+      input.salaryGrowthPct,
+    );
     const claimIncomeFloor =
       age === input.currentAge
         ? incomeReal
-        : Math.max(0, incomeReal - freshRrspRoom(incomeReal));
+        : Math.max(0, incomeReal - freshRrspRoom(priorIncomeReal));
     if (claimedReal > 0 || distribution > 0) {
       const refund = settleDistributionAndDeduction(
         nonReg,
@@ -244,6 +256,7 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       nonRegTax,
     refundTotal,
     refundSchedule,
+    retirementDeflator,
   };
 }
 
@@ -447,15 +460,22 @@ export function allocateLumpSum(
       ? evaluation.afterTaxValue -
         combinedAfterTaxValue(input, allDeductNowForComparison)
       : 0;
+  const deflator = evaluation.retirementDeflator;
+  // refundTotal is the sum of refunds in today's dollars; express the aggregate
+  // at a single retirement vintage rather than summing different-year nominals.
+  const refundTotalNominal = evaluation.refundTotal * deflator;
   return {
     tfsa: plan.tfsa,
     rrspDeductNow,
     rrspCarryForward,
     nonReg: plan.nonRegDirect,
     projectedAfterTaxTotal: evaluation.afterTaxValue,
+    projectedAfterTaxTotalNominal: evaluation.afterTaxValue * deflator,
     refundTotal: evaluation.refundTotal,
+    refundTotalNominal,
     refundSchedule: evaluation.refundSchedule,
     carryForwardBenefit,
+    carryForwardBenefitNominal: carryForwardBenefit * deflator,
     precision: FINAL_ALLOCATION_PRECISION,
   };
 }

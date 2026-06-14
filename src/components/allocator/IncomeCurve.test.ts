@@ -17,14 +17,14 @@ describe("buildIncomeCurveData", () => {
     );
   });
 
-  it("shows the early-peak plateau after ten years", () => {
+  it("shows the early-peak plateau after fifteen years", () => {
     const data = buildIncomeCurveData({
       ...DEFAULTS,
       currentAge: 30,
-      retirementAge: 45,
+      retirementAge: 55,
       salaryCurve: "early-peak",
     });
 
-    expect(data.at(-1)?.income).toBe(data[10].income);
+    expect(data.at(-1)?.income).toBe(data[15].income);
   });
 });

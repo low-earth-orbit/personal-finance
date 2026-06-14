@@ -25,12 +25,17 @@ export default function TaxAssumptions() {
               immediate deduction, RRSP with the deduction carried forward, and
               non-registered. The full entered lump sum is invested now. Only
               RRSP deduction claims can be delayed, potentially across multiple
-              future ages. Refunds arrive the year after deductions are claimed
-              and are invested in available TFSA room, then non-registered.
-              Amounts above available room spill into non-registered
-              investments. Existing room is fixed nominal dollars, so unused
-              room loses real value to inflation. Room is static and does not
-              accrue annually in this version.
+              future ages. A deduction carried to a future year is assumed to
+              stack below that year&apos;s fresh RRSP room (18% of the prior
+              year&apos;s income, capped), since new contributions are assumed
+              to claim that year&apos;s top rate first — so deferring helps only
+              when a genuine higher band remains. Pension adjustments are
+              ignored. Refunds arrive the year after deductions are claimed and
+              are invested in available TFSA room, then non-registered. Amounts
+              above available room spill into non-registered investments.
+              Existing room is fixed nominal dollars, so unused room loses real
+              value to inflation. Room is static and does not accrue annually in
+              this version.
             </Text>
             <Text size="sm" c="dimmed">
               Non-registered distributions use an interest-income proxy;
@@ -46,6 +51,14 @@ export default function TaxAssumptions() {
               Deduction claims are optimized only through the year before
               retirement. Retirement-year and post-retirement deduction claims
               and their later refunds are outside the at-retirement objective.
+            </Text>
+            <Text size="sm" c="dimmed">
+              Result amounts are shown in nominal (future) dollars; the
+              income-curve chart is in real (today&apos;s) dollars to keep its
+              shape readable. Income curves use the entered real growth rate:
+              flat holds income constant, steady climb compounds to retirement,
+              early peak compounds for 15 years then plateaus, and fast climb
+              compounds 1.5x the rate for 20 years then plateaus.
             </Text>
             <Text size="sm" c="dimmed">
               Deterministic illustration only. Returns, tax rules, room, and

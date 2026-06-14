@@ -47,11 +47,15 @@ export default function Result({
       <IncomeCurve allocation={allocation} input={input} />
       <Alert variant="light" color="gray" title="Model scope">
         <Text size="sm">
-          Deterministic illustration using 2025 tax brackets and thresholds held
-          constant in today&apos;s dollars, static registered room, and a
-          constant return. Registered room and carried deductions remain fixed
-          nominal amounts. Deduction claims are optimized only through the year
-          before retirement. Verify room and tax advice before acting.
+          Deterministic illustration. Result amounts (projected value, refunds,
+          and the carry-forward benefit) are shown in nominal (future) dollars;
+          the income-curve chart below is in real (today&apos;s) dollars to keep
+          its shape readable. The 2025 tax brackets and thresholds are modeled
+          as fully indexed to inflation, so they keep their real value over
+          time. Registered room is static and carried deductions stay fixed
+          nominal amounts. Returns are constant. Deduction claims are optimized
+          only through the year before retirement. Verify room and tax advice
+          before acting.
         </Text>
       </Alert>
     </Stack>

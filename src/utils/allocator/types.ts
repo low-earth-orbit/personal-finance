@@ -41,7 +41,9 @@ export interface AllocationResult {
   rrspCarryForward: { age: number; amount: number }[];
   nonReg: number;
   projectedAfterTaxTotal: number;
+  projectedAfterTaxTotalNominal: number;
   refundTotal: number;
+  refundTotalNominal: number;
   refundSchedule: {
     claimAge: number;
     arrivalAge: number;
@@ -49,6 +51,7 @@ export interface AllocationResult {
     amountToday: number;
   }[];
   carryForwardBenefit: number;
+  carryForwardBenefitNominal: number;
   precision: number;
 }
 

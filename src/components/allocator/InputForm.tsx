@@ -109,11 +109,13 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
               <Text size="xs" c="dimmed">
                 {selectedCurve?.description}
               </Text>
-              <UserInputFormItem
-                {...num("salaryGrowthPct")}
-                label="Real salary growth"
-                suffix="%"
-              />
+              {input.salaryCurve !== "flat" && (
+                <UserInputFormItem
+                  {...num("salaryGrowthPct")}
+                  label="Real salary growth"
+                  suffix="%"
+                />
+              )}
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
