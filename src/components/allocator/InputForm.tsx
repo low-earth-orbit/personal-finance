@@ -107,21 +107,24 @@ export default function InputForm({ input, errors, onChange, onReset }: Props) {
                 onChange={(value) => value && onChange("salaryCurve", value)}
               />
               <Text size="xs" c="dimmed">
-                {selectedCurve?.description}
+                {selectedCurve?.description} All growth rates are above
+                inflation.
               </Text>
-              {input.salaryCurve !== "flat" && (
-                <UserInputFormItem
-                  {...num("salaryGrowthPct")}
-                  label="Real salary growth"
-                  description={
-                    input.salaryCurve === "aggressive"
-                      ? "Fast climb applies 1.5x this rate for 20 years, then plateaus."
-                      : input.salaryCurve === "early-peak"
-                        ? "Early peak applies this rate for 15 years, then plateaus."
-                        : "Compounds at this rate every year until retirement."
-                  }
-                  suffix="%"
-                />
+              {input.salaryCurve === "custom" && (
+                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                  <UserInputFormItem
+                    {...num("salaryGrowthPct")}
+                    label="Real income growth"
+                    description="Annual growth above inflation while income is rising."
+                    suffix="%"
+                  />
+                  <UserInputFormItem
+                    {...num("salaryGrowthYears")}
+                    label="Growth period"
+                    description="Years income grows before leveling off."
+                    suffix=" yrs"
+                  />
+                </SimpleGrid>
               )}
             </Stack>
           </Accordion.Panel>

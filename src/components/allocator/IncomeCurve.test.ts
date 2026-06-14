@@ -17,14 +17,36 @@ describe("buildIncomeCurveData", () => {
     );
   });
 
-  it("shows the early-peak plateau after fifteen years", () => {
+  it.each([
+    ["modest", 1],
+    ["strong", 2],
+    ["fast", 3],
+  ] as const)(
+    "shows the %s preset plateau after fifteen years",
+    (curve, rate) => {
+      const data = buildIncomeCurveData({
+        ...DEFAULTS,
+        currentAge: 30,
+        retirementAge: 55,
+        salaryCurve: curve,
+      });
+
+      expect(data[15].income).toBeCloseTo(100_000 * (1 + rate / 100) ** 15);
+      expect(data.at(-1)?.income).toBe(data[15].income);
+    },
+  );
+
+  it("uses the custom growth rate and period", () => {
     const data = buildIncomeCurveData({
       ...DEFAULTS,
       currentAge: 30,
       retirementAge: 55,
-      salaryCurve: "early-peak",
+      salaryCurve: "custom",
+      salaryGrowthPct: 2,
+      salaryGrowthYears: 10,
     });
 
-    expect(data.at(-1)?.income).toBe(data[15].income);
+    expect(data[10].income).toBeCloseTo(100_000 * 1.02 ** 10);
+    expect(data.at(-1)?.income).toBe(data[10].income);
   });
 });

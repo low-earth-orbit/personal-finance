@@ -156,6 +156,7 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       input.salaryCurve,
       input.currentIncome,
       input.salaryGrowthPct,
+      input.salaryGrowthYears,
     );
     const arrivingRefundNominal = pendingRefundsNominal.get(age) ?? 0;
     const refundToTfsaNominal = Math.min(
@@ -197,6 +198,7 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       input.salaryCurve,
       input.currentIncome,
       input.salaryGrowthPct,
+      input.salaryGrowthYears,
     );
     const claimIncomeFloor =
       age === input.currentAge

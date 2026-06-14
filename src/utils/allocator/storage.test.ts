@@ -37,4 +37,27 @@ describe("allocator storage migration", () => {
         .portfolioPresetId,
     ).toBe(DEFAULTS.portfolioPresetId);
   });
+
+  it.each([
+    ["steady-climb", 2, 30, 2],
+    ["early-peak", 1, 15, 1],
+    ["aggressive", 2, 20, 3],
+  ])(
+    "migrates the legacy %s curve to an equivalent custom path",
+    (salaryCurve, salaryGrowthPct, salaryGrowthYears, expectedGrowthPct) => {
+      expect(
+        migrateInput({
+          ...DEFAULTS,
+          currentAge: 35,
+          retirementAge: 65,
+          salaryCurve,
+          salaryGrowthPct,
+        }),
+      ).toMatchObject({
+        salaryCurve: "custom",
+        salaryGrowthPct: expectedGrowthPct,
+        salaryGrowthYears,
+      });
+    },
+  );
 });

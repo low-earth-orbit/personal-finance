@@ -35,6 +35,7 @@ export function buildIncomeCurveData(
     | "salaryCurve"
     | "currentIncome"
     | "salaryGrowthPct"
+    | "salaryGrowthYears"
   >,
 ): IncomeCurvePoint[] {
   return Array.from(
@@ -49,6 +50,7 @@ export function buildIncomeCurveData(
           input.salaryCurve,
           input.currentIncome,
           input.salaryGrowthPct,
+          input.salaryGrowthYears,
         ),
       };
     },

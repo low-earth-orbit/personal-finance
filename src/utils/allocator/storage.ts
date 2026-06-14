@@ -12,9 +12,10 @@ export const KEY = "alloc_input";
 const provinces: Province[] = ["NB", "ON", "BC"];
 const curves: SalaryCurvePreset[] = [
   "flat",
-  "steady-climb",
-  "early-peak",
-  "aggressive",
+  "modest",
+  "strong",
+  "fast",
+  "custom",
 ];
 const retirementRateModes: RetirementRateMode[] = ["rate", "income"];
 const portfolioIds = PORTFOLIO_PRESETS.map(
@@ -46,11 +47,28 @@ export function migrateInput(value: unknown): AllocatorInput {
     }
   }
   next.province = enumValue(parsed.province, provinces, DEFAULTS.province);
-  next.salaryCurve = enumValue(
-    parsed.salaryCurve,
-    curves,
-    DEFAULTS.salaryCurve,
-  );
+  if (
+    parsed.salaryCurve === "steady-climb" ||
+    parsed.salaryCurve === "early-peak" ||
+    parsed.salaryCurve === "aggressive"
+  ) {
+    next.salaryCurve = "custom";
+    next.salaryGrowthYears =
+      parsed.salaryCurve === "early-peak"
+        ? 15
+        : parsed.salaryCurve === "aggressive"
+          ? 20
+          : Math.max(0, next.retirementAge - next.currentAge);
+    if (parsed.salaryCurve === "aggressive") {
+      next.salaryGrowthPct *= 1.5;
+    }
+  } else {
+    next.salaryCurve = enumValue(
+      parsed.salaryCurve,
+      curves,
+      DEFAULTS.salaryCurve,
+    );
+  }
   next.retirementRateMode = enumValue(
     parsed.retirementRateMode,
     retirementRateModes,

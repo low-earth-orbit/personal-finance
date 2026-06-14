@@ -54,4 +54,23 @@ describe("allocator validation", () => {
       }).retirementIncome,
     ).toBe("Expected retirement income is required.");
   });
+
+  it("validates custom income terms only when custom is selected", () => {
+    expect(
+      validateAllocatorInput({
+        ...DEFAULTS,
+        salaryGrowthPct: Number.NaN,
+        salaryGrowthYears: Number.NaN,
+      }),
+    ).toEqual({});
+
+    const errors = validateAllocatorInput({
+      ...DEFAULTS,
+      salaryCurve: "custom",
+      salaryGrowthPct: Number.NaN,
+      salaryGrowthYears: 83,
+    });
+    expect(errors.salaryGrowthPct).toBe("Real income growth is required.");
+    expect(errors.salaryGrowthYears).toBe("Must be between 0 and 82");
+  });
 });

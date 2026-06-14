@@ -116,12 +116,12 @@ its career shape and plateau stay legible.
 
 ## Income curves
 
-The real-income path is one of four presets, all driven by the entered real
-growth rate. **Flat** holds income constant (the growth input is hidden).
-**Steady climb** compounds growth to retirement. **Early peak** compounds growth
-for 15 years, then plateaus. **Fast climb** compounds 1.5x the growth rate for 20
-years, then plateaus. The plateaus keep long-horizon incomes realistic rather
-than compounding without bound.
+The real-income path uses growth above inflation. **Income stays flat** holds
+real income constant. **Slow career growth** grows 1% yearly for 15 years, then
+plateaus. **Moderate career growth** grows 2% yearly for 15 years, then
+plateaus. **Fast career growth** grows 3% yearly for 15 years, then plateaus.
+**Custom** uses the entered real growth rate and growth period. The plateaus
+keep long-horizon incomes realistic rather than compounding without bound.
 
 ## Withdrawal-rate haircut
 

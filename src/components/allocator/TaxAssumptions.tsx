@@ -64,10 +64,10 @@ export default function TaxAssumptions() {
             <Text size="sm" c="dimmed">
               Result amounts are shown in nominal (future) dollars; the
               income-curve chart is in real (today&apos;s) dollars to keep its
-              shape readable. Income curves use the entered real growth rate:
-              flat holds income constant, steady climb compounds to retirement,
-              early peak compounds for 15 years then plateaus, and fast climb
-              compounds 1.5x the rate for 20 years then plateaus.
+              shape readable. Preset income curves hold real income flat or
+              compound at 1%, 2%, or 3% above inflation for 15 years, then
+              plateau. The custom curve uses the entered real growth rate and
+              growth period.
             </Text>
             <Text size="sm" c="dimmed">
               Deterministic illustration only. Returns, tax rules, room, and
