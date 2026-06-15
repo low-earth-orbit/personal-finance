@@ -874,13 +874,13 @@ new claim.
    era cuts, forward-block's best constant weight sweeps the whole [50%, 100%] envelope while iid's
    ~60–80% sits permanently _inside_ it (recap of the §2f era table, `best flat` column):
 
-   | History cut         | forward-block best flat |
-   | ------------------- | ----------------------- |
-   | full 1871–2020      | 100%                    |
-   | post-1950           | 100%                    |
-   | ex Germany + Japan  | 100%                    |
-   | stable six          | 80%                     |
-   | 1990–2020 (IT era)  | 50%                     |
+   | History cut        | forward-block best flat |
+   | ------------------ | ----------------------- |
+   | full 1871–2020     | 100%                    |
+   | post-1950          | 100%                    |
+   | ex Germany + Japan | 100%                    |
+   | stable six         | 80%                     |
+   | 1990–2020 (IT era) | 50%                     |
 
    So iid is never the worst-case answer in any regime — it minimizes the largest possible
    allocation error when the regime is unknown — whereas forward-block is optimal in its corner cut
@@ -888,6 +888,7 @@ new claim.
    surface (CE spread ≤2–3%), "always near the middle of the envelope" is exactly the low-regret
    property a default should have; the corner answer is a scenario, and scenarios make better
    toggles than defaults.
+
 4. **The verdict on bonds is about the menu, not the asset class — now measured, not just
    suspected.** The bond-menu experiment (§2f) holds the bond's mean and vol constant and removes
    only its historical sequencing and correlation: the optimum collapses from flat-100% to 45%
