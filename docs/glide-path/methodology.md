@@ -12,8 +12,10 @@ the forward-CMA marginals, then stationary-block-bootstrapped — is offered in 
 largely disappears and the optimum becomes flat ~100% equity. The default is iid because the §2f
 robustness program showed forward-block's flat-100% answer holds only in one corner of the evidence
 (full-sample monetary regimes × a long-nominal-bonds-only menu), while iid's interior recommendation
-is near-optimal in every era, country, and bond-menu cut — and it matches the `/retirement` tool's
-return model. The two modes bracket the answer; the bracket, not either endpoint, is the finding.
+is never the worst-case answer in any era, country, or bond-menu cut — it sits inside the allocation
+envelope forward-block sweeps across regimes (the minimax-regret choice; see §7.3) — and it matches
+the `/retirement` tool's return model. The two modes bracket the answer; the bracket, not either
+endpoint, is the finding.
 
 The web and Python recommender share the baseline household/model defaults: flexibility 0,
 γ = 4, β = 0.985, and a 4% flexible withdrawal rate. Their product
@@ -89,8 +91,8 @@ already-diversified world series, not of the (stock/bond) candidate set.
    100% in every cell, and the glide shape is worth **≈ $0** (§2f), reproducing **ACO's flat-100%**
    on our own CMAs. The §2f robustness cuts show that flat-100% answer is conditional on pre-1990
    monetary regimes and on long nominal bonds being the only safe asset, while the iid interior
-   answer is near-optimal in every cut — hence iid as the default and forward-block as the
-   scenario.
+   answer is never the worst case in any cut (it stays inside the envelope forward-block sweeps —
+   the minimax-regret pick, §7.3) — hence iid as the default and forward-block as the scenario.
 
 1. **The spending rule decides the shape (within either model).**
    - **Constant real-dollar withdrawal** → _under iid_ the optimum **derisks into retirement** (a **bond tent**) then drifts up; _under the forward-block scenario_ this collapses to a shallow dip near 100%.
@@ -181,7 +183,7 @@ sequencing content).
 
 ### Returns — our own assumptions, no history
 
-The app's allocation curve ([`presets.ts`](../../src/utils/retirement/presets.ts) `ALLOCATIONS`, PWL Capital-based, inflation 2.1%) is interpolated so **any** equity weight `w∈[0,1]` maps to a real arithmetic `(mean, vol)`. Endpoints: **100% equity → 4.67% real / 12.6% vol**; **0% equity → 1.42% real / 5.4% vol** ⇒ an equity premium of **~3.3pp** (vs the ~5pp the US-tilted history ACO and ERN lean on — see the [`retirement` SWR methodology](../retirement/swr-methodology.md) §2). Each year's return is `mean(wₜ) + vol(wₜ)·Z`, matching `monteCarlo.ts` (arithmetic normal, mid-year cash flow earns half a year, a depleted portfolio absorbs at 0).
+The app's allocation curve ([`presets.ts`](../../src/utils/glide-path/presets.ts) `DEFAULT_ALLOC_CURVE`, PWL Capital-based, inflation 2.1%) is interpolated so **any** equity weight `w∈[0,1]` maps to a real arithmetic `(mean, vol)`. Endpoints: **100% equity → 4.67% real / 12.6% vol**; **0% equity → 1.42% real / 5.4% vol** ⇒ an equity premium of **~3.3pp** (vs the ~5pp the US-tilted history ACO and ERN lean on — see the [`retirement` SWR methodology](../retirement/swr-methodology.md) §2). Each year's return is `mean(wₜ) + vol(wₜ)·Z`, matching `monteCarlo.ts` (arithmetic normal, mid-year cash flow earns half a year, a depleted portfolio absorbs at 0).
 
 ### Household & phases
 
@@ -560,8 +562,8 @@ _ladder_ product (Canada stopped issuing RRBs in 2022; existing RRBs are long-du
 two implementable real-asset routes are:
 
 - A **GIC / bill ladder** — an actual ladder (hold-to-maturity), but _nominal_: it fixes amplitude,
-  not persistence (the "short nominal" row below — VR still bad). It does **not** move the optimum
-  off the nominal-bond answer on the persistence axis.
+  not persistence (the "short nominal" row of the amplitude-vs-persistence table below — VR still
+  bad). It does **not** move the optimum off the nominal-bond answer on the persistence axis.
 - A **short-term, CAD-hedged US-TIPS ETF** (e.g. XSTH / ZTIP.F) — real and short-duration, but a
   perpetual marked-to-market _fund_, not a ladder: it carries short-bond price vol, not the ladder's
   2%. This is cell (d): it delivers the persistence fix (→45%) but **not** the ladder's amplitude
@@ -573,9 +575,8 @@ real ladder that no Canadian retail wrapper provides, and the ETF-vs-ladder gap 
 discontinuation — is the binding constraint (it applies wherever real bonds trade only as funds).
 Read (c) as the idealized upper bound; read (d) as the reachable figure. The product's two-asset
 candidate set cannot express any of this; it is the most consequential menu limitation (§7).
-Reproduce: `--sections menu` on the same `research_history` command as above; doc cell (d) is the
-`XSTH ETF proxy` row in the output, and the 2.0%-real sensitivity noted above is the script's
-`short-TIPS ladder @2% real` row.
+Reproduce: `--sections menu` on the same `research_history` command as above (doc cell (d) prints as
+the `XSTH ETF proxy` row; the 2.0%-real sensitivity as `short-TIPS ladder @2% real`).
 
 **Is the synthetic VR=1 leg realistic? The empirical short asset says short helps but is not
 enough.** Cells (b)–(d) assume the alternative asset is mean-reverting (VR=1 or a clean
@@ -838,7 +839,7 @@ including `--beta` and `--paths`, so that command reruns the same simulation and
 Tweak `analysis/glide_path/research.py`'s CONFIG block: `SPENDING_REGIMES` (FLEX levels), `RETIRE_HORIZONS`,
 `ACCUM_HORIZONS`, `GAMMA`, `WITHDRAWAL_RATE`, `GRID_STEP`, `OPT_N`/`N_FINAL`/`OPT_PASSES`.
 Returns/vol come straight from the `ALLOC_ANCHORS` mirror of
-[`presets.ts`](../../src/utils/retirement/presets.ts) — change them there (and here) together. Runtime
+[`presets.ts`](../../src/utils/glide-path/presets.ts) `DEFAULT_ALLOC_CURVE` — change them there (and here) together. Runtime
 ≈ 5 min (the per-age coordinate ascent is the cost).
 
 ## 7. Discussion — what we actually take away
@@ -863,9 +864,30 @@ new claim.
    data cannot adjudicate which regime the next 60 years resemble (§2f era table, §4). The two
    engines are best read as scenario brackets — iid: "no recovery, bonds work"; forward-block:
    "history's joint structure persists" — not as a settled point estimate plus a stress case.
-   This is why the product defaults to iid: its interior answer is near-optimal in every cut,
-   while forward-block's flat-100% is optimal only in the corner cell, and scenarios make
-   better toggles than defaults.
+   This is why the product defaults to iid, and the choice is **minimax-regret**, not
+   "near-optimal everywhere." iid lands interior _by construction_: with no path memory, equity
+   weight trades only mean against variance, so the γ-penalty pulls the optimum off the corner to
+   ~60–80% regardless of which era you slice (iid reads the forward CMA marginals, not the
+   sequencing). forward-block hits the **corner** _by construction_ too — historical sequencing
+   makes equity mean-revert over a decade (its long-horizon variance falls below its annual vol)
+   while bonds persist, so the optimizer sees equity as horizon-safe and goes to 100%. Across the
+   era cuts, forward-block's best constant weight sweeps the whole [50%, 100%] envelope while iid's
+   ~60–80% sits permanently _inside_ it (recap of the §2f era table, `best flat` column):
+
+   | History cut         | forward-block best flat |
+   | ------------------- | ----------------------- |
+   | full 1871–2020      | 100%                    |
+   | post-1950           | 100%                    |
+   | ex Germany + Japan  | 100%                    |
+   | stable six          | 80%                     |
+   | 1990–2020 (IT era)  | 50%                     |
+
+   So iid is never the worst-case answer in any regime — it minimizes the largest possible
+   allocation error when the regime is unknown — whereas forward-block is optimal in its corner cut
+   and most wrong (100% vs 50%) in the inflation-targeting cut. Combined with the flat welfare
+   surface (CE spread ≤2–3%), "always near the middle of the envelope" is exactly the low-regret
+   property a default should have; the corner answer is a scenario, and scenarios make better
+   toggles than defaults.
 4. **The verdict on bonds is about the menu, not the asset class — now measured, not just
    suspected.** The bond-menu experiment (§2f) holds the bond's mean and vol constant and removes
    only its historical sequencing and correlation: the optimum collapses from flat-100% to 45%
