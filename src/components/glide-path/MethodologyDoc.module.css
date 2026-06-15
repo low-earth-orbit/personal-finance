@@ -1,0 +1,107 @@
+/* Prose styling for the rendered methodology note. Uses Mantine CSS variables so it
+   tracks the app theme and color scheme (light/dark) without extra wiring. */
+.prose {
+  color: var(--mantine-color-text);
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.65;
+  word-wrap: break-word;
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4 {
+  line-height: 1.25;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  font-weight: 600;
+}
+
+.prose h1 {
+  font-size: var(--mantine-font-size-xl);
+  margin-top: 0;
+}
+.prose h2 {
+  font-size: var(--mantine-font-size-lg);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+  padding-bottom: 0.3em;
+}
+.prose h3 {
+  font-size: var(--mantine-font-size-md);
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose blockquote {
+  margin-top: 0.75em;
+  margin-bottom: 0.75em;
+}
+
+.prose a {
+  color: var(--mantine-color-teal-6);
+  text-decoration: none;
+}
+.prose a:hover {
+  text-decoration: underline;
+}
+
+/* Heading anchor links (rehype-autolink-headings wrap mode) shouldn't look like links. */
+.prose h1 a,
+.prose h2 a,
+.prose h3 a,
+.prose h4 a {
+  color: inherit;
+}
+
+.prose code {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.85em;
+  background: var(--mantine-color-default-hover);
+  padding: 0.1em 0.35em;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.prose pre {
+  background: var(--mantine-color-default-hover);
+  padding: var(--mantine-spacing-md);
+  border-radius: var(--mantine-radius-md);
+  overflow-x: auto;
+}
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+
+.prose blockquote {
+  border-left: 3px solid var(--mantine-color-teal-5);
+  padding: 0.2em 1em;
+  color: var(--mantine-color-dimmed);
+  background: var(--mantine-color-default-hover);
+  border-radius: var(--mantine-radius-sm);
+}
+
+.prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+  font-size: 0.9em;
+  display: block;
+  overflow-x: auto;
+}
+.prose th,
+.prose td {
+  border: 1px solid var(--mantine-color-default-border);
+  padding: 0.4em 0.6em;
+  text-align: left;
+}
+.prose th {
+  background: var(--mantine-color-default-hover);
+  font-weight: 600;
+}
+
+.prose hr {
+  border: none;
+  border-top: 1px solid var(--mantine-color-default-border);
+  margin: 2em 0;
+}

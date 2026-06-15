@@ -1,4 +1,7 @@
+"use client";
+
 import { Anchor, Container, Stack, Text, Title } from "@mantine/core";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 function Point({
@@ -143,14 +146,18 @@ export default function Methodology() {
 
         <Text size="sm" c="dimmed">
           Full methodology:{" "}
+          <Anchor component={Link} href="/glide-path/methodology">
+            glide-path analysis note
+          </Anchor>{" "}
+          (or read the{" "}
           <Anchor
             href="https://github.com/low-earth-orbit/personal-finance/blob/main/docs/glide-path/methodology.md"
             target="_blank"
             rel="noopener noreferrer"
           >
-            glide-path analysis note
+            Markdown source
           </Anchor>
-          . Runs in your browser — nothing is sent anywhere. This is an
+          ). Runs in your browser — nothing is sent anywhere. This is an
           illustration, not financial advice.
         </Text>
       </Stack>
