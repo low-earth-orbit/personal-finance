@@ -648,6 +648,25 @@ persistent _negative_ run — a hot-inflation decade like the 1970s — which is
 and post-1950 cuts (which contain it) are the ones that matter for sizing a real-asset slice.
 Reproduce: `--sections vr` on the same `research_history` command (now prints a `bills` row).
 
+**Scope: "short beats long" is a _tent_ finding, not a permanent-allocation one.** The amplitude
+preference above is conditional on the bond's job here — a _temporary_ sequence-risk hedge protecting
+the wealth handed to early retirement, held over a short window. For that job short duration wins:
+you don't need the term premium over a short hold, and a near-term liability can't afford a deep
+drawdown. It does **not** follow that short beats long (or aggregate) for an investor holding a
+_permanent_ constant-weight bond sleeve and **not** using the bond to protect a specific near-term
+draw. That holder faces a different trade and the optimizer here doesn't speak to it (there is no
+single sequence to protect): over a lifelong hold the term premium compounds (short nominal has run
+roughly _negative_ real in recent data, intermediate/long positive), and longer duration supplies
+the equity-crash convexity short bonds lack — long government bonds rally in a _deflationary_ crash
+(2008, 2020) precisely when equities fall. The catch is that this convexity is itself
+regime-conditional: in an _inflationary_ selloff (2022) long bonds crash _with_ equities and post
+equity-sized drawdowns (20y+ Treasuries fell ~−48% peak-to-trough), so the stock/bond correlation
+that makes them a hedge flips sign with the regime — the same monetary-regime dependence that governs
+the rest of this note. Rough default for a permanent _nominal_ sleeve: aggregate/intermediate
+duration is the term-premium-vs-drawdown sweet spot, long only for a deliberate rebalancing-harvest
+strategy that wants the volatility, short for a near-term liability — and none of the three fixes
+inflation, which is still the argument for putting part of any permanent sleeve in a real asset.
+
 **(4) Does a real-world TIPS _ETF_ actually deliver VR≈1? Live fund data says yes — mostly.** Cells
 (b)–(e) and the bills test treat the inflation-linked leg as clean VR=1. A TIPS _ETF_ is not a
 ladder: its real return = inflation accretion (VR≈1) **+** real-yield repricing (persistent, and
