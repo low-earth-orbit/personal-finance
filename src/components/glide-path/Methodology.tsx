@@ -106,15 +106,19 @@ export default function Methodology() {
         <Point heading="The return model and the spending rule set the shape.">
           Under the default independent (iid) mode, rigid constant-$ spending
           derisks into a moderate &ldquo;bond tent&rdquo; near retirement — an
-          answer that stays near-optimal across every historical era and country
-          cut we tested. Under the sequence-aware mode, history&apos;s joint
-          pattern (equities recover, while long nominal bonds quietly fail in
-          inflation decades) pushes the optimum to ~100% equity — but that
-          result leans on pre-1990 monetary regimes, surviving developed
-          markets, and long nominal bonds being the only alternative, so we
-          treat it as a scenario rather than the default. Flexible spending
-          (income moves with the market) stays near 100% equity in both — the
-          two modes bracket the answer (see the analysis note&apos;s caveats).
+          interior answer that is never the worst case in any historical era or
+          country cut we tested (it always sits inside the range the
+          sequence-aware mode sweeps across regimes). Under the sequence-aware
+          mode, history&apos;s joint pattern (equities recover, while long
+          nominal bonds quietly fail in inflation decades) pushes the optimum to
+          ~100% equity — but that result leans on pre-1990 monetary regimes,
+          surviving developed markets, and long nominal bonds being the only
+          alternative: swap in a real, short-duration holding (e.g. an
+          inflation-linked bond fund) and the optimum drops well below 100%, so
+          we treat the ~100% figure as a scenario rather than the default.
+          Flexible spending (income moves with the market) stays near 100%
+          equity in both — the two modes bracket the answer (see the analysis
+          note&apos;s caveats).
         </Point>
         <Point heading="The shape is worth little; the level matters.">
           Out of sample, the full per-age glide path beats the best single flat
