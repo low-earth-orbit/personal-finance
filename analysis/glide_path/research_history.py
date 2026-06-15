@@ -399,11 +399,153 @@ def run_variance_ratios(args):
               f"{bill_vol:>6.1f}%  {history.observations:>5}")
 
 
+def run_bills_block(args):
+    """Forward-block with a real **bills** leg carrying its OWN historical persistence.
+
+    Unlike the menu cells (which force the safe asset iid, VR=1), this replaces the long-bond leg
+    with JST's empirical real short-bill series — rescaled to the given bills marginals (default
+    0.75% real / 2% vol) — and block-bootstraps it jointly with equity. So the bills leg keeps its
+    real-world VR(10y)≈2.4 inflation persistence: the honest "real-world GIC/bill ladder" answer,
+    vs the menu's idealized VR=1 short asset.
+    """
+    from unittest.mock import patch
+
+    from analysis.glide_path import recommender as R
+    from analysis.shared import jst_history as J
+
+    eq_m, eq_v, _, _ = R._forward_anchors(R.PWL_CURVE, 2.1, True)
+    bill_m, bill_v = args.bills_mean / 100.0, args.bills_vol / 100.0
+
+    # Joint per-country equity+bills panel: inner-join on year so both legs are present and paired,
+    # with shared per-country segment ids (no block bridges countries/gaps).
+    frame = J.load_jst_frame()
+    eq_parts, bill_parts, seg_country, seg_years = [], [], [], []
+    for country in frame["country"].dropna().unique():
+        sub = frame[frame["country"] == country]
+        eq = J.real_stock_fixed_income_returns(sub)[["year", "equity"]]
+        bl = J.real_bill_returns(sub)  # ["year", "bills"]
+        merged = eq.merge(bl, on="year", how="inner").sort_values("year")
+        if merged.empty:
+            continue
+        eq_parts.append(merged["equity"].to_numpy(dtype=float))
+        bill_parts.append(merged["bills"].to_numpy(dtype=float))
+        seg_country.append(np.full(len(merged), country))
+        seg_years.append(merged["year"].to_numpy(dtype=int))
+    equity = np.concatenate(eq_parts)
+    bills = np.concatenate(bill_parts)
+    years = np.concatenate(seg_years)
+    segment_ids = J._assign_segments(np.concatenate(seg_country), years)
+
+    joint = J.rescale_to_targets(
+        J.ReturnHistory(years=years, equity=equity, fixed_income=bills,
+                        label="equity+bills joint", country_count=len(eq_parts),
+                        segment_ids=segment_ids),
+        equity_mean=eq_m, equity_vol=eq_v, fixed_income_mean=bill_m, fixed_income_vol=bill_v,
+        label_suffix="forward-CMA rescaled (bills)")
+
+    print("\n" + "=" * 100)
+    print("FORWARD-BLOCK with a REAL BILLS leg (bills keep their own historical persistence)")
+    print(f"  bills marginals: {args.bills_mean:.2f}% real / {args.bills_vol:.2f}% vol; "
+          f"equity keeps full forward-block sequencing. Compare to menu cell (a) nominal bonds.")
+    print(f"  bills VR(10y) = {J.variance_ratio(joint.fixed_income, 10, joint.segment_ids):.2f} "
+          f"(iid null = 1.0; >1 = persistent inflation bleed)")
+    print("=" * 100)
+    with patch.object(R, "_load_history", return_value=joint):
+        rec = recommend_glide_path(**base_kwargs(args, return_mode="forward-block",
+                                                 dataset="pooled", block_years=args.block_years))
+    print(summary_row("bills (forward-block, own persistence)", rec))
+
+    rng = np.random.default_rng(11)
+    iid_bills = bill_m + bill_v * rng.standard_normal(joint.observations)
+    iid_hist = J.ReturnHistory(years=joint.years, equity=joint.equity, fixed_income=iid_bills,
+                               label="bills-iid", country_count=joint.country_count,
+                               segment_ids=joint.segment_ids)
+
+    def split_sample(history, n_years, n_paths, *, mode, block_years, seed):
+        blk = J.sample_indices(history.observations, n_years, n_paths, mode="historical-block",
+                               block_years=block_years, seed=seed, segment_ids=history.segment_ids)
+        iid = J.sample_indices(history.observations, n_years, n_paths, mode="historical-iid",
+                               block_years=block_years, seed=seed + 1)
+        return history.equity[blk], history.fixed_income[iid]
+
+    with patch.object(R, "_load_history", return_value=iid_hist), \
+         patch.object(J, "sample_return_paths", split_sample):
+        rec_iid = recommend_glide_path(**base_kwargs(args, return_mode="historical-block",
+                                                     dataset="pooled", block_years=args.block_years))
+    print(summary_row("bills (iid, VR=1 — for contrast)", rec_iid))
+
+
+def run_tips_etf(args):
+    """Data-anchored realistic short-TIPS-ETF leg (e.g. XSTH/VTIP), not the idealized VR=1 cell.
+
+    Menu cell (e) assumes the buyable real asset is VR=1. Live ETF data (VTIP/STIP 2012-, deflated
+    by US CPI) says short-TIPS real returns are only *mildly* persistent — annual AR(1) phi ~= 0.13,
+    i.e. VR(2y) ~= 1.13 — because the inflation-accretion leg (VR~=1) dominates but the real-yield
+    repricing leg adds a little persistence and ~0.6 correlation to short Treasuries. Still far below
+    short *nominal* bills (VR(2y) ~= 4.8 in the same data; ~2.9 in JST). This builds the safe leg as
+    an AR(1) at VTIP's measured phi/marginals (--tips-mean/--tips-vol/--tips-phi), block-sampled
+    jointly so it carries that mild persistence while equity keeps its JST forward-block sequencing.
+    """
+    from unittest.mock import patch
+
+    from analysis.glide_path import recommender as R
+    from analysis.shared import jst_history as J
+
+    eq_m, eq_v, _, _ = R._forward_anchors(R.PWL_CURVE, 2.1, True)
+    tips_m, tips_v, phi = args.tips_mean / 100.0, args.tips_vol / 100.0, args.tips_phi
+
+    hist = J.load_pooled_country_returns()
+    n = hist.observations
+    seg = hist.segment_ids if hist.segment_ids is not None else np.zeros(n, dtype=int)
+
+    def ar1(seed):
+        """AR(1) with the given phi at (tips_m, tips_v) marginals; restart each segment."""
+        rng = np.random.default_rng(seed)
+        innov_sd = tips_v * np.sqrt(1 - phi * phi)
+        out = np.empty(n)
+        prev, x = None, 0.0
+        for i in range(n):
+            if seg[i] != prev:
+                x = rng.standard_normal() * tips_v
+                prev = seg[i]
+            else:
+                x = phi * x + rng.standard_normal() * innov_sd
+            out[i] = tips_m + x
+        return out
+
+    def make_hist(series, label):
+        return J.ReturnHistory(years=hist.years, equity=hist.equity, fixed_income=series,
+                               label=label, country_count=hist.country_count,
+                               segment_ids=hist.segment_ids)
+
+    def split_sample(history, n_years, n_paths, *, mode, block_years, seed):
+        blk = J.sample_indices(history.observations, n_years, n_paths, mode="historical-block",
+                               block_years=block_years, seed=seed, segment_ids=history.segment_ids)
+        return history.equity[blk], history.fixed_income[blk]
+
+    print("\n" + "=" * 100)
+    print("REALISTIC short-TIPS-ETF leg (data-anchored AR(1), not idealized VR=1)")
+    print(f"  marginals {args.tips_mean:.2f}% real / {args.tips_vol:.2f}% vol, AR(1) phi={phi:.2f} "
+          f"(VTIP-measured); equity keeps JST forward-block sequencing.")
+    print("=" * 100)
+    for label, ph, seed in [(f"realistic XSTH (phi={phi:.2f}, VR(2y)~{1 + phi:.2f})", phi, 7),
+                            ("idealized VR=1 (phi=0, = cell e)", 0.0, 7)]:
+        series = ar1(seed) if ph == phi else (
+            tips_m + tips_v * np.random.default_rng(seed).standard_normal(n))
+        with patch.object(R, "_load_history", return_value=make_hist(series, label)), \
+             patch.object(J, "sample_return_paths", split_sample):
+            rec = recommend_glide_path(**base_kwargs(args, return_mode="historical-block",
+                                                     dataset="pooled", block_years=args.block_years))
+        print(summary_row(label, rec))
+
+
 SECTIONS = {
     "matrix": run_matrix,
     "blocks": run_block_sweep,
     "channels": run_channels,
     "menu": run_menu,
+    "bills-block": run_bills_block,
+    "tips-etf": run_tips_etf,
     "gamma": run_gamma_sweep,
     "curves": run_flat_curves,
     "vr": run_variance_ratios,
@@ -428,6 +570,16 @@ def main(argv=None):
     ap.add_argument("--gamma", type=float, default=4.0)
     ap.add_argument("--interval", type=int, default=5)
     ap.add_argument("--block-years", type=int, default=10)
+    ap.add_argument("--bills-mean", type=float, default=0.75,
+                    help="bills-block: real bill mean return %% (default 0.75)")
+    ap.add_argument("--bills-vol", type=float, default=2.0,
+                    help="bills-block: real bill vol %% (default 2.0)")
+    ap.add_argument("--tips-mean", type=float, default=1.42,
+                    help="tips-etf: real mean %% (default 1.42, = menu cell e/b)")
+    ap.add_argument("--tips-vol", type=float, default=5.4,
+                    help="tips-etf: real vol %% (default 5.4, = menu cell e/b)")
+    ap.add_argument("--tips-phi", type=float, default=0.13,
+                    help="tips-etf: annual AR(1) phi (default 0.13, VTIP-measured)")
     ap.add_argument("--paths", type=int, default=6_000)
     ap.add_argument("--passes", type=int, default=10)
     ap.add_argument("--quick", action="store_true",

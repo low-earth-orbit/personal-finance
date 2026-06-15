@@ -530,7 +530,35 @@ equity recovery). Note also that every cut's CE-vs-flat-weight curve is shallow:
 between 50% and 100%, but the welfare spread across that range stays ≤ ~2% of CE — the era choice
 moves the _allocation_ answer far more than the _welfare_ answer.
 
-**Robustness: the bond menu.** The channel factorial says the flip is driven by what history does
+---
+
+### 2g. The bond menu — is flat-100% about equity, or about the only bond being long-nominal?
+
+> **In one paragraph.** Flat-100% is a verdict on _long nominal bonds_, not on equity. Swap the
+> bond leg for a real, short-duration asset and the optimum drops from 100% to **~45% equity** —
+> the reachable figure, what a short-TIPS ETF (XSTH) delivers. A further drop to ~20% needs an
+> idealized hold-to-maturity _ladder_ no Canadian retail product offers, so read 20% as an upper
+> bound. The driver is **persistence, not amplitude**: nominal bonds' real returns compound bad
+> (inflation) decades (VR(10y)≈1.7), and only _inflation linkage_ — not short duration — removes
+> that. We confirm this three ways (hold mean/vol fixed, vary only persistence), check it against
+> live TIPS-ETF data, and map it to the buyable Canadian menu below. The whole result is
+> regime-conditional: it holds in persistent-inflation regimes and reverses in the 1990–2020
+> disinflation cut, which is why the real asset is best read as a _hedge across regimes_, not a
+> free lunch.
+>
+> **Practitioner takeaway** (not advice). Real, short-duration is the high-value add the two-asset
+> product can't express. In Canada: **XSTH** (short US TIPS, CAD-hedged) is the closest buyable
+> proxy — short duration, US-CPI basis risk; **XRB** (Canadian RRB ETF) matches Canadian CPI but is
+> long-duration; a **GIC/bill ladder** fixes drawdown but not inflation persistence. None is the
+> idealized short-domestic-real ladder (Canada stopped issuing RRBs in 2022). Without a real asset,
+> for the sequence-hedge role: GIC ladder > XSB > ZAG, all on the amplitude axis only.
+
+The rest of this section is the evidence behind that summary: (1) the menu experiment; (2) whether a
+real-world short asset is really VR=1 — the empirical bills check; (3) the persistence-vs-amplitude
+axes that result implies; (4) the live TIPS-ETF data confirming the buyable proxy; (5) the Canadian
+product menu; (6) regime conditionality.
+
+**(1) The menu experiment.** The channel factorial says the flip is driven by what history does
 to the _bond_ leg, which raises the question: is flat-100% about equity's merit, or about the only
 modeled alternative being long nominal bonds? Replacing the bond leg with a synthetic VR=1 real
 asset (iid, zero equity correlation — an idealized short-TIPS/RRB ladder) while equity keeps its
@@ -557,28 +585,15 @@ Canadian retail investor can buy the first but not the second. (Raising the ladd
 1.42% to 2.0% pushes the idealized optimum further still, to ~10% / $60.0k — the **return** axis — but
 that stacks an optimistic yield on top of the unreachable ladder vol, so it is not tabulated.)
 
-**What's actually buyable in Canada, mapped onto these cells.** There is no retail short-real
-_ladder_ product (Canada stopped issuing RRBs in 2022; existing RRBs are long-duration anyway). The
-two implementable real-asset routes are:
+So the menu verdict is **~45% equity, not 20%**: cell (b)/(d)'s 45% is the reachable figure (a real
+asset at full short-bond vol); cell (c)'s 20% needs the ladder's hold-to-maturity vol suppression,
+unreachable in retail — the ETF-vs-ladder gap, not RRB discontinuation, is the binding constraint
+(it applies wherever real bonds trade only as funds). The product's two-asset candidate set cannot
+express any of this; it is the most consequential menu limitation (§7). The buyable Canadian menu is
+mapped in step (4). Reproduce: `--sections menu` (cell (d) prints as the `XSTH ETF proxy` row; the
+2.0%-real sensitivity as `short-TIPS ladder @2% real`).
 
-- A **GIC / bill ladder** — an actual ladder (hold-to-maturity), but _nominal_: it fixes amplitude,
-  not persistence (the "short nominal" row of the amplitude-vs-persistence table below — VR still
-  bad). It does **not** move the optimum off the nominal-bond answer on the persistence axis.
-- A **short-term, CAD-hedged US-TIPS ETF** (e.g. XSTH / ZTIP.F) — real and short-duration, but a
-  perpetual marked-to-market _fund_, not a ladder: it carries short-bond price vol, not the ladder's
-  2%. This is cell (d): it delivers the persistence fix (→45%) but **not** the ladder's amplitude
-  suppression (so not 20%). Residual idealizations even at (d): it tracks _US_ CPI, not Canadian
-  (basis risk on the exact axis it's bought for), and the model pins its real yield at 1.42%.
-
-So the implementable verdict is **~45% equity, not 20%**: cell (c)'s 20% requires a hold-to-maturity
-real ladder that no Canadian retail wrapper provides, and the ETF-vs-ladder gap — not RRB
-discontinuation — is the binding constraint (it applies wherever real bonds trade only as funds).
-Read (c) as the idealized upper bound; read (d) as the reachable figure. The product's two-asset
-candidate set cannot express any of this; it is the most consequential menu limitation (§7).
-Reproduce: `--sections menu` on the same `research_history` command as above (doc cell (d) prints as
-the `XSTH ETF proxy` row; the 2.0%-real sensitivity as `short-TIPS ladder @2% real`).
-
-**Is the synthetic VR=1 leg realistic? The empirical short asset says short helps but is not
+**(2) Is the synthetic VR=1 leg realistic? The empirical short asset says short helps but is not
 enough.** Cells (b)–(d) assume the alternative asset is mean-reverting (VR=1 or a clean
 real ladder). That is a property of being _inflation-linked_, not of being _short_. JST carries
 an actual short asset — rolling short-term government **bills** (`bill_rate`, deflated by CPI) —
@@ -604,7 +619,7 @@ collapse the optimum the way cell (c) does. It takes short **and inflation-linke
 no nominal instrument has — to deliver the VR=1 leg, which is precisely why an idealized
 short-TIPS/RRB ladder, not a bill ladder, is the asset that flips the answer.
 
-**This is not "short duration is bad" — short fixes a different axis.** A safe asset can fail on
+**(3) This is not "short duration is bad" — short fixes a different axis.** A safe asset can fail on
 two independent dimensions, and VR measures only the second:
 
 - **Amplitude** — how _deep_ a bad spell goes (vol, drawdown size). Set by **duration**. A rate
@@ -632,6 +647,60 @@ that gives 1990–2020 bills VR(10y)=3.90) scores high without being a danger. T
 persistent _negative_ run — a hot-inflation decade like the 1970s — which is why the full-sample
 and post-1950 cuts (which contain it) are the ones that matter for sizing a real-asset slice.
 Reproduce: `--sections vr` on the same `research_history` command (now prints a `bills` row).
+
+**(4) Does a real-world TIPS _ETF_ actually deliver VR≈1? Live fund data says yes — mostly.** Cells
+(b)–(e) and the bills test treat the inflation-linked leg as clean VR=1. A TIPS _ETF_ is not a
+ladder: its real return = inflation accretion (VR≈1) **+** real-yield repricing (persistent, and
+never extinguished by maturity because the fund rolls perpetually). So the VR=1 assumption is, in
+principle, optimistic for the buyable instrument. We checked it against the actual funds — VTIP and
+STIP (US short-TIPS ETFs, XSTH's siblings), deflated by US CPI, 2012–2025 — alongside short
+Treasuries (SHY/VGSH) over the same window, which **includes the 2021–23 inflation shock**:
+
+| Real series (US, 2012–25)   | real μ/yr | VR(2y) |
+| --------------------------- | --------- | ------ |
+| VTIP (short TIPS ETF)       | −0.45%    | ~1.1   |
+| STIP (0–5y TIPS ETF)        | −0.51%    | ~1.6   |
+| SHY / VGSH (short Treasury) | −1.3%     | ~4.8   |
+
+Two readings. (1) The repricing leg _is_ real — short-TIPS and short-Treasury real returns
+correlate ~0.6 (shared real-rate factor), so the ETF is not an independent VR=1 asset. (2) But the
+accretion leg dominates: TIPS VR(2y)≈1.1–1.6 sits next to the iid null, **far** from short
+nominal's ~4.8, and TIPS earned **+~0.9pp/yr real** over short Treasuries _through_ the inflation
+shock. Putting VTIP's measured persistence (annual AR(1) φ≈0.13, i.e. VR(2y)≈1.13) through the
+optimizer at the menu marginals moves the tent only ~5pp of equity vs the idealized φ=0 — not the
+~55pp that separates VR=1 from the nominal corner. **The repricing objection is real but
+second-order: a short-TIPS ETF keeps most of the idealized real asset's tent benefit and does _not_
+collapse to short-Treasury behaviour.** (Caveat: φ≈0.13 is 13 annual observations — a wide CI; read
+"mildly persistent, not 4.8," not a precise point.) Reproduce: `--sections tips-etf`
+(`--tips-mean`/`--tips-vol`/`--tips-phi`).
+
+**(5) What a Canadian can actually buy — and the constraint that bites.** The real-asset slice is
+implementable in Canada, but not in its idealized form. The buyable menu, mapped onto the two axes:
+
+| Product (CAD investor)                        | amplitude (duration) | persistence (CPI link)  | residual                         |
+| --------------------------------------------- | -------------------- | ----------------------- | -------------------------------- |
+| **XSTH / ZTIP.F** (short US TIPS, CAD-hedged) | good (0–5y)          | good — but **US** CPI   | CPI basis vs CAD liability       |
+| **XRB** (Canadian RRB ETF)                    | **bad (~13–15y)**    | good — **Canadian** CPI | 2022-style drawdown (XRB ≈ −14%) |
+| GIC / bill ladder                             | good (HTM, no marks) | **none — nominal**      | persistence axis open            |
+
+The hard constraint: **no product offers short duration _and_ Canadian CPI.** Canada stopped issuing
+RRBs in 2022 and the outstanding ones are long-dated, so a short _domestic_ real ladder does not
+exist. XSTH buys amplitude at the cost of US-CPI basis risk; XRB buys CPI-match at the cost of
+long-duration amplitude (and partial rate-bull/deflation-hedge behaviour like long nominal bonds).
+For the sequence-hedge role this section is about, **XSTH is the better fit** (amplitude is the
+cleaner risk to cut, and CAD/US CPI correlate ~0.7–0.8); XRB is the better _pure_ Canadian-CPI hedge
+for a high-drawdown-tolerance holder; a blend approximates the unavailable short-domestic-real asset.
+
+**(6) Regime-robustness — why this is a hedge, not a free lunch.** The menu result is itself
+regime-conditional, and the same monetary-regime judgment that governs flat-100% governs the value
+of TIPS. In the **persistent-inflation** regime (full sample, post-1950, the 1970s) nominal bonds
+bleed (VR>1) and TIPS earns its keep. In the **disinflation + duration-bull** regime (1990–2020,
+bond VR(10y)=0.50) nominal bonds already mean-revert and recover, the interior tent returns, and
+TIPS is largely _redundant_. So the case for the real asset is not "it beats bonds" but "it is the
+one safe asset adequate in **both** regimes" — it dominates the regime _bet_ a nominal holder is
+otherwise forced to make. (The 1990–2020 mean reversion is substantially the one-off duration bull —
+rates 8%→0%, unrepeatable from today — and bills stayed VR>1 even then; see the era table in §2f and
+the caveats in §4.)
 
 ---
 
