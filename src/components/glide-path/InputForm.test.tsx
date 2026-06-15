@@ -81,4 +81,25 @@ describe("glide-path InputForm guidance", () => {
       await screen.findByRole("textbox", { name: "Custom risk aversion" }),
     ).toHaveValue("4.5");
   });
+
+  it("disables the generate button and shows loading while computing", () => {
+    renderWithMantine(
+      <InputForm
+        input={DEFAULTS}
+        errors={{}}
+        returnMode="iid-mc"
+        onChange={vi.fn()}
+        onReturnModeChange={vi.fn()}
+        onReset={vi.fn()}
+        onGenerate={vi.fn()}
+        generating
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Generate allocation paths",
+    });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("data-loading", "true");
+  });
 });

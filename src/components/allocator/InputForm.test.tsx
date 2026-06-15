@@ -10,6 +10,7 @@ describe("allocator InputForm", () => {
     const props = {
       errors: {},
       started: false,
+      loading: false,
       onChange: vi.fn(),
       onReset: vi.fn(),
       onShowRecommendation: vi.fn(),
@@ -36,6 +37,7 @@ describe("allocator InputForm", () => {
     const props = {
       errors: {},
       started: false,
+      loading: false,
       onChange: vi.fn(),
       onReset: vi.fn(),
       onShowRecommendation: vi.fn(),
@@ -68,6 +70,7 @@ describe("allocator InputForm", () => {
         input={DEFAULTS}
         errors={{}}
         started={false}
+        loading={false}
         onChange={vi.fn()}
         onReset={vi.fn()}
         onShowRecommendation={onShowRecommendation}
@@ -80,6 +83,27 @@ describe("allocator InputForm", () => {
     expect(onShowRecommendation).toHaveBeenCalledOnce();
   });
 
+  it("keeps the recommendation button disabled and loading while calculating", () => {
+    renderWithMantine(
+      <InputForm
+        input={DEFAULTS}
+        errors={{}}
+        started
+        loading
+        onChange={vi.fn()}
+        onReset={vi.fn()}
+        onShowRecommendation={vi.fn()}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Show recommendation" });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("data-loading", "true");
+    expect(
+      screen.queryByText(/Recommendation updates automatically/i),
+    ).not.toBeInTheDocument();
+  });
+
   it("uses one explicit RRSP withdrawal tax-rate input", async () => {
     const user = userEvent.setup();
     renderWithMantine(
@@ -87,6 +111,7 @@ describe("allocator InputForm", () => {
         input={DEFAULTS}
         errors={{}}
         started={false}
+        loading={false}
         onChange={vi.fn()}
         onReset={vi.fn()}
         onShowRecommendation={vi.fn()}

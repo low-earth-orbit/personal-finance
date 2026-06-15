@@ -45,7 +45,6 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const seedRef = useRef(0);
-  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function terminateWorker() {
     workerRef.current?.terminate();
@@ -53,8 +52,6 @@ export default function Main() {
   }
 
   function cancelPendingComputation() {
-    if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
-    updateTimerRef.current = null;
     terminateWorker();
     requestIdRef.current += 1;
     setComputing(false);
@@ -63,7 +60,6 @@ export default function Main() {
 
   useEffect(
     () => () => {
-      if (updateTimerRef.current) clearTimeout(updateTimerRef.current);
       terminateWorker();
     },
     [],
@@ -108,8 +104,8 @@ export default function Main() {
       if (workerRef.current === worker) terminateWorker();
     };
 
-    // Re-roll keeps the current result visible (only the button spins); a fresh Generate
-    // swaps to the full loader.
+    // Re-roll only spins its own control. Generate uses the primary button and shows
+    // the full loader only before the first result.
     if (isReroll) setRerolling(true);
     else setComputing(true);
     worker.postMessage({
@@ -118,17 +114,6 @@ export default function Main() {
       seed: seedValue,
       returnMode: returnModeSnapshot,
     });
-  }
-
-  function scheduleUpdate(
-    inputSnapshot: GlidePathInput,
-    returnModeSnapshot: GlidePathReturnMode,
-  ) {
-    if (!computed) return;
-    updateTimerRef.current = setTimeout(() => {
-      updateTimerRef.current = null;
-      compute(0, false, inputSnapshot, returnModeSnapshot);
-    }, 400);
   }
 
   function handleGenerate() {
@@ -156,9 +141,6 @@ export default function Main() {
     cancelPendingComputation();
     setError(false);
     seedRef.current = 0;
-    if (Object.keys(validateGlidePathInput(next)).length === 0) {
-      scheduleUpdate(next, returnMode);
-    }
   }
 
   function handleReturnModeChange(mode: GlidePathReturnMode) {
@@ -167,7 +149,6 @@ export default function Main() {
     cancelPendingComputation();
     setError(false);
     seedRef.current = 0;
-    scheduleUpdate(input, mode);
   }
 
   function handleReset() {
@@ -180,11 +161,11 @@ export default function Main() {
     seedRef.current = 0;
   }
 
-  const updating =
+  const stale =
     computed !== null &&
-    (computing ||
-      computed.input !== input ||
-      computed.returnMode !== returnMode);
+    !computing &&
+    (computed.input !== input || computed.returnMode !== returnMode);
+  const updating = computed !== null && computing;
 
   return (
     <Container size="xl" pb="xl">
@@ -198,7 +179,7 @@ export default function Main() {
             onReturnModeChange={handleReturnModeChange}
             onReset={handleReset}
             onGenerate={handleGenerate}
-            generating={computing && !computed}
+            generating={computing}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, lg: 2 }}>
@@ -207,6 +188,7 @@ export default function Main() {
             result={computed?.data ?? null}
             computing={computing}
             updating={updating}
+            stale={stale}
             rerolling={rerolling}
             error={error}
             hasErrors={hasErrors}

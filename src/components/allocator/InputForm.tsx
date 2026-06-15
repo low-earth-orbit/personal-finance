@@ -30,6 +30,7 @@ interface Props {
   input: AllocatorInput;
   errors: AllocatorErrors;
   started: boolean;
+  loading: boolean;
   onChange: (key: AllocatorInputKey, value: unknown) => void;
   onReset: () => void;
   onShowRecommendation: () => void;
@@ -65,6 +66,7 @@ export default function InputForm({
   input,
   errors,
   started,
+  loading,
   onChange,
   onReset,
   onShowRecommendation,
@@ -288,12 +290,18 @@ export default function InputForm({
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
-      {!started && (
-        <Button fullWidth mt="lg" onClick={showRecommendation}>
+      {(!started || loading) && (
+        <Button
+          fullWidth
+          mt="lg"
+          onClick={showRecommendation}
+          loading={loading}
+          disabled={loading}
+        >
           Show recommendation
         </Button>
       )}
-      {started && (
+      {started && !loading && (
         <Text size="xs" c="dimmed" mt="sm">
           Recommendation updates automatically when inputs change.
         </Text>

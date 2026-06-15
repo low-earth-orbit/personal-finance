@@ -446,9 +446,22 @@ describe("glide-path Result", () => {
     ).toBeDisabled();
   });
 
-  it("keeps existing results visible when an update is paused", () => {
-    renderResult(makeResult(), { hasErrors: true });
-    expect(screen.getByText(/Update paused/i)).toBeInTheDocument();
+  it("keeps existing results visible after inputs change and prompts generation", () => {
+    renderResult(makeResult(), { stale: true, onReroll: () => {} });
+    expect(
+      screen.getByText(/Inputs changed.*Generate allocation paths/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Updating allocation paths/i)).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /another simulation sample/i }),
+    ).toBeDisabled();
+  });
+
+  it("prompts users to fix invalid changed inputs before generating", () => {
+    renderResult(makeResult(), { stale: true, hasErrors: true });
+    expect(
+      screen.getByText(/fix the highlighted fields, then generate again/i),
+    ).toBeInTheDocument();
   });
 });
