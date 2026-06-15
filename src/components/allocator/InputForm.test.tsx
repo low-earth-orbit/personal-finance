@@ -83,7 +83,7 @@ describe("allocator InputForm", () => {
     expect(onShowRecommendation).toHaveBeenCalledOnce();
   });
 
-  it("keeps the recommendation button disabled and loading while calculating", () => {
+  it("replaces the button with the auto-update notice once started", () => {
     renderWithMantine(
       <InputForm
         input={DEFAULTS}
@@ -96,12 +96,14 @@ describe("allocator InputForm", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: "Show recommendation" });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute("data-loading", "true");
+    // Once started, the recommendation recomputes automatically: no Show button,
+    // just the notice — including while a recompute is in flight (loading).
     expect(
-      screen.queryByText(/Recommendation updates automatically/i),
+      screen.queryByRole("button", { name: "Show recommendation" }),
     ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Recommendation updates automatically/i),
+    ).toBeInTheDocument();
   });
 
   it("uses one explicit RRSP withdrawal tax-rate input", async () => {
