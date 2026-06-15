@@ -215,10 +215,15 @@ def run_menu(args):
                                       bond-side sequencing+correlation, holding risk constant
       c) short-TIPS ladder          : iid normal, bond mean, 2% vol (idealized real ladder)
       d) short-TIPS ladder @2% real : c) with a 2.0% real yield
+      e) XSTH ETF proxy             : iid normal, bond mean, FULL short-bond vol — a real,
+                                      short-duration ETF (CAD-hedged short-term US TIPS) that has
+                                      the persistence fix but NOT the ladder's vol suppression.
+                                      Numerically identical to (b); the buyable Canadian figure.
 
-    The synthetic asset is idealized: no real-rate duration risk, no equity correlation, no
-    liquidity/issuance constraints (Canada stopped RRB issuance in 2022). Read c/d as upper
-    bounds on what a real ladder buys.
+    Cells (c)/(d) are idealized: no real-rate duration risk, no equity correlation, no
+    liquidity/issuance constraints (Canada stopped RRB issuance in 2022). The 2% vol in (c) is the
+    LADDER property (hold-to-maturity pull-to-par), not a property of being short or real — an ETF
+    (e) cannot deliver it. Read c/d as upper bounds; (e) is what a Canadian can actually buy.
     """
     from unittest.mock import patch
 
@@ -265,6 +270,7 @@ def run_menu(args):
         ("b) synth bond, same marginals", bd_m, bd_v),
         ("c) short-TIPS ladder (2% vol)", bd_m, 0.02),
         ("d) short-TIPS ladder @2% real", 0.02, 0.02),
+        ("e) XSTH ETF proxy (VR=1, full vol)", bd_m, bd_v),
     ]
     for label, mean, vol in cells:
         history = with_synth_bond(mean, vol)

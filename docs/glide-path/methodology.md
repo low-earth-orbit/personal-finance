@@ -534,23 +534,48 @@ modeled alternative being long nominal bonds? Replacing the bond leg with a synt
 asset (iid, zero equity correlation — an idealized short-TIPS/RRB ladder) while equity keeps its
 full forward-block sequencing:
 
-| Non-equity asset                                  | best flat | CE at best | Deplete |
-| ------------------------------------------------- | --------- | ---------- | ------- |
-| a) nominal bonds, joint structure (forward-block) | **100%**  | $54.9k     | 5.3%    |
-| b) synthetic, same mean/vol (1.42%/5.4%), iid     | 45%       | $57.9k     | 3.5%    |
-| c) short-TIPS ladder (1.42% real, 2% vol)         | 20%       | $59.6k     | 1.7%    |
-| d) short-TIPS ladder at 2.0% real                 | 10%       | $60.0k     | 0.1%    |
+| Non-equity asset                                       | best flat | CE at best | Deplete |
+| ------------------------------------------------------ | --------- | ---------- | ------- |
+| a) nominal bonds, joint structure (forward-block)      | **100%**  | $54.9k     | 5.3%    |
+| b) synthetic real, same mean/vol (1.42%/5.4%), iid     | 45%       | $57.9k     | 3.5%    |
+| c) short-TIPS _ladder_ (1.42% real, 2% vol)            | 20%       | $59.6k     | 1.7%    |
+| d) **buyable real ETF proxy** (1.42% real, 5.4%, VR=1) | **45%**   | $57.9k     | 3.5%    |
 
 Cell (b) is the decisive one: it holds the bond's mean **and** vol constant and removes only the
 sequencing and correlation — and the optimum collapses from 100% to 45% while CE _rises_ ~$3k/yr.
-**The flat-100% result is a verdict on long nominal bonds, not a celebration of equity.** With an
-implementable real ladder (c), the optimizer wants mostly the ladder, CE improves by ~$4.7k/yr
-(~9%) over the all-equity answer — a larger welfare gain than every allocation refinement in this
-note combined — and depletion drops from 5.3% to 1.7%. Caveats: the synthetic asset is idealized
-(no real-rate duration risk — long TIPS lost ~12% in 2022 — no liquidity or issuance constraints;
-Canada stopped issuing RRBs in 2022), so read (c)/(d) as upper bounds. The product's two-asset
-candidate set cannot express this; it is the most consequential menu limitation (§7).
-Reproduce: `--sections menu` on the same `research_history` command as above.
+**The flat-100% result is a verdict on long nominal bonds, not a celebration of equity.** The two
+real cells then split a property the doc previously conflated. Cells (b)/(d) are **identical** — a
+real (VR=1, zero-correlation) leg at the _full_ short-bond vol — and land at 45%; cell (c) keeps
+the real linkage but additionally suppresses vol to 2%, and only then does the optimum reach 20%.
+That 2%-vol assumption is the _ladder_ property — hold-to-maturity pull-to-par, where terminal
+real wealth is locked at purchase and interim price marks don't matter — **not** a property of being
+short or being inflation-linked. The 100%→45% jump is the **persistence** axis (inflation linkage);
+the further 45%→20% is the **amplitude** axis (ladder vol suppression). They are separable, and a
+Canadian retail investor can buy the first but not the second. (Raising the ladder's real yield from
+1.42% to 2.0% pushes the idealized optimum further still, to ~10% / $60.0k — the **return** axis — but
+that stacks an optimistic yield on top of the unreachable ladder vol, so it is not tabulated.)
+
+**What's actually buyable in Canada, mapped onto these cells.** There is no retail short-real
+_ladder_ product (Canada stopped issuing RRBs in 2022; existing RRBs are long-duration anyway). The
+two implementable real-asset routes are:
+
+- A **GIC / bill ladder** — an actual ladder (hold-to-maturity), but _nominal_: it fixes amplitude,
+  not persistence (the "short nominal" row below — VR still bad). It does **not** move the optimum
+  off the nominal-bond answer on the persistence axis.
+- A **short-term, CAD-hedged US-TIPS ETF** (e.g. XSTH / ZTIP.F) — real and short-duration, but a
+  perpetual marked-to-market _fund_, not a ladder: it carries short-bond price vol, not the ladder's
+  2%. This is cell (d): it delivers the persistence fix (→45%) but **not** the ladder's amplitude
+  suppression (so not 20%). Residual idealizations even at (d): it tracks _US_ CPI, not Canadian
+  (basis risk on the exact axis it's bought for), and the model pins its real yield at 1.42%.
+
+So the implementable verdict is **~45% equity, not 20%**: cell (c)'s 20% requires a hold-to-maturity
+real ladder that no Canadian retail wrapper provides, and the ETF-vs-ladder gap — not RRB
+discontinuation — is the binding constraint (it applies wherever real bonds trade only as funds).
+Read (c) as the idealized upper bound; read (d) as the reachable figure. The product's two-asset
+candidate set cannot express any of this; it is the most consequential menu limitation (§7).
+Reproduce: `--sections menu` on the same `research_history` command as above; doc cell (d) is the
+`XSTH ETF proxy` row in the output, and the 2.0%-real sensitivity noted above is the script's
+`short-TIPS ladder @2% real` row.
 
 **Is the synthetic VR=1 leg realistic? The empirical short asset says short helps but is not
 enough.** Cells (b)–(d) assume the alternative asset is mean-reverting (VR=1 or a clean
@@ -844,8 +869,12 @@ new claim.
 4. **The verdict on bonds is about the menu, not the asset class — now measured, not just
    suspected.** The bond-menu experiment (§2f) holds the bond's mean and vol constant and removes
    only its historical sequencing and correlation: the optimum collapses from flat-100% to 45%
-   equity and CE _rises_. An idealized short-TIPS/RRB ladder takes the optimum to ~20% equity and
-   adds ~9% of CE — a larger welfare gain than every allocation refinement in this note combined.
+   equity and CE _rises_ ~$3k/yr. That 45% is the **reachable** figure — it is what a real,
+   short-duration ETF (CAD-hedged short-term US TIPS, e.g. XSTH) delivers, since the 100%→45% jump
+   is driven entirely by inflation linkage (the persistence axis). An _idealized_ short-TIPS/RRB
+   **ladder** takes the optimum further, to ~20% equity / +~9% CE, but the extra 45%→20% step comes
+   only from the ladder's hold-to-maturity vol suppression (2% vs short-bond ~5.4%), which no
+   Canadian retail wrapper provides — read 20% as the idealized upper bound, 45% as the buyable one.
    Flat-100% is conditional on the only safe asset being long nominal bonds; a third (real,
    short-duration) asset is the highest-value extension to the candidate set (§4).
 5. **Lifecycle-horizon historical inference runs on priors, not power.** 150 years × 16
