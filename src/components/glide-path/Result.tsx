@@ -39,6 +39,8 @@ interface ResultProps {
   result: GlidePathResult | null;
   computing: boolean;
   updating?: boolean;
+  /** Inputs changed since this result was generated. */
+  stale?: boolean;
   /** A re-roll is in flight: keep the current result visible, just spin the re-roll button. */
   rerolling?: boolean;
   error?: boolean;
@@ -351,6 +353,7 @@ export default function Result({
   result,
   computing,
   updating = false,
+  stale = false,
   rerolling = false,
   error = false,
   hasErrors,
@@ -489,14 +492,16 @@ export default function Result({
           </Text>
         </Group>
       )}
-      {hasErrors && (
+      {stale && (
         <Text size="xs" c="orange" fw={600} aria-live="polite">
-          Update paused: fix the highlighted fields.
+          {hasErrors
+            ? "Inputs changed: fix the highlighted fields, then generate again."
+            : "Inputs changed. Generate allocation paths to refresh this result."}
         </Text>
       )}
       {error && (
         <Text size="xs" c="red" fw={600} aria-live="polite">
-          Update failed. Change an input to retry.
+          Generation failed. Try again.
         </Text>
       )}
       {planNeedsAdjustment && (
@@ -669,7 +674,7 @@ export default function Result({
             leftSection={<IconArrowsShuffle size={14} />}
             onClick={onReroll}
             loading={rerolling}
-            disabled={updating}
+            disabled={updating || stale}
           >
             Test another simulation sample
           </Button>

@@ -280,7 +280,7 @@ export default function InputForm({
         leftSection={<IconChartLine size={18} />}
         onClick={onGenerate}
         loading={generating}
-        disabled={Object.keys(errors).length > 0}
+        disabled={generating || Object.keys(errors).length > 0}
         mt="sm"
       >
         Generate allocation paths

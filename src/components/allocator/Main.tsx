@@ -132,6 +132,7 @@ export default function Main() {
             input={input}
             errors={errors}
             started={hasStarted}
+            loading={status === "loading" || status === "updating"}
             onChange={handleChange}
             onReset={handleReset}
             onShowRecommendation={handleShowRecommendation}
