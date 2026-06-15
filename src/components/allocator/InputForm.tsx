@@ -290,7 +290,11 @@ export default function InputForm({
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
-      {(!started || loading) && (
+      {started ? (
+        <Text size="xs" c="dimmed" mt="sm">
+          Recommendation updates automatically when inputs change.
+        </Text>
+      ) : (
         <Button
           fullWidth
           mt="lg"
@@ -300,11 +304,6 @@ export default function InputForm({
         >
           Show recommendation
         </Button>
-      )}
-      {started && !loading && (
-        <Text size="xs" c="dimmed" mt="sm">
-          Recommendation updates automatically when inputs change.
-        </Text>
       )}
       <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />
     </>
