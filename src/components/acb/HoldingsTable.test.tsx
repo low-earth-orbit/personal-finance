@@ -41,9 +41,7 @@ const HOLDINGS_WITH_TRANSFER: Holding[] = [
 const noop = () => {};
 
 /** Adjustments prop with no T3 entries or opening lots. */
-function emptyAdjustments(
-  overrides: Partial<AcbAdjustments> = {},
-): AcbAdjustments {
+function emptyAdjustments(overrides: Partial<AcbAdjustments> = {}): AcbAdjustments {
   return {
     t3Slips: {},
     onEditT3: noop,
@@ -55,9 +53,7 @@ function emptyAdjustments(
 
 describe("HoldingsTable", () => {
   it("renders one row per holding with shares, ACB, and cost basis", () => {
-    renderWithMantine(
-      <HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />,
-    );
+    renderWithMantine(<HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />);
 
     const veqtRow = screen.getByText("VEQT").closest("tr")!;
     expect(within(veqtRow).getByText("10")).toBeInTheDocument();
@@ -66,9 +62,7 @@ describe("HoldingsTable", () => {
   });
 
   it("hides ghost rows: holdings with zero shares are not rendered", () => {
-    renderWithMantine(
-      <HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />,
-    );
+    renderWithMantine(<HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />);
 
     // XEQT was fully sold (0 shares): no row for it.
     expect(screen.queryByText("XEQT")).not.toBeInTheDocument();
@@ -148,10 +142,7 @@ describe("HoldingsTable", () => {
     const user = userEvent.setup();
     const onEditT3 = vi.fn();
     renderWithMantine(
-      <HoldingsTable
-        holdings={HOLDINGS}
-        adjustments={emptyAdjustments({ onEditT3 })}
-      />,
+      <HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments({ onEditT3 })} />,
     );
 
     const veqtRow = screen.getByText("VEQT").closest("tr")!;
@@ -160,27 +151,20 @@ describe("HoldingsTable", () => {
   });
 
   it("hides the transfer lots column when no holding has transferred shares", () => {
-    renderWithMantine(
-      <HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />,
-    );
+    renderWithMantine(<HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />);
 
     expect(screen.queryByText("Transfer lots")).not.toBeInTheDocument();
   });
 
   it("flags holdings with transferred shares and shows the Edit transfers button", () => {
     renderWithMantine(
-      <HoldingsTable
-        holdings={HOLDINGS_WITH_TRANSFER}
-        adjustments={emptyAdjustments()}
-      />,
+      <HoldingsTable holdings={HOLDINGS_WITH_TRANSFER} adjustments={emptyAdjustments()} />,
     );
 
     expect(screen.getByText("Transfer lots")).toBeInTheDocument();
     const xeqtRow = screen.getByText("XEQT").closest("tr")!;
     expect(within(xeqtRow).getByText("5 transferred")).toBeInTheDocument();
-    expect(
-      within(xeqtRow).getByRole("button", { name: "Edit transfers" }),
-    ).toBeInTheDocument();
+    expect(within(xeqtRow).getByRole("button", { name: "Edit transfers" })).toBeInTheDocument();
     // VEQT has no transfers: dash in its transfer lots cell, no button.
     const veqtRow = screen.getByText("VEQT").closest("tr")!;
     expect(
@@ -218,9 +202,7 @@ describe("HoldingsTable", () => {
     );
 
     const xeqtRow = screen.getByText("XEQT").closest("tr")!;
-    await user.click(
-      within(xeqtRow).getByRole("button", { name: "Edit transfers" }),
-    );
+    await user.click(within(xeqtRow).getByRole("button", { name: "Edit transfers" }));
     expect(onEditTransfers).toHaveBeenCalledWith("XEQT");
   });
 
@@ -230,9 +212,7 @@ describe("HoldingsTable", () => {
     // Raw mode: no T3 column, no Edit T3 buttons, no opening lot column even
     // with transferred shares present.
     expect(screen.queryByText("T3 slips")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Edit T3" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit T3" })).not.toBeInTheDocument();
     expect(screen.queryByText("Transfer lots")).not.toBeInTheDocument();
     // Unadjusted figures straight from the holding.
     const veqtRow = screen.getByText("VEQT").closest("tr")!;
@@ -241,9 +221,7 @@ describe("HoldingsTable", () => {
   });
 
   it("shows no row-expansion toggles when transactions are not provided", () => {
-    renderWithMantine(
-      <HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />,
-    );
+    renderWithMantine(<HoldingsTable holdings={HOLDINGS} adjustments={emptyAdjustments()} />);
 
     expect(
       screen.queryByRole("button", { name: /Toggle year-by-year ACB/ }),

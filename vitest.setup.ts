@@ -28,5 +28,4 @@ class ResizeObserverMock {
   disconnect(): void {}
 }
 window.ResizeObserver =
-  window.ResizeObserver ||
-  (ResizeObserverMock as unknown as typeof window.ResizeObserver);
+  window.ResizeObserver || (ResizeObserverMock as unknown as typeof window.ResizeObserver);

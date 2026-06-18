@@ -1,21 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Accordion,
-  Button,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Accordion, Button, Select, SimpleGrid, Stack, Text } from "@mantine/core";
 import FormResetButton from "@/components/shared/FormResetButton";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
-import {
-  PORTFOLIO_PRESETS,
-  PROVINCES,
-  SALARY_CURVE_PRESETS,
-} from "@/utils/allocator/presets";
+import { PORTFOLIO_PRESETS, PROVINCES, SALARY_CURVE_PRESETS } from "@/utils/allocator/presets";
 import { TAX_YEAR } from "@/utils/allocator/taxConstants";
 import type {
   AllocatorErrors,
@@ -73,9 +62,7 @@ export default function InputForm({
 }: Props) {
   const [openedSections, setOpenedSections] = useState<string[]>(() => {
     const sections = errorSections(errors);
-    return sections.length > 0
-      ? sections
-      : ["money", "profile", "investment", "retirement-tax"];
+    return sections.length > 0 ? sections : ["money", "profile", "investment", "retirement-tax"];
   });
   const num = (key: keyof typeof FIELD_CONSTRAINTS) => {
     const constraint = FIELD_CONSTRAINTS[key]!;
@@ -100,9 +87,7 @@ export default function InputForm({
     onChange("portfolioPresetId", id as PortfolioPresetId);
     onChange("portfolioReturn", preset.returnPct);
   };
-  const selectedCurve = SALARY_CURVE_PRESETS.find(
-    (curve) => curve.value === input.salaryCurve,
-  );
+  const selectedCurve = SALARY_CURVE_PRESETS.find((curve) => curve.value === input.salaryCurve);
   const yearsToRetirement =
     typeof input.currentAge === "number" &&
     typeof input.retirementAge === "number" &&
@@ -122,19 +107,14 @@ export default function InputForm({
 
   return (
     <>
-      <Accordion
-        multiple
-        value={openedSections}
-        onChange={setOpenedSections}
-        variant="contained"
-      >
+      <Accordion multiple value={openedSections} onChange={setOpenedSections} variant="contained">
         <Accordion.Item value="money">
           <Accordion.Control>Money to invest</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="sm" c="dimmed">
-                The full lump sum is invested now. Amounts above registered
-                account room go to non-registered.
+                The full lump sum is invested now. Amounts above registered account room go to
+                non-registered.
               </Text>
               <UserInputFormItem
                 {...num("lumpSum")}
@@ -165,11 +145,7 @@ export default function InputForm({
           <Accordion.Panel>
             <Stack gap="md">
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <UserInputFormItem
-                  {...num("currentAge")}
-                  label="Current age"
-                  suffix=" yrs"
-                />
+                <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
                   {...num("retirementAge")}
                   label="Retirement age"
@@ -234,8 +210,7 @@ export default function InputForm({
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
-                Defaults are illustrations. Small changes can alter the
-                suggested split.
+                Defaults are illustrations. Small changes can alter the suggested split.
               </Text>
               <Select
                 label="Portfolio"
@@ -255,11 +230,7 @@ export default function InputForm({
                     suffix="%"
                   />
                 )}
-                <UserInputFormItem
-                  {...num("inflationPct")}
-                  label="Inflation"
-                  suffix="%"
-                />
+                <UserInputFormItem {...num("inflationPct")} label="Inflation" suffix="%" />
                 <UserInputFormItem
                   {...num("distributionYieldPct")}
                   label="Non-reg distribution yield"
@@ -295,13 +266,7 @@ export default function InputForm({
           Recommendation updates automatically when inputs change.
         </Text>
       ) : (
-        <Button
-          fullWidth
-          mt="lg"
-          onClick={showRecommendation}
-          loading={loading}
-          disabled={loading}
-        >
+        <Button fullWidth mt="lg" onClick={showRecommendation} loading={loading} disabled={loading}>
           Show recommendation
         </Button>
       )}

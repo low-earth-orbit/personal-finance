@@ -1,9 +1,5 @@
 import { DEFAULTS } from "./presets";
-import type {
-  RetirementErrors,
-  RetirementInput,
-  RetirementInputKey,
-} from "./types";
+import type { RetirementErrors, RetirementInput, RetirementInputKey } from "./types";
 
 interface Constraint {
   min: number;
@@ -57,9 +53,7 @@ export const FIELD_CONSTRAINTS: Record<RetirementInputKey, Constraint> = {
 
 const KEYS = Object.keys(DEFAULTS) as RetirementInputKey[];
 
-export function validateRetirementInput(
-  input: RetirementInput,
-): RetirementErrors {
+export function validateRetirementInput(input: RetirementInput): RetirementErrors {
   const errors: RetirementErrors = {};
 
   for (const key of KEYS) {
@@ -84,11 +78,7 @@ export function validateRetirementInput(
   }
 
   // Cross-field: you must plan to an age beyond today.
-  if (
-    !errors.planningAge &&
-    !errors.currentAge &&
-    input.planningAge <= input.currentAge
-  ) {
+  if (!errors.planningAge && !errors.currentAge && input.planningAge <= input.currentAge) {
     errors.planningAge = "Planning age must be greater than your current age.";
   }
 
@@ -99,8 +89,7 @@ export function validateRetirementInput(
     input.guaranteedIncomePct > 0 &&
     input.pensionStartAge > input.planningAge
   ) {
-    errors.pensionStartAge =
-      "Pension start age must be before your planning age.";
+    errors.pensionStartAge = "Pension start age must be before your planning age.";
   }
 
   return errors;

@@ -36,10 +36,9 @@ describe("allocator storage migration", () => {
   });
 
   it("falls back from an invalid portfolio preset", () => {
-    expect(
-      migrateInput({ ...DEFAULTS, portfolioPresetId: "not-a-preset" })
-        .portfolioPresetId,
-    ).toBe(DEFAULTS.portfolioPresetId);
+    expect(migrateInput({ ...DEFAULTS, portfolioPresetId: "not-a-preset" }).portfolioPresetId).toBe(
+      DEFAULTS.portfolioPresetId,
+    );
   });
 
   it.each([

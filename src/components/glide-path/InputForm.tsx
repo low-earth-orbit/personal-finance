@@ -46,8 +46,7 @@ export default function InputForm({
   onGenerate,
   generating,
 }: InputFormProps) {
-  const bind = (key: GlidePathInputKey) => (value: FieldValue) =>
-    onChange(key, value);
+  const bind = (key: GlidePathInputKey) => (value: FieldValue) => onChange(key, value);
 
   const isSame = (value: FieldValue, target: number) =>
     typeof value === "number" && Math.abs(value - target) < 1e-6;
@@ -66,28 +65,17 @@ export default function InputForm({
   };
 
   const flex = typeof input.flexibility === "number" ? input.flexibility : 0;
-  const isCustomGamma = !GAMMA_PRESETS.some((gamma) =>
-    isSame(input.gamma, gamma),
-  );
-  const leveraged =
-    typeof input.maxEquityPct === "number" && input.maxEquityPct > 100;
+  const isCustomGamma = !GAMMA_PRESETS.some((gamma) => isSame(input.gamma, gamma));
+  const leveraged = typeof input.maxEquityPct === "number" && input.maxEquityPct > 100;
 
   return (
     <>
-      <Accordion
-        multiple
-        defaultValue={["you", "retirement", "prefs"]}
-        variant="contained"
-      >
+      <Accordion multiple defaultValue={["you", "retirement", "prefs"]} variant="contained">
         <Accordion.Item value="you">
           <Accordion.Control>About you</Accordion.Control>
           <Accordion.Panel>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <UserInputFormItem
-                {...num("startAge")}
-                label="Current age"
-                suffix=" yrs"
-              />
+              <UserInputFormItem {...num("startAge")} label="Current age" suffix=" yrs" />
               <UserInputFormItem
                 {...num("startSavings")}
                 label="Current savings"
@@ -109,11 +97,7 @@ export default function InputForm({
           <Accordion.Control>Retirement targets</Accordion.Control>
           <Accordion.Panel>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <UserInputFormItem
-                {...num("retirementAge")}
-                label="Retirement age"
-                suffix=" yrs"
-              />
+              <UserInputFormItem {...num("retirementAge")} label="Retirement age" suffix=" yrs" />
               <UserInputFormItem
                 {...num("planningAge")}
                 label="Plan until"
@@ -193,12 +177,7 @@ export default function InputForm({
                       {g}
                     </Button>
                   ))}
-                  <Popover
-                    width={220}
-                    position="bottom-start"
-                    withArrow
-                    shadow="md"
-                  >
+                  <Popover width={220} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
                       <Button
                         variant={isCustomGamma ? "filled" : "light"}
@@ -210,10 +189,7 @@ export default function InputForm({
                       </Button>
                     </Popover.Target>
                     <Popover.Dropdown>
-                      <UserInputFormItem
-                        {...num("gamma")}
-                        label="Custom risk aversion"
-                      />
+                      <UserInputFormItem {...num("gamma")} label="Custom risk aversion" />
                     </Popover.Dropdown>
                   </Popover>
                 </Group>

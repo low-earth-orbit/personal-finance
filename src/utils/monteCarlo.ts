@@ -77,19 +77,15 @@ interface PathYear {
 function drawScenario(userInput: UserInput): Scenario {
   return {
     homePriceGrowthMean:
-      userInput.homePriceGrowthRate +
-      normalRandom() * userInput.homePriceGrowthSigma,
+      userInput.homePriceGrowthRate + normalRandom() * userInput.homePriceGrowthSigma,
     investmentReturnMean:
-      userInput.investmentReturnRate +
-      normalRandom() * userInput.investmentReturnSigma,
-    rentIncreaseMean:
-      userInput.rentIncreaseRate + normalRandom() * userInput.rentIncreaseSigma,
+      userInput.investmentReturnRate + normalRandom() * userInput.investmentReturnSigma,
+    rentIncreaseMean: userInput.rentIncreaseRate + normalRandom() * userInput.rentIncreaseSigma,
     ownerCostGrowthMean:
       (userInput.ownerCostGrowthRate ?? 2.5) +
       normalRandom() * (userInput.ownerCostGrowthSigma ?? 0.75),
     mortgageRateMean:
-      userInput.annualMortgageInterestRate +
-      normalRandom() * userInput.mortgageRateSigma,
+      userInput.annualMortgageInterestRate + normalRandom() * userInput.mortgageRateSigma,
     maintenanceMean: Math.max(0, userInput.maintPct),
     propertyTaxMean: Math.max(0, userInput.propertyTaxRate),
     dividendYieldMean: Math.max(
@@ -116,24 +112,16 @@ function drawPath(scenario: Scenario, horizon: number): ScenarioPath {
     // Lognormal draw preserves the scenario arithmetic mean; the annual shock is
     // iid (drawn fresh each year, no serial correlation).
     const muArith = scenario.investmentReturnMean / 100;
-    const investmentSigma =
-      investmentAnnualVolPct(scenario.investmentReturnMean) / 100;
-    const logMean =
-      Math.log(1 + muArith) - 0.5 * investmentSigma * investmentSigma;
+    const investmentSigma = investmentAnnualVolPct(scenario.investmentReturnMean) / 100;
+    const logMean = Math.log(1 + muArith) - 0.5 * investmentSigma * investmentSigma;
 
-    const investmentReturn =
-      (Math.exp(logMean + normalRandom() * investmentSigma) - 1) * 100;
+    const investmentReturn = (Math.exp(logMean + normalRandom() * investmentSigma) - 1) * 100;
 
-    const rentIncrease =
-      scenario.rentIncreaseMean + INFLATION_BETA.rent * inflShock;
-    const ownerCostGrowth =
-      scenario.ownerCostGrowthMean + INFLATION_BETA.ownerCost * inflShock;
+    const rentIncrease = scenario.rentIncreaseMean + INFLATION_BETA.rent * inflShock;
+    const ownerCostGrowth = scenario.ownerCostGrowthMean + INFLATION_BETA.ownerCost * inflShock;
     const dividendYield = Math.max(
       0,
-      Math.min(
-        scenario.dividendYieldMean,
-        Math.max(scenario.investmentReturnMean, 0),
-      ),
+      Math.min(scenario.dividendYieldMean, Math.max(scenario.investmentReturnMean, 0)),
     );
 
     annual.push({
@@ -148,14 +136,10 @@ function drawPath(scenario: Scenario, horizon: number): ScenarioPath {
   // Mortgage rate: at each 5-year renewal, snaps to scenario mean plus that
   // year's inflation pressure. Couples renewal cost to the inflation regime.
   const mortgageRates: number[] = [];
-  let currentRate =
-    scenario.mortgageRateMean +
-    INFLATION_BETA.mortgageRate * inflationShocks[0];
+  let currentRate = scenario.mortgageRateMean + INFLATION_BETA.mortgageRate * inflationShocks[0];
   for (let y = 0; y < horizon; y++) {
     if (y > 0 && y % MORTGAGE_TERM_YEARS === 0) {
-      currentRate =
-        scenario.mortgageRateMean +
-        INFLATION_BETA.mortgageRate * inflationShocks[y];
+      currentRate = scenario.mortgageRateMean + INFLATION_BETA.mortgageRate * inflationShocks[y];
     }
     mortgageRates.push(Math.max(0, currentRate));
   }
@@ -191,10 +175,8 @@ function simulatePath(
   let annualRent = userInput.monthlyRent * 12;
   // Year-0 anchored operating costs. Each grows with realized owner cost growth,
   // independent of rent growth and home price appreciation.
-  let annualPropertyTax =
-    (userInput.initialHomePrice * scenario.propertyTaxMean) / 100;
-  let annualMaintenance =
-    (userInput.initialHomePrice * scenario.maintenanceMean) / 100;
+  let annualPropertyTax = (userInput.initialHomePrice * scenario.propertyTaxMean) / 100;
+  let annualMaintenance = (userInput.initialHomePrice * scenario.maintenanceMean) / 100;
   let monthlyCondoFees = userInput.condoFeesPerMonth ?? 0;
   let remainingYears = userInput.amortization;
   let currentMortgageRate = mortgageRates[0];
@@ -210,12 +192,7 @@ function simulatePath(
     const yr = annual[y - 1];
 
     // Re-amortize remaining balance at each renewal boundary.
-    if (
-      y > 1 &&
-      (y - 1) % MORTGAGE_TERM_YEARS === 0 &&
-      mortgageBalance > 0 &&
-      remainingYears > 0
-    ) {
+    if (y > 1 && (y - 1) % MORTGAGE_TERM_YEARS === 0 && mortgageBalance > 0 && remainingYears > 0) {
       currentMortgageRate = mortgageRates[y - 1];
       monthlyPayment = calculateMonthlyMortgagePayment(
         mortgageBalance,
@@ -226,8 +203,7 @@ function simulatePath(
 
     let annualMortgagePayment = 0;
     if (mortgageBalance > 0 && remainingYears > 0) {
-      const monthlyRate =
-        calculateMonthlyMortgageInterestRate(currentMortgageRate);
+      const monthlyRate = calculateMonthlyMortgageInterestRate(currentMortgageRate);
       for (let m = 0; m < 12; m++) {
         if (mortgageBalance <= 0) break;
         const interest = mortgageBalance * monthlyRate;
@@ -241,10 +217,7 @@ function simulatePath(
     }
 
     const ownersCashOutflow =
-      annualMortgagePayment +
-      annualPropertyTax +
-      annualMaintenance +
-      monthlyCondoFees * 12;
+      annualMortgagePayment + annualPropertyTax + annualMaintenance + monthlyCondoFees * 12;
     const surplus = ownersCashOutflow - annualRent;
 
     const r = yr.investmentReturn / 100;
@@ -252,9 +225,7 @@ function simulatePath(
     const afterTaxDividends = grossDividends * (1 - dividendTaxFrac);
 
     portfolioValue =
-      portfolioValue * (1 + r) -
-      grossDividends * dividendTaxFrac +
-      surplus * (1 + r / 2);
+      portfolioValue * (1 + r) - grossDividends * dividendTaxFrac + surplus * (1 + r / 2);
     bookValue += surplus + afterTaxDividends;
 
     homePrice = homePrice * (1 + yr.homePriceGrowth / 100);
@@ -267,9 +238,7 @@ function simulatePath(
 
     const taxableGain = portfolioValue - Math.max(bookValue, 0);
     const renterNetWorth =
-      taxableGain > 0
-        ? portfolioValue - taxableGain * capGainTaxFrac
-        : portfolioValue;
+      taxableGain > 0 ? portfolioValue - taxableGain * capGainTaxFrac : portfolioValue;
     const ownerNetWorth = homePrice * netOfSellingFees - mortgageBalance;
 
     results.push({ year: y, renterNetWorth, ownerNetWorth });
@@ -278,10 +247,7 @@ function simulatePath(
   return results;
 }
 
-export function runMonteCarlo(
-  userInput: UserInput,
-  numSimulations: number,
-): MonteCarloYear[] {
+export function runMonteCarlo(userInput: UserInput, numSimulations: number): MonteCarloYear[] {
   const horizon = SIMULATION_HORIZON_YEARS;
   const renterByYear: number[][] = Array.from({ length: horizon }, () => []);
   const ownerByYear: number[][] = Array.from({ length: horizon }, () => []);

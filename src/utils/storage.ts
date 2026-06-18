@@ -58,9 +58,7 @@ export function clearInput(): void {
 
 export function loadExpandedFields(): UserInputKey[] | null {
   const v = safeGet(KEY_EXPANDED_FIELDS);
-  return Array.isArray(v)
-    ? (v.filter((s) => typeof s === "string") as UserInputKey[])
-    : null;
+  return Array.isArray(v) ? (v.filter((s) => typeof s === "string") as UserInputKey[]) : null;
 }
 
 export function saveExpandedFields(arr: UserInputKey[]): void {

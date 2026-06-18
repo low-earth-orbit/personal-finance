@@ -14,13 +14,7 @@ const LOTS: TransferLot[] = [
 describe("TransferModal", () => {
   it("renders nothing when symbol is null", () => {
     renderWithMantine(
-      <TransferModal
-        symbol={null}
-        lots={[]}
-        acbs={[]}
-        onChange={noop}
-        onClose={noop}
-      />,
+      <TransferModal symbol={null} lots={[]} acbs={[]} onChange={noop} onClose={noop} />,
     );
     expect(screen.queryByText(/Transfer lots/)).not.toBeInTheDocument();
   });
@@ -38,12 +32,8 @@ describe("TransferModal", () => {
     expect(screen.getByText("Transfer lots — XEQT")).toBeInTheDocument();
     expect(screen.getByText("2023-01-15")).toBeInTheDocument();
     expect(screen.getByText("2024-03-02")).toBeInTheDocument();
-    expect(screen.getByLabelText("Opening lot ACB for XEQT lot 1")).toHaveValue(
-      "$9000",
-    );
-    expect(screen.getByLabelText("Opening lot ACB for XEQT lot 2")).toHaveValue(
-      "$3500",
-    );
+    expect(screen.getByLabelText("Opening lot ACB for XEQT lot 1")).toHaveValue("$9000");
+    expect(screen.getByLabelText("Opening lot ACB for XEQT lot 2")).toHaveValue("$3500");
   });
 
   it("shows the live opening lot total across all lots", () => {
@@ -56,9 +46,7 @@ describe("TransferModal", () => {
         onClose={noop}
       />,
     );
-    expect(screen.getByText(/Total opening lot ACB:/)).toHaveTextContent(
-      "$12,500.00",
-    );
+    expect(screen.getByText(/Total opening lot ACB:/)).toHaveTextContent("$12,500.00");
   });
 
   it("propagates a per-lot ACB edit without dropping other lots", async () => {
@@ -73,10 +61,7 @@ describe("TransferModal", () => {
         onClose={noop}
       />,
     );
-    await user.type(
-      screen.getByLabelText("Opening lot ACB for XEQT lot 2"),
-      "5",
-    );
+    await user.type(screen.getByLabelText("Opening lot ACB for XEQT lot 2"), "5");
     expect(onChange).toHaveBeenLastCalledWith([9000, 5]);
   });
 
@@ -97,13 +82,7 @@ describe("TransferModal", () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     renderWithMantine(
-      <TransferModal
-        symbol="XEQT"
-        lots={LOTS}
-        acbs={[]}
-        onChange={noop}
-        onClose={onClose}
-      />,
+      <TransferModal symbol="XEQT" lots={LOTS} acbs={[]} onChange={noop} onClose={onClose} />,
     );
     await user.click(screen.getByRole("button", { name: "Close" }));
     expect(onClose).toHaveBeenCalled();

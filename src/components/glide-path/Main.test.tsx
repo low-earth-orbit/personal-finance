@@ -20,9 +20,7 @@ vi.mock("./InputForm", () => ({
   }) => (
     <>
       <button onClick={() => onChange("startAge", 31)}>Change input</button>
-      <button onClick={() => onReturnModeChange("forward-block")}>
-        Change return mode
-      </button>
+      <button onClick={() => onReturnModeChange("forward-block")}>Change return mode</button>
       <button onClick={onGenerate}>Generate</button>
     </>
   ),
@@ -63,8 +61,7 @@ describe("glide-path Main", () => {
     fireEvent.click(screen.getByRole("button", { name: "Generate" }));
     expect(WorkerMock.instances).toHaveLength(1);
 
-    const requestId = WorkerMock.instances[0]!.postMessage.mock.calls[0]![0]
-      .requestId as number;
+    const requestId = WorkerMock.instances[0]!.postMessage.mock.calls[0]![0].requestId as number;
     act(() => {
       WorkerMock.instances[0]!.onmessage?.({
         data: { requestId, result: {} },

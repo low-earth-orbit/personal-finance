@@ -40,16 +40,12 @@ interface Evaluation {
   retirementDeflator: number;
 }
 
-type Bucket =
-  | { kind: "tfsa" }
-  | { kind: "rrsp"; claimAge: number }
-  | { kind: "non-reg" };
+type Bucket = { kind: "tfsa" } | { kind: "rrsp"; claimAge: number } | { kind: "non-reg" };
 
 function allocationGrid(lumpSum: number): number {
   return Math.max(
     MIN_INITIAL_GRID,
-    Math.ceil(lumpSum / MAX_GRID_INCREMENTS / MIN_INITIAL_GRID) *
-      MIN_INITIAL_GRID,
+    Math.ceil(lumpSum / MAX_GRID_INCREMENTS / MIN_INITIAL_GRID) * MIN_INITIAL_GRID,
   );
 }
 
@@ -63,12 +59,7 @@ function refinementGrids(initialGrid: number): number[] {
   return grids;
 }
 
-function growNominal(
-  balance: number,
-  flowNow: number,
-  flowMidYear: number,
-  rate: number,
-): number {
+function growNominal(balance: number, flowNow: number, flowMidYear: number, rate: number): number {
   return (balance + flowNow) * (1 + rate) + flowMidYear * (1 + rate / 2);
 }
 
@@ -108,8 +99,7 @@ function settleDistributionAndDeduction(
   // overstatement from not netting the deduction here.
   const distributionTaxReal = Math.max(
     0,
-    taxOwed(province, incomeReal + distributionReal) -
-      taxOwed(province, incomeReal),
+    taxOwed(province, incomeReal + distributionReal) - taxOwed(province, incomeReal),
   );
   const distributionTaxNominal = distributionTaxReal * inflationFactor;
   const reinvested = Math.max(0, distributionNominal - distributionTaxNominal);
@@ -154,19 +144,11 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
       input.salaryGrowthYears,
     );
     const arrivingRefundNominal = pendingRefundsNominal.get(age) ?? 0;
-    const refundToTfsaNominal = Math.min(
-      arrivingRefundNominal,
-      tfsaRoomNominal,
-    );
+    const refundToTfsaNominal = Math.min(arrivingRefundNominal, tfsaRoomNominal);
     const refundToNonRegNominal = arrivingRefundNominal - refundToTfsaNominal;
     tfsaRoomNominal -= refundToTfsaNominal;
 
-    rrsp = growNominal(
-      rrsp,
-      age === input.currentAge ? plan.rrspContrib : 0,
-      0,
-      nominalReturn,
-    );
+    rrsp = growNominal(rrsp, age === input.currentAge ? plan.rrspContrib : 0, 0, nominalReturn);
     tfsa = growNominal(
       tfsa,
       age === input.currentAge ? plan.tfsa : 0,
@@ -225,14 +207,9 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
 
   const retirementYears = input.retirementAge - input.currentAge;
   const retirementDeflator = (1 + inflation) ** retirementYears;
-  const finalRefundNominal =
-    pendingRefundsNominal.get(input.retirementAge) ?? 0;
-  const finalRefundToTfsaNominal = Math.min(
-    finalRefundNominal,
-    tfsaRoomNominal,
-  );
-  const finalRefundToNonRegNominal =
-    finalRefundNominal - finalRefundToTfsaNominal;
+  const finalRefundNominal = pendingRefundsNominal.get(input.retirementAge) ?? 0;
+  const finalRefundToTfsaNominal = Math.min(finalRefundNominal, tfsaRoomNominal);
+  const finalRefundToNonRegNominal = finalRefundNominal - finalRefundToTfsaNominal;
   tfsa += finalRefundToTfsaNominal;
   nonReg.balance += finalRefundToNonRegNominal;
   nonReg.acb += finalRefundToNonRegNominal;
@@ -242,25 +219,16 @@ function evaluatePlan(input: AllocatorInput, plan: AllocationPlan): Evaluation {
   const rrspBalance = rrsp / retirementDeflator;
   const tfsaBalance = tfsa / retirementDeflator;
   const rateAtWithdrawal = withdrawalRate(input);
-  const nonRegTax =
-    Math.max(0, nonRegBalance - nonRegAcb) *
-    (input.capitalGainsTaxRatePct / 100);
+  const nonRegTax = Math.max(0, nonRegBalance - nonRegAcb) * (input.capitalGainsTaxRatePct / 100);
   return {
-    afterTaxValue:
-      rrspBalance * (1 - rateAtWithdrawal) +
-      tfsaBalance +
-      nonRegBalance -
-      nonRegTax,
+    afterTaxValue: rrspBalance * (1 - rateAtWithdrawal) + tfsaBalance + nonRegBalance - nonRegTax,
     refundTotal,
     refundSchedule,
     retirementDeflator,
   };
 }
 
-export function combinedAfterTaxValue(
-  input: AllocatorInput,
-  plan: AllocationPlan,
-): number {
+export function combinedAfterTaxValue(input: AllocatorInput, plan: AllocationPlan): number {
   return evaluatePlan(input, plan).afterTaxValue;
 }
 
@@ -306,19 +274,13 @@ function addToBucket(
 ): AllocationPlan | null {
   const next = clonePlan(plan);
   if (bucket.kind === "tfsa") {
-    const accepted = Math.min(
-      amount,
-      Math.max(0, input.availableTfsaRoom - next.tfsa),
-    );
+    const accepted = Math.min(amount, Math.max(0, input.availableTfsaRoom - next.tfsa));
     next.tfsa += accepted;
     next.nonRegDirect += amount - accepted;
   } else if (bucket.kind === "non-reg") {
     next.nonRegDirect += amount;
   } else {
-    const accepted = Math.min(
-      amount,
-      Math.max(0, input.availableRrspRoom - next.rrspContrib),
-    );
+    const accepted = Math.min(amount, Math.max(0, input.availableRrspRoom - next.rrspContrib));
     next.rrspContrib += accepted;
     next.nonRegDirect += amount - accepted;
     next.claimedDeductionByAge.set(
@@ -329,11 +291,7 @@ function addToBucket(
   return next;
 }
 
-function removeFromBucket(
-  plan: AllocationPlan,
-  bucket: Bucket,
-  amount: number,
-): AllocationPlan {
+function removeFromBucket(plan: AllocationPlan, bucket: Bucket, amount: number): AllocationPlan {
   const next = clonePlan(plan);
   if (bucket.kind === "tfsa") {
     next.tfsa -= amount;
@@ -341,8 +299,7 @@ function removeFromBucket(
     next.nonRegDirect -= amount;
   } else {
     next.rrspContrib -= amount;
-    const remaining =
-      (next.claimedDeductionByAge.get(bucket.claimAge) ?? 0) - amount;
+    const remaining = (next.claimedDeductionByAge.get(bucket.claimAge) ?? 0) - amount;
     if (remaining > IMPROVEMENT_EPSILON) {
       next.claimedDeductionByAge.set(bucket.claimAge, remaining);
     } else {
@@ -352,11 +309,7 @@ function removeFromBucket(
   return next;
 }
 
-function bestAddition(
-  input: AllocatorInput,
-  plan: AllocationPlan,
-  amount: number,
-): AllocationPlan {
+function bestAddition(input: AllocatorInput, plan: AllocationPlan, amount: number): AllocationPlan {
   const currentValue = combinedAfterTaxValue(input, plan);
   let bestPlan: AllocationPlan | null = null;
   let bestDelta = Number.NEGATIVE_INFINITY;
@@ -409,10 +362,7 @@ function improveByExchange(
   return plan;
 }
 
-export function allocateLumpSum(
-  input: AllocatorInput,
-  lumpSum: number,
-): AllocationResult {
+export function allocateLumpSum(input: AllocatorInput, lumpSum: number): AllocationResult {
   const safeLumpSum = Math.max(0, lumpSum);
   const initialGrid = allocationGrid(safeLumpSum);
   const fullIncrements = Math.floor(safeLumpSum / initialGrid);
@@ -447,15 +397,11 @@ export function allocateLumpSum(
   const allDeductNowForComparison = clonePlan(plan);
   allDeductNowForComparison.claimedDeductionByAge.clear();
   if (plan.rrspContrib > 0) {
-    allDeductNowForComparison.claimedDeductionByAge.set(
-      input.currentAge,
-      plan.rrspContrib,
-    );
+    allDeductNowForComparison.claimedDeductionByAge.set(input.currentAge, plan.rrspContrib);
   }
   const carryForwardBenefit =
     rrspCarryForward.length > 0
-      ? evaluation.afterTaxValue -
-        combinedAfterTaxValue(input, allDeductNowForComparison)
+      ? evaluation.afterTaxValue - combinedAfterTaxValue(input, allDeductNowForComparison)
       : 0;
   const deflator = evaluation.retirementDeflator;
   // refundTotal is the sum of refunds in today's dollars; express the aggregate

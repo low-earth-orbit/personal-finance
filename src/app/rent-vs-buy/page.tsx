@@ -6,8 +6,7 @@ import RentVsBuyApp from "@/components/rent-vs-buy/RentVsBuyApp";
 
 export const metadata: Metadata = {
   title: "Rent vs Buy",
-  description:
-    "A simple and sensible calculator for comparing renting vs owning a home in Canada.",
+  description: "A simple and sensible calculator for comparing renting vs owning a home in Canada.",
 };
 
 export default function RentVsBuyPage() {

@@ -1,13 +1,5 @@
 import { Fragment, useState } from "react";
-import {
-  ActionIcon,
-  Badge,
-  Button,
-  Group,
-  Table,
-  Text,
-  Tooltip,
-} from "@mantine/core";
+import { ActionIcon, Badge, Button, Group, Table, Text, Tooltip } from "@mantine/core";
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import YearlyACBTable from "./YearlyACBTable";
 import {
@@ -50,21 +42,14 @@ const sharesFormatter = new Intl.NumberFormat("en-CA", {
   maximumFractionDigits: 4,
 });
 
-const HoldingsTable = ({
-  holdings,
-  transactions,
-  adjustments,
-}: HoldingsTableProps) => {
-  const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(
-    new Set(),
-  );
+const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTableProps) => {
+  const [expandedSymbols, setExpandedSymbols] = useState<Set<string>>(new Set());
 
   // Hide ghost rows: fully sold positions carry no ACB to show.
   const visibleHoldings = holdings.filter((h) => h.shares > 0);
   const anyTransferred = visibleHoldings.some((h) => h.transferredShares > 0);
   const expandable = transactions !== undefined;
-  const columnCount =
-    4 + (expandable ? 1 : 0) + (adjustments ? 1 + (anyTransferred ? 1 : 0) : 0);
+  const columnCount = 4 + (expandable ? 1 : 0) + (adjustments ? 1 + (anyTransferred ? 1 : 0) : 0);
 
   function toggleExpanded(symbol: string) {
     setExpandedSymbols((prev) => {
@@ -96,12 +81,8 @@ const HoldingsTable = ({
           const t3Net = adjustments
             ? t3NetAdjustment(adjustments.t3Slips[holding.symbol] ?? [])
             : 0;
-          const openingLot = adjustments
-            ? (adjustments.openingLots[holding.symbol] ?? 0)
-            : 0;
-          const shown = adjustments
-            ? applyAdjustments(holding, openingLot, t3Net)
-            : holding;
+          const openingLot = adjustments ? (adjustments.openingLots[holding.symbol] ?? 0) : 0;
+          const shown = adjustments ? applyAdjustments(holding, openingLot, t3Net) : holding;
           const hasTransfers = holding.transferredShares > 0;
           const expanded = expandedSymbols.has(holding.symbol);
           return (
@@ -116,11 +97,7 @@ const HoldingsTable = ({
                       aria-expanded={expanded}
                       onClick={() => toggleExpanded(holding.symbol)}
                     >
-                      {expanded ? (
-                        <IconChevronDown size={16} />
-                      ) : (
-                        <IconChevronRight size={16} />
-                      )}
+                      {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
                     </ActionIcon>
                   </Table.Td>
                 )}
@@ -132,16 +109,13 @@ const HoldingsTable = ({
                         label={`Includes ${sharesFormatter.format(holding.transferredShares)} transferred shares — no purchase history`}
                       >
                         <Badge color="yellow" size="sm" variant="light">
-                          {sharesFormatter.format(holding.transferredShares)}{" "}
-                          transferred
+                          {sharesFormatter.format(holding.transferredShares)} transferred
                         </Badge>
                       </Tooltip>
                     )}
                   </Group>
                 </Table.Td>
-                <Table.Td ta="right">
-                  {sharesFormatter.format(shown.shares)}
-                </Table.Td>
+                <Table.Td ta="right">{sharesFormatter.format(shown.shares)}</Table.Td>
                 <Table.Td ta="right">
                   {shown.acbPerShare === null ? (
                     <Text component="span" c="dimmed">
@@ -151,9 +125,7 @@ const HoldingsTable = ({
                     formatCADDecimal(shown.acbPerShare)
                   )}
                 </Table.Td>
-                <Table.Td ta="right">
-                  {formatCADDecimal(shown.costBasis)}
-                </Table.Td>
+                <Table.Td ta="right">{formatCADDecimal(shown.costBasis)}</Table.Td>
                 {adjustments && anyTransferred && (
                   <Table.Td>
                     {hasTransfers ? (
@@ -161,9 +133,7 @@ const HoldingsTable = ({
                         <Button
                           variant="transparent"
                           size="xs"
-                          onClick={() =>
-                            adjustments.onEditTransfers(holding.symbol)
-                          }
+                          onClick={() => adjustments.onEditTransfers(holding.symbol)}
                         >
                           Edit transfers
                         </Button>
@@ -191,11 +161,7 @@ const HoldingsTable = ({
                         Edit T3
                       </Button>
                       {t3Net !== 0 && (
-                        <Badge
-                          size="sm"
-                          variant="light"
-                          color={t3Net > 0 ? "teal" : "red"}
-                        >
+                        <Badge size="sm" variant="light" color={t3Net > 0 ? "teal" : "red"}>
                           {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
                         </Badge>
                       )}
@@ -206,9 +172,7 @@ const HoldingsTable = ({
               {expandable && expanded && (
                 <Table.Tr>
                   <Table.Td colSpan={columnCount} p="sm">
-                    <YearlyACBTable
-                      snapshots={computeYearlyACB(transactions, holding.symbol)}
-                    />
+                    <YearlyACBTable snapshots={computeYearlyACB(transactions, holding.symbol)} />
                   </Table.Td>
                 </Table.Tr>
               )}

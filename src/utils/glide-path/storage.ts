@@ -1,9 +1,5 @@
 import { DEFAULTS } from "./presets";
-import type {
-  GlidePathInput,
-  GlidePathInputKey,
-  GlidePathReturnMode,
-} from "./types";
+import type { GlidePathInput, GlidePathInputKey, GlidePathReturnMode } from "./types";
 
 const KEY = "glide_input";
 
@@ -29,9 +25,7 @@ export function loadInput(): GlidePathInput {
         ? current.guaranteedIncome
         : typeof parsed.pensionPct === "number"
           ? (parsed.pensionPct / 100) *
-            (typeof parsed.preRetirementIncome === "number"
-              ? parsed.preRetirementIncome
-              : 100000)
+            (typeof parsed.preRetirementIncome === "number" ? parsed.preRetirementIncome : 100000)
           : DEFAULTS.guaranteedIncome;
     return { ...DEFAULTS, ...current, guaranteedIncome };
   } catch {

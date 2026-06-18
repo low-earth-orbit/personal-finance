@@ -11,13 +11,7 @@ import {
 } from "@mantine/core";
 import type { AcbTransaction, ParsedFile } from "@/utils/acb/parser";
 
-const TYPE_OPTIONS: AcbTransaction["type"][] = [
-  "buy",
-  "sell",
-  "dividend",
-  "transfer",
-  "interest",
-];
+const TYPE_OPTIONS: AcbTransaction["type"][] = ["buy", "sell", "dividend", "transfer", "interest"];
 
 function isTransactionType(value: string): value is AcbTransaction["type"] {
   return (TYPE_OPTIONS as string[]).includes(value);
@@ -86,8 +80,7 @@ const FilePreviewModal = ({
               <Table.Tr key={`${rowIndex}-${tx.date ?? ""}-${tx.symbol}`}>
                 <Table.Td>{tx.date || "—"}</Table.Td>
                 <Table.Td>
-                  {[tx.accountType, tx.accountId].filter(Boolean).join(" · ") ||
-                    "—"}
+                  {[tx.accountType, tx.accountId].filter(Boolean).join(" · ") || "—"}
                 </Table.Td>
                 <Table.Td fw={600}>{tx.symbol || "—"}</Table.Td>
                 <Table.Td>
@@ -96,11 +89,7 @@ const FilePreviewModal = ({
                     data={TYPE_OPTIONS}
                     value={tx.type}
                     onChange={(value) => {
-                      if (
-                        fileIndex !== null &&
-                        value !== null &&
-                        isTransactionType(value)
-                      ) {
+                      if (fileIndex !== null && value !== null && isTransactionType(value)) {
                         onUpdateTransaction(fileIndex, rowIndex, {
                           type: value,
                         });

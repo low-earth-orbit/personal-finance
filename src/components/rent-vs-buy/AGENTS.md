@@ -13,8 +13,7 @@ Year-by-year net worth comparison, MC confidence bands, win probability. Methodo
 
 ## Engine
 
-`src/utils/monteCarlo.ts` — `runMonteCarlo()` → P25/median/P75 + `renterWinPct`
-`src/workers/monteCarloWorker.ts` — runs MC off main thread; debounced 150ms, `requestId` drops stale responses
+`src/utils/monteCarlo.ts` — `runMonteCarlo()` → P25/median/P75 + `renterWinPct` `src/workers/monteCarloWorker.ts` — runs MC off main thread; debounced 150ms, `requestId` drops stale responses
 
 ## Summary tiers
 

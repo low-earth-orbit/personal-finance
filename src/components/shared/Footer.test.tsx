@@ -9,9 +9,6 @@ describe("Footer", () => {
     expect(screen.getByText(/not financial advice/i)).toBeInTheDocument();
 
     const github = screen.getByRole("link", { name: "GitHub" });
-    expect(github).toHaveAttribute(
-      "href",
-      "https://github.com/low-earth-orbit/personal-finance",
-    );
+    expect(github).toHaveAttribute("href", "https://github.com/low-earth-orbit/personal-finance");
   });
 });

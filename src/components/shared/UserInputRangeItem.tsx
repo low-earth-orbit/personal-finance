@@ -42,8 +42,7 @@ export default function UserInputRangeItem({
   const baseNum = +baseValue || 0;
   const low = baseNum - 2 * sigmaNum;
   const high = baseNum + 2 * sigmaNum;
-  const rangeKnown =
-    baseValue !== "" && baseValue != null && sigma !== "" && sigma != null;
+  const rangeKnown = baseValue !== "" && baseValue != null && sigma !== "" && sigma != null;
 
   const composedLabel = (
     <Group justify="space-between" wrap="nowrap" gap="xs">
@@ -57,9 +56,7 @@ export default function UserInputRangeItem({
         disabled={disabled}
         underline="never"
         aria-label={
-          expanded
-            ? `Reset uncertainty range for ${label}`
-            : `Add uncertainty range for ${label}`
+          expanded ? `Reset uncertainty range for ${label}` : `Add uncertainty range for ${label}`
         }
         aria-expanded={expanded}
       >

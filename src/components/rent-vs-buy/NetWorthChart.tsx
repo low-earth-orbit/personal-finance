@@ -12,12 +12,7 @@ import {
   Text,
   VisuallyHidden,
 } from "@mantine/core";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconDownload,
-  IconHeart,
-} from "@tabler/icons-react";
+import { IconChevronDown, IconChevronUp, IconDownload, IconHeart } from "@tabler/icons-react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ComposedChart,
@@ -31,12 +26,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { formatCAD, formatCADCompact } from "@/utils/format";
-import type {
-  MonteCarloResponse,
-  MonteCarloYear,
-  UserInput,
-  UserInputKey,
-} from "@/types";
+import type { MonteCarloResponse, MonteCarloYear, UserInput, UserInputKey } from "@/types";
 
 const NUM_SIMULATIONS = 1000;
 
@@ -100,8 +90,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
         {point.renterP25 != null && (
           <Text size="xs" c="dimmed" span>
             {" "}
-            ({formatCADCompact(point.renterP25)} –{" "}
-            {formatCADCompact(point.renterP75)})
+            ({formatCADCompact(point.renterP25)} – {formatCADCompact(point.renterP75)})
           </Text>
         )}
       </Text>
@@ -110,8 +99,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
         {point.ownerP25 != null && (
           <Text size="xs" c="dimmed" span>
             {" "}
-            ({formatCADCompact(point.ownerP25)} –{" "}
-            {formatCADCompact(point.ownerP75)})
+            ({formatCADCompact(point.ownerP25)} – {formatCADCompact(point.ownerP75)})
           </Text>
         )}
       </Text>
@@ -122,15 +110,8 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   );
 }
 
-function Summary({
-  data,
-  holdingPeriod,
-}: {
-  data: ChartPoint[];
-  holdingPeriod: number;
-}) {
-  const decision =
-    data.find((d) => d.year === holdingPeriod) ?? data[data.length - 1];
+function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPeriod: number }) {
+  const decision = data.find((d) => d.year === holdingPeriod) ?? data[data.length - 1];
 
   if (decision.renterWinPct == null) {
     return null;
@@ -183,9 +164,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL("../../workers/monteCarloWorker.ts", import.meta.url),
-    );
+    workerRef.current = new Worker(new URL("../../workers/monteCarloWorker.ts", import.meta.url));
     workerRef.current.onmessage = (event: MessageEvent<MonteCarloResponse>) => {
       const { requestId, result } = event.data;
       if (requestId === requestIdRef.current) setMcData(result);
@@ -245,9 +224,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
     const esc = (v: unknown) => {
       if (v == null) return "";
       const s = String(v);
-      return s.includes(",") || s.includes('"')
-        ? `"${s.replace(/"/g, '""')}"`
-        : s;
+      return s.includes(",") || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const rows = [
       ["Input", "Value"],
@@ -294,10 +271,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         aria-label={`Net worth projection chart comparing renting versus buying over 50 years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}
       >
         <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart
-            data={chartData}
-            margin={{ top: 25, right: 50, left: 0, bottom: 20 }}
-          >
+          <ComposedChart data={chartData} margin={{ top: 25, right: 50, left: 0, bottom: 20 }}>
             <XAxis
               dataKey="year"
               label={{
@@ -433,12 +407,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       </div>
       <Group gap="lg" wrap="wrap">
         <Group gap={6} wrap="nowrap">
-          <Box
-            w={18}
-            h={2}
-            style={{ backgroundColor: "#12b886" }}
-            aria-hidden="true"
-          />
+          <Box w={18} h={2} style={{ backgroundColor: "#12b886" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
             <Text span fw={600} c="teal">
               Rent
@@ -447,12 +416,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Box
-            w={18}
-            h={2}
-            style={{ backgroundColor: "#4c6ef5" }}
-            aria-hidden="true"
-          />
+          <Box w={18} h={2} style={{ backgroundColor: "#4c6ef5" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
             <Text span fw={600} c="indigo">
               Buy
@@ -485,12 +449,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         </Group>
 
         <Group gap={6} wrap="nowrap">
-          <Box
-            w={18}
-            h={2}
-            style={{ backgroundColor: "#fd7e14" }}
-            aria-hidden="true"
-          />
+          <Box w={18} h={2} style={{ backgroundColor: "#fd7e14" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
             <Text span fw={600} c="orange.7">
               Sale
@@ -501,12 +460,11 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       </Group>
 
       <Text size="xs" c="dimmed">
-        The chart shows net worth projections for both renting and buying
-        scenarios from {NUM_SIMULATIONS.toLocaleString()} Monte Carlo
-        simulations. It extends to a 50-year horizon to show what would happen
-        if you held longer. These projections are based on your assumptions and
-        are illustrative only — results are subject to modelling error,
-        uncertain inputs, and real-world complexity.
+        The chart shows net worth projections for both renting and buying scenarios from{" "}
+        {NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. It extends to a 50-year horizon
+        to show what would happen if you held longer. These projections are based on your
+        assumptions and are illustrative only — results are subject to modelling error, uncertain
+        inputs, and real-world complexity.
       </Text>
 
       <Group justify="space-between" align="center" mt="xs">
@@ -541,13 +499,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       <Collapse expanded={tableOpen}>
         <div id="net-worth-data-table">
           <ScrollArea>
-            <Table
-              striped
-              withTableBorder
-              withColumnBorders
-              fz="xs"
-              style={{ minWidth: 620 }}
-            >
+            <Table striped withTableBorder withColumnBorders fz="xs" style={{ minWidth: 620 }}>
               <caption
                 style={{
                   captionSide: "top",
@@ -582,8 +534,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                     <abbr title="75th percentile">Buy P75</abbr>
                   </Table.Th>
                   <Table.Th scope="col">
-                    Renter win %
-                    <VisuallyHidden> (% of simulations)</VisuallyHidden>
+                    Renter win %<VisuallyHidden> (% of simulations)</VisuallyHidden>
                   </Table.Th>
                 </Table.Tr>
               </Table.Thead>
@@ -591,11 +542,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                 {chartData.map((d) => (
                   <Table.Tr
                     key={d.year}
-                    style={
-                      d.year === userInput.holdingPeriod
-                        ? { fontWeight: 700 }
-                        : undefined
-                    }
+                    style={d.year === userInput.holdingPeriod ? { fontWeight: 700 } : undefined}
                   >
                     <Table.Td>
                       {d.year}
@@ -608,23 +555,13 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                       )}
                     </Table.Td>
                     <Table.Td>{formatCADCompact(d.renterMedian)}</Table.Td>
-                    <Table.Td c="dimmed">
-                      {formatCADCompact(d.renterP25)}
-                    </Table.Td>
-                    <Table.Td c="dimmed">
-                      {formatCADCompact(d.renterP75)}
-                    </Table.Td>
+                    <Table.Td c="dimmed">{formatCADCompact(d.renterP25)}</Table.Td>
+                    <Table.Td c="dimmed">{formatCADCompact(d.renterP75)}</Table.Td>
                     <Table.Td>{formatCADCompact(d.ownerMedian)}</Table.Td>
-                    <Table.Td c="dimmed">
-                      {formatCADCompact(d.ownerP25)}
-                    </Table.Td>
-                    <Table.Td c="dimmed">
-                      {formatCADCompact(d.ownerP75)}
-                    </Table.Td>
+                    <Table.Td c="dimmed">{formatCADCompact(d.ownerP25)}</Table.Td>
+                    <Table.Td c="dimmed">{formatCADCompact(d.ownerP75)}</Table.Td>
                     <Table.Td>
-                      {d.renterWinPct != null
-                        ? `${Math.round(d.renterWinPct * 100)}%`
-                        : "—"}
+                      {d.renterWinPct != null ? `${Math.round(d.renterWinPct * 100)}%` : "—"}
                     </Table.Td>
                   </Table.Tr>
                 ))}

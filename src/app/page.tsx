@@ -1,15 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  Card,
-  Container,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Card, Container, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
 import StatusBadge, { type AppStatus } from "@/components/shared/StatusBadge";
@@ -26,8 +18,7 @@ const TOOLS: Tool[] = [
   {
     emoji: "🏠",
     title: "Rent vs Buy",
-    description:
-      "Compare the long-run net worth of renting versus owning a home.",
+    description: "Compare the long-run net worth of renting versus owning a home.",
     href: "/rent-vs-buy",
   },
   {
@@ -41,8 +32,7 @@ const TOOLS: Tool[] = [
   {
     emoji: "🛤️",
     title: "Lifetime Allocation (Glide Path)",
-    description:
-      "Find your optimal stock allocation across your lifetime. FOR NERDS.",
+    description: "Find your optimal stock allocation across your lifetime. FOR NERDS.",
     href: "/glide-path",
     status: "new",
   },
@@ -57,8 +47,7 @@ const TOOLS: Tool[] = [
   {
     emoji: "🧮",
     title: "Where to invest: TFSA, RRSP or Non-Reg?",
-    description:
-      "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
+    description: "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
   },
 ];
 
@@ -100,12 +89,7 @@ function ToolCard({ tool }: { tool: Tool }) {
   }
 
   return (
-    <Card
-      withBorder
-      padding="lg"
-      radius="md"
-      style={{ height: "100%", opacity: 0.65 }}
-    >
+    <Card withBorder padding="lg" radius="md" style={{ height: "100%", opacity: 0.65 }}>
       <ToolCardBody tool={tool} />
     </Card>
   );

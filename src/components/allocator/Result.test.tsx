@@ -7,71 +7,47 @@ import { renderWithMantine } from "@/test-utils";
 
 describe("Allocator Result", () => {
   it("does not show a recommendation before inputs are reviewed", () => {
-    renderWithMantine(
-      <Result allocation={null} input={DEFAULTS} status="idle" />,
-    );
+    renderWithMantine(<Result allocation={null} input={DEFAULTS} status="idle" />);
     expect(screen.getByText("Review your numbers first")).toBeInTheDocument();
     expect(screen.queryByText(/Invest about/)).not.toBeInTheDocument();
   });
 
   it("guards incomplete inputs", () => {
-    renderWithMantine(
-      <Result allocation={null} input={DEFAULTS} status="invalid" />,
-    );
+    renderWithMantine(<Result allocation={null} input={DEFAULTS} status="invalid" />);
     expect(screen.getByText("Complete the inputs")).toBeInTheDocument();
   });
 
   it("shows the optimized one-time allocation", () => {
     const input = { ...DEFAULTS, lumpSum: 20_000 };
     const allocation = allocateLumpSum(input, input.lumpSum);
-    renderWithMantine(
-      <Result allocation={allocation} input={input} status="ready" />,
-    );
+    renderWithMantine(<Result allocation={allocation} input={input} status="ready" />);
 
-    expect(
-      screen.getByRole("heading", { name: "Invest about $20,000" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Future-dollar illustration, not a forecast/),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Invest about $20,000" })).toBeInTheDocument();
+    expect(screen.getByText(/Future-dollar illustration, not a forecast/)).toBeInTheDocument();
     expect(screen.getByText("Why this split")).toBeInTheDocument();
     expect(screen.getByText("Before acting")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("shows calculation progress instead of an input error", () => {
-    renderWithMantine(
-      <Result allocation={null} input={DEFAULTS} status="loading" />,
-    );
+    renderWithMantine(<Result allocation={null} input={DEFAULTS} status="loading" />);
     expect(screen.getByText("Calculating recommendation")).toBeInTheDocument();
   });
 
   it("keeps the previous result visible while updating", () => {
     const allocation = allocateLumpSum(DEFAULTS, DEFAULTS.lumpSum);
-    renderWithMantine(
-      <Result allocation={allocation} input={DEFAULTS} status="updating" />,
-    );
+    renderWithMantine(<Result allocation={allocation} input={DEFAULTS} status="updating" />);
 
     expect(screen.getByText("Updating recommendation…")).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Invest about $50,000" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByText("Calculating recommendation"),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Invest about $50,000" })).toBeInTheDocument();
+    expect(screen.queryByText("Calculating recommendation")).not.toBeInTheDocument();
   });
 
   it("keeps the previous result visible when an edit is invalid", () => {
     const allocation = allocateLumpSum(DEFAULTS, DEFAULTS.lumpSum);
-    renderWithMantine(
-      <Result allocation={allocation} input={DEFAULTS} status="invalid" />,
-    );
+    renderWithMantine(<Result allocation={allocation} input={DEFAULTS} status="invalid" />);
 
-    expect(
-      screen.getByText("Update paused: fix the highlighted fields."),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { name: "Invest about $50,000" }),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Update paused: fix the highlighted fields.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Invest about $50,000" })).toBeInTheDocument();
   });
 });

@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Badge,
-  Button,
-  CloseButton,
-  FileInput,
-  Group,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Badge, Button, CloseButton, FileInput, Group, Stack, Text } from "@mantine/core";
 
 export type UploadedFileSummary = {
   name: string;
@@ -30,12 +22,7 @@ type FileUploadProps = {
   onPreview: (fileIndex: number) => void;
 };
 
-const FileUpload = ({
-  files,
-  onFilesAdded,
-  onRemoveFile,
-  onPreview,
-}: FileUploadProps) => {
+const FileUpload = ({ files, onFilesAdded, onRemoveFile, onPreview }: FileUploadProps) => {
   // Remount the FileInput after each selection so it resets to empty and
   // selecting the same file again still fires onChange.
   const [inputKey, setInputKey] = useState(0);
@@ -65,17 +52,12 @@ const FileUpload = ({
               {file.excludedAccounts && file.excludedAccounts.length > 0 && (
                 <Badge color="gray" variant="light" size="sm">
                   Excluded: {file.excludedAccounts.join(" · ")}
-                  {file.excludedTransactionCount &&
-                  file.excludedTransactionCount > 0
+                  {file.excludedTransactionCount && file.excludedTransactionCount > 0
                     ? ` (${file.excludedTransactionCount} tx)`
                     : ""}
                 </Badge>
               )}
-              <Button
-                variant="transparent"
-                size="xs"
-                onClick={() => onPreview(index)}
-              >
+              <Button variant="transparent" size="xs" onClick={() => onPreview(index)}>
                 Edit transactions
               </Button>
               <CloseButton

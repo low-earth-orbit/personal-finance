@@ -1,15 +1,6 @@
-import {
-  accumulationBalances,
-  incomeBreakdown,
-  realMean,
-  withdrawalAtAge,
-} from "./projection";
+import { accumulationBalances, incomeBreakdown, realMean, withdrawalAtAge } from "./projection";
 import { RETURN_PRESETS } from "./presets";
-import type {
-  RetirementBand,
-  RetirementInput,
-  RetirementResult,
-} from "./types";
+import type { RetirementBand, RetirementInput, RetirementResult } from "./types";
 import { investmentAnnualVolPct } from "../monteCarlo";
 
 export const NUM_SIMULATIONS = 1000;
@@ -26,19 +17,13 @@ const SEED = 0x9e3779b9;
  */
 function phaseSigma(input: RetirementInput, phase: "accum" | "retire"): number {
   const matching = RETURN_PRESETS.find(
-    (p) =>
-      p.accumReturn === input.accumReturn &&
-      p.retireReturn === input.retireReturn,
+    (p) => p.accumReturn === input.accumReturn && p.retireReturn === input.retireReturn,
   );
   if (phase === "accum") {
-    const vol = matching
-      ? matching.accumVolatility
-      : investmentAnnualVolPct(input.accumReturn);
+    const vol = matching ? matching.accumVolatility : investmentAnnualVolPct(input.accumReturn);
     return vol / 100;
   }
-  const vol = matching
-    ? matching.retireVolatility
-    : investmentAnnualVolPct(input.retireReturn);
+  const vol = matching ? matching.retireVolatility : investmentAnnualVolPct(input.retireReturn);
   return vol / 100;
 }
 
@@ -56,9 +41,7 @@ function phaseSigma(input: RetirementInput, phase: "accum" | "retire"): number {
  * stationary stdev at `sigma` (= 1 when φ = 0).
  */
 const RETURN_AUTOCORRELATION = 0;
-const INNOVATION_SCALE = Math.sqrt(
-  1 - RETURN_AUTOCORRELATION * RETURN_AUTOCORRELATION,
-);
+const INNOVATION_SCALE = Math.sqrt(1 - RETURN_AUTOCORRELATION * RETURN_AUTOCORRELATION);
 
 /**
  * Withdrawal-rate guardrail trigger. Spending stays at the full target until a weak
@@ -127,9 +110,7 @@ function simulate(
   // Guardrail reference: the withdrawal rate at retirement. A weak sequence that
   // lifts the current rate above this (by GUARDRAIL_TRIGGER) trims spending.
   const initialRate =
-    startBalance > 0
-      ? withdrawalAtAge(input, breakdown, retireAge) / startBalance
-      : 0;
+    startBalance > 0 ? withdrawalAtAge(input, breakdown, retireAge) / startBalance : 0;
 
   const balancesByAge = collectBands
     ? Array.from({ length: years + 1 }, () => [] as number[])
@@ -147,8 +128,7 @@ function simulate(
       const age = retireAge + i;
       const full = withdrawalAtAge(input, breakdown, age);
       deviation =
-        RETURN_AUTOCORRELATION * deviation +
-        INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
       const r = mean + deviation;
 
       if (!depleted) {
@@ -211,21 +191,14 @@ const ACCUM_SEED = 0x85ebca6b;
  * is monotonic in the starting balance, so we bisect for the smallest balance
  * that clears the target — the age-specific "retirement number".
  */
-function requiredWealth(
-  input: RetirementInput,
-  retireAge: number,
-  target: number,
-): number {
+function requiredWealth(input: RetirementInput, retireAge: number, target: number): number {
   const breakdown = incomeBreakdown(input);
   let lo = 0;
   // 100× the annual target funds any horizon even at a zero return — a safe ceiling.
   let hi = Math.max(1, breakdown.targetGrossIncome) * 100;
   for (let i = 0; i < 12; i++) {
     const mid = (lo + hi) / 2;
-    if (
-      simulate(input, retireAge, mid, false, RANGE_SIMS).successRate >= target
-    )
-      hi = mid;
+    if (simulate(input, retireAge, mid, false, RANGE_SIMS).successRate >= target) hi = mid;
     else lo = mid;
   }
   return hi;
@@ -269,12 +242,10 @@ function retirementAgeRange(
         break;
       }
       deviation =
-        RETURN_AUTOCORRELATION * deviation +
-        INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
       const r = mean + deviation;
       // A pension that starts while still working is saved (matches accumulationBalances).
-      const inflow =
-        contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
+      const inflow = contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
       balance = balance * (1 + r) + inflow * (1 + r / 2);
     }
     // Paths that don't reach the bar within the window retire later still; count
@@ -337,8 +308,7 @@ export function safeWithdrawalRate(
       let deviation = 0;
       for (let i = 0; i < years; i++) {
         deviation =
-          RETURN_AUTOCORRELATION * deviation +
-          INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+          RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
         const r = mean + deviation;
         if (!depleted) {
           balance = balance * (1 + r) - w * (1 + r / 2);
@@ -375,8 +345,7 @@ export function computeRetirement(input: RetirementInput): RetirementResult {
   const breakdown = incomeBreakdown(input);
   const target = input.targetSuccessRate / 100;
   const accum = accumulationBalances(input);
-  const balanceAt = (age: number) =>
-    accum[age - input.currentAge]?.balance ?? 0;
+  const balanceAt = (age: number) => accum[age - input.currentAge]?.balance ?? 0;
 
   for (let age = input.currentAge; age < input.planningAge; age++) {
     const startBalance = balanceAt(age);

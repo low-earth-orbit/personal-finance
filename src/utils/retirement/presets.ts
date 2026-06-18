@@ -130,9 +130,7 @@ export const DEFAULTS = {
 export type ReturnPreset = (typeof RETURN_PRESETS)[number];
 export type ReturnPresetId = ReturnPreset["id"];
 
-export function getReturnPresetById(
-  id: ReturnPresetId | null,
-): ReturnPreset | undefined {
+export function getReturnPresetById(id: ReturnPresetId | null): ReturnPreset | undefined {
   if (id === null) return undefined;
   return RETURN_PRESETS.find((preset) => preset.id === id);
 }

@@ -6,16 +6,10 @@ import { useDebouncedValue } from "@mantine/hooks";
 import InputForm from "./InputForm";
 import Result from "./Result";
 import { DEFAULTS } from "@/utils/retirement/presets";
-import {
-  computePlanSWR,
-  computeRetirement,
-} from "@/utils/retirement/monteCarlo";
+import { computePlanSWR, computeRetirement } from "@/utils/retirement/monteCarlo";
 import { loadInput, saveInput } from "@/utils/retirement/storage";
 import { validateRetirementInput } from "@/utils/retirement/validation";
-import type {
-  RetirementInput,
-  RetirementInputKey,
-} from "@/utils/retirement/types";
+import type { RetirementInput, RetirementInputKey } from "@/utils/retirement/types";
 import type { FieldValue } from "@/types";
 
 export default function Main() {
@@ -32,13 +26,8 @@ export default function Main() {
       : null;
 
   const planSWR =
-    result?.earliestRetirementAge != null &&
-    result.portfolioAtRetirement != null
-      ? computePlanSWR(
-          debouncedInput,
-          result.earliestRetirementAge,
-          result.portfolioAtRetirement,
-        )
+    result?.earliestRetirementAge != null && result.portfolioAtRetirement != null
+      ? computePlanSWR(debouncedInput, result.earliestRetirementAge, result.portfolioAtRetirement)
       : null;
 
   function handleChange(key: RetirementInputKey, value: FieldValue) {
@@ -63,12 +52,7 @@ export default function Main() {
     <Container size="xl" pb="xl">
       <Grid gap="xl">
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 2, md: 1 }}>
-          <InputForm
-            input={input}
-            errors={errors}
-            onChange={handleChange}
-            onReset={handleReset}
-          />
+          <InputForm input={input} errors={errors} onChange={handleChange} onReset={handleReset} />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, md: 2 }}>
           <Result input={input} result={result} planSWR={planSWR} />

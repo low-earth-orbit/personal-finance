@@ -7,10 +7,7 @@ function Wrapper({ children }: { children: ReactNode }) {
 }
 
 // RTL render wrapped in MantineProvider so component tests have Mantine context.
-export function renderWithMantine(
-  ui: ReactElement,
-  options?: Omit<RenderOptions, "wrapper">,
-) {
+export function renderWithMantine(ui: ReactElement, options?: Omit<RenderOptions, "wrapper">) {
   return render(ui, { wrapper: Wrapper, ...options });
 }
 

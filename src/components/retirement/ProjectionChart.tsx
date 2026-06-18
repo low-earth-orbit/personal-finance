@@ -15,10 +15,7 @@ import {
 } from "recharts";
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import { NUM_SIMULATIONS } from "@/utils/retirement/monteCarlo";
-import type {
-  RetirementInput,
-  RetirementResult,
-} from "@/utils/retirement/types";
+import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 import { generateTicks } from "@/utils/charts";
 
 const TEAL = "var(--mantine-color-teal-6)";
@@ -57,10 +54,9 @@ function SuccessSummary({
   return (
     <Alert variant="default" radius="md">
       <Text size="sm">
-        Your savings last to age {planningAge} in about {pct}% of simulated
-        markets — within your {target}% confidence target.
-        {flexPct > 0 &&
-          ` Assumes you trim spending by up to ${flexPct}% in weak markets.`}
+        Your savings last to age {planningAge} in about {pct}% of simulated markets — within your{" "}
+        {target}% confidence target.
+        {flexPct > 0 && ` Assumes you trim spending by up to ${flexPct}% in weak markets.`}
       </Text>
     </Alert>
   );
@@ -81,8 +77,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
             Median: {formatCAD(p.median ?? 0)}
           </Text>
           <Text size="xs" c="dimmed">
-            10–90%: {formatCADCompact(p.p10 ?? 0)} –{" "}
-            {formatCADCompact(p.p90 ?? 0)}
+            10–90%: {formatCADCompact(p.p10 ?? 0)} – {formatCADCompact(p.p90 ?? 0)}
           </Text>
         </>
       ) : (
@@ -94,10 +89,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   );
 }
 
-export default function ProjectionChart({
-  input,
-  result,
-}: ProjectionChartProps) {
+export default function ProjectionChart({ input, result }: ProjectionChartProps) {
   if (
     result.earliestRetirementAge === null ||
     !result.retirementBands ||
@@ -145,10 +137,7 @@ export default function ProjectionChart({
         style={{ width: "100%", minWidth: 0, marginTop: 12 }}
       >
         <ResponsiveContainer width="100%" height={360}>
-          <ComposedChart
-            data={data}
-            margin={{ top: 24, right: 8, bottom: 28, left: 0 }}
-          >
+          <ComposedChart data={data} margin={{ top: 24, right: 8, bottom: 28, left: 0 }}>
             <ReferenceArea
               x1={retireAge}
               x2={lastAge}
@@ -249,12 +238,7 @@ export default function ProjectionChart({
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Box
-            w={18}
-            h={10}
-            style={{ backgroundColor: TEAL, opacity: 0.18 }}
-            aria-hidden
-          />
+          <Box w={18} h={10} style={{ backgroundColor: TEAL, opacity: 0.18 }} aria-hidden />
           <Text size="xs" c="dimmed">
             10–90% range
           </Text>
@@ -262,8 +246,8 @@ export default function ProjectionChart({
       </Group>
       <Text size="xs" c="dimmed" mt="sm">
         Accumulation is shown on mean returns; the retirement fan is{" "}
-        {NUM_SIMULATIONS.toLocaleString()} simulations with year-to-year return
-        swings, in today&apos;s dollars. Illustrative, not a guarantee.
+        {NUM_SIMULATIONS.toLocaleString()} simulations with year-to-year return swings, in
+        today&apos;s dollars. Illustrative, not a guarantee.
       </Text>
     </Card>
   );

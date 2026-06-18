@@ -2,12 +2,7 @@ import { useState } from "react";
 import { Container, Grid } from "@mantine/core";
 import Result from "./Result";
 import UserInputForm from "./UserInputForm";
-import {
-  DEFAULTS,
-  PRESETS,
-  INPUT_UNCERTAINTIES,
-  getActivePreset,
-} from "@/utils/presets";
+import { DEFAULTS, PRESETS, INPUT_UNCERTAINTIES, getActivePreset } from "@/utils/presets";
 import { validateUserInput } from "@/utils/validation";
 import {
   loadInput,
@@ -24,13 +19,7 @@ import {
   saveActivePresetId,
   clearAll,
 } from "@/utils/storage";
-import type {
-  FieldValue,
-  Preset,
-  SigmaKey,
-  UserInput,
-  UserInputKey,
-} from "@/types";
+import type { FieldValue, Preset, SigmaKey, UserInput, UserInputKey } from "@/types";
 
 const PERTURBED_FIELDS: UserInputKey[] = [
   "rentIncreaseRate",
@@ -51,27 +40,23 @@ const Main = () => {
     const loaded = loadInput();
     return loaded ? normalizeInput(loaded) : DEFAULTS;
   });
-  const [expandedFields, setExpandedFieldsState] = useState<UserInputKey[]>(
-    () => {
-      const loaded = loadExpandedFields();
-      if (loaded) return loaded;
-      const legacy = consumeLegacyAdvanced();
-      if (legacy) {
-        saveExpandedFields(PERTURBED_FIELDS);
-        return PERTURBED_FIELDS;
-      }
-      return [];
-    },
-  );
+  const [expandedFields, setExpandedFieldsState] = useState<UserInputKey[]>(() => {
+    const loaded = loadExpandedFields();
+    if (loaded) return loaded;
+    const legacy = consumeLegacyAdvanced();
+    if (legacy) {
+      saveExpandedFields(PERTURBED_FIELDS);
+      return PERTURBED_FIELDS;
+    }
+    return [];
+  });
   const [customPresets, setCustomPresets] = useState<Preset[]>(() =>
     (loadCustomPresets() ?? []).map((preset) => ({
       ...preset,
       values: normalizeInput(preset.values),
     })),
   );
-  const [hiddenBuiltins, setHiddenBuiltins] = useState<string[]>(
-    () => loadHiddenBuiltins() ?? [],
-  );
+  const [hiddenBuiltins, setHiddenBuiltins] = useState<string[]>(() => loadHiddenBuiltins() ?? []);
   const [activePresetId, setActivePresetIdState] = useState<string | null>(
     () => loadActivePresetId() ?? "defaults",
   );
@@ -120,9 +105,7 @@ const Main = () => {
   function toggleFieldExpanded(baseField: UserInputKey, sigmaField?: SigmaKey) {
     const wasExpanded = expandedFields.includes(baseField);
     setExpandedFieldsState((prev) => {
-      const next = wasExpanded
-        ? prev.filter((f) => f !== baseField)
-        : [...prev, baseField];
+      const next = wasExpanded ? prev.filter((f) => f !== baseField) : [...prev, baseField];
       saveExpandedFields(next);
       return next;
     });

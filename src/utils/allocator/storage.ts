@@ -1,34 +1,15 @@
 import { DEFAULTS, PORTFOLIO_PRESETS } from "./presets";
-import type {
-  AllocatorInput,
-  PortfolioPresetId,
-  Province,
-  SalaryCurvePreset,
-} from "./types";
+import type { AllocatorInput, PortfolioPresetId, Province, SalaryCurvePreset } from "./types";
 
 export const KEY = "alloc_input";
 
 const provinces: Province[] = ["NB", "ON", "BC"];
-const curves: SalaryCurvePreset[] = [
-  "flat",
-  "modest",
-  "strong",
-  "fast",
-  "custom",
-];
-const portfolioIds = PORTFOLIO_PRESETS.map(
-  (preset) => preset.id,
-) as PortfolioPresetId[];
+const curves: SalaryCurvePreset[] = ["flat", "modest", "strong", "fast", "custom"];
+const portfolioIds = PORTFOLIO_PRESETS.map((preset) => preset.id) as PortfolioPresetId[];
 portfolioIds.push("custom");
 
-function enumValue<T extends string>(
-  value: unknown,
-  allowed: readonly T[],
-  fallback: T,
-): T {
-  return typeof value === "string" && allowed.includes(value as T)
-    ? (value as T)
-    : fallback;
+function enumValue<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
+  return typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback;
 }
 
 export function migrateInput(value: unknown): AllocatorInput {
@@ -61,11 +42,7 @@ export function migrateInput(value: unknown): AllocatorInput {
       next.salaryGrowthPct *= 1.5;
     }
   } else {
-    next.salaryCurve = enumValue(
-      parsed.salaryCurve,
-      curves,
-      DEFAULTS.salaryCurve,
-    );
+    next.salaryCurve = enumValue(parsed.salaryCurve, curves, DEFAULTS.salaryCurve);
   }
   next.portfolioPresetId = enumValue(
     parsed.portfolioPresetId,

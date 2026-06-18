@@ -1,22 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  ActionIcon,
-  Group,
-  Loader,
-  Modal,
-  Stack,
-  Table,
-  Text,
-} from "@mantine/core";
+import { ActionIcon, Group, Loader, Modal, Stack, Table, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconInfoCircle } from "@tabler/icons-react";
 import { safeWithdrawalRate } from "@/utils/retirement/monteCarlo";
-import {
-  SWR_TABLE_ALLOCATIONS,
-  SWR_TABLE_HORIZONS,
-} from "@/utils/retirement/presets";
+import { SWR_TABLE_ALLOCATIONS, SWR_TABLE_HORIZONS } from "@/utils/retirement/presets";
 import type { RetirementInput } from "@/utils/retirement/types";
 
 interface SwrTechnicalNoteProps {
@@ -61,13 +50,7 @@ export default function SwrTechnicalNote({ input }: SwrTechnicalNoteProps) {
       acc.push({
         label: a.label,
         swrs: SWR_TABLE_HORIZONS.map((h) =>
-          safeWithdrawalRate(
-            a.returnPct,
-            a.volatility,
-            inflation,
-            h,
-            successRate,
-          ),
+          safeWithdrawalRate(a.returnPct, a.volatility, inflation, h, successRate),
         ),
       });
       i += 1;
@@ -109,32 +92,31 @@ export default function SwrTechnicalNote({ input }: SwrTechnicalNoteProps) {
         <Stack gap="sm">
           <Text size="sm">
             The rate on your plan is your{" "}
-            <strong>first-year withdrawal as a % of your savings</strong> at
-            retirement, and it reflects your pension. If you retire before your
-            pension starts, year 1 runs higher — your portfolio covers your
-            whole income until the pension kicks in (the &ldquo;bridge&rdquo;).
+            <strong>first-year withdrawal as a % of your savings</strong> at retirement, and it
+            reflects your pension. If you retire before your pension starts, year 1 runs higher —
+            your portfolio covers your whole income until the pension kicks in (the
+            &ldquo;bridge&rdquo;).
           </Text>
           <Text size="sm">
-            For some, it may look low next to the famous US &ldquo;4%
-            rule.&rdquo; I believe it&apos;s right, for two reasons:
+            For some, it may look low next to the famous US &ldquo;4% rule.&rdquo; I believe
+            it&apos;s right, for two reasons:
           </Text>
           <Text size="sm" component="div">
-            <strong>1. Forward-looking Canadian returns.</strong> My return
-            assumptions come from PWL Capital&apos;s capital-market estimates
-            (corroborated by FP Canada&apos;s planning guidelines & RBC
-            assumptions) — more modest than the 20th-century US history the 4%
-            rule was built on.
+            <strong>1. Forward-looking Canadian returns.</strong> My return assumptions come from
+            PWL Capital&apos;s capital-market estimates (corroborated by FP Canada&apos;s planning
+            guidelines & RBC assumptions) — more modest than the 20th-century US history the 4% rule
+            was built on.
           </Text>
           <Text size="sm" component="div">
-            <strong>2. Longer retirements need lower rates.</strong> A 30-year
-            retirement sustains a higher rate than a 50-year one. The figure
-            beside your plan is for <em>your</em> horizon.
+            <strong>2. Longer retirements need lower rates.</strong> A 30-year retirement sustains a
+            higher rate than a 50-year one. The figure beside your plan is for <em>your</em>{" "}
+            horizon.
           </Text>
           <Text size="sm">
-            I checked these rates against 150 years of global market history (16
-            countries, 1870–2020): they are in line with what real history would
-            have sustained. The takeaway is that the withdrawal rate is driven
-            by the return assumption, not by an overly harsh risk model.
+            I checked these rates against 150 years of global market history (16 countries,
+            1870–2020): they are in line with what real history would have sustained. The takeaway
+            is that the withdrawal rate is driven by the return assumption, not by an overly harsh
+            risk model.
           </Text>
 
           <Text size="sm" fw={600} mt="xs">
@@ -191,12 +173,10 @@ export default function SwrTechnicalNote({ input }: SwrTechnicalNoteProps) {
           )}
 
           <Text size="xs" c="dimmed">
-            Each cell is a constant withdrawal — as a % of the starting
-            portfolio, held in real terms — with a {successPct}% chance of
-            lasting the full horizon. It&apos;s a generic benchmark for a
-            globally-diversified mix and excludes CPP/OAS/pension, so it
-            won&apos;t exactly match your plan&apos;s year-1 rate above (which
-            reflects your pension).
+            Each cell is a constant withdrawal — as a % of the starting portfolio, held in real
+            terms — with a {successPct}% chance of lasting the full horizon. It&apos;s a generic
+            benchmark for a globally-diversified mix and excludes CPP/OAS/pension, so it won&apos;t
+            exactly match your plan&apos;s year-1 rate above (which reflects your pension).
           </Text>
         </Stack>
       </Modal>

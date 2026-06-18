@@ -172,9 +172,7 @@ function mapActivityType(
 }
 
 export function parseWealthsimpleCsv(text: string): ParseResult {
-  const lines = text
-    .split(/\r\n|\r|\n/)
-    .filter((line) => line.trim().length > 0);
+  const lines = text.split(/\r\n|\r|\n/).filter((line) => line.trim().length > 0);
 
   if (lines.length === 0) {
     return { ok: false, error: "No transactions found" };
@@ -219,8 +217,7 @@ export function parseWealthsimpleCsv(text: string): ParseResult {
   const transactions: AcbTransaction[] = [];
   for (const line of lines.slice(1)) {
     const fields = splitCsvLine(line);
-    const field = (idx: number): string =>
-      idx === -1 ? "" : (fields[idx] ?? "").trim();
+    const field = (idx: number): string => (idx === -1 ? "" : (fields[idx] ?? "").trim());
 
     let type: AcbTransaction["type"] | null;
     let rawActivityType: string;
@@ -228,19 +225,12 @@ export function parseWealthsimpleCsv(text: string): ParseResult {
       rawActivityType = field(typeIdx);
       const legacy = rawActivityType.toLowerCase();
       type =
-        legacy === "buy" ||
-        legacy === "sell" ||
-        legacy === "dividend" ||
-        legacy === "transfer"
+        legacy === "buy" || legacy === "sell" || legacy === "dividend" || legacy === "transfer"
           ? legacy
           : null;
     } else {
       rawActivityType = field(activityTypeIdx);
-      type = mapActivityType(
-        rawActivityType,
-        field(activitySubTypeIdx),
-        field(directionIdx),
-      );
+      type = mapActivityType(rawActivityType, field(activitySubTypeIdx), field(directionIdx));
     }
     if (type === null) continue; // ignore deposits, deposit interest, fees, etc.
 
@@ -290,9 +280,7 @@ export function hasMixedCurrencies(transactions: AcbTransaction[]): boolean {
  * overlap, even when their date ranges intersect. Transactions with no date
  * are skipped.
  */
-export function detectOverlappingFiles(
-  fileTransactions: AcbTransaction[][],
-): boolean {
+export function detectOverlappingFiles(fileTransactions: AcbTransaction[][]): boolean {
   // Per file: accountKey → [minDate, maxDate] over that account's dated rows.
   const fileRanges: Map<string, { min: string; max: string }>[] = [];
   for (const transactions of fileTransactions) {
@@ -360,8 +348,7 @@ export function computeHoldings(transactions: AcbTransaction[]): Holding[] {
       // CRA rule: sell reduces pool pro-rata so ACB/share is unchanged.
       // remaining_pool = pool × (shares_before - sold) / shares_before
       const sharesAfter = entry.shares - tx.quantity;
-      entry.costBasis =
-        entry.shares > 0 ? entry.costBasis * (sharesAfter / entry.shares) : 0;
+      entry.costBasis = entry.shares > 0 ? entry.costBasis * (sharesAfter / entry.shares) : 0;
       entry.shares = sharesAfter;
     }
     bySymbol.set(tx.symbol, entry);
@@ -395,11 +382,7 @@ export function applyT3Adjustment(holding: Holding, roc: number): Holding {
  * - `t3Net`: net T3 adjustment, `sum(box 21) − sum(box 42)` — positive adds
  *   to the pool, negative subtracts (combined result clamped at zero)
  */
-export function applyAdjustments(
-  holding: Holding,
-  openingLot: number,
-  t3Net: number,
-): Holding {
+export function applyAdjustments(holding: Holding, openingLot: number, t3Net: number): Holding {
   const costBasis = Math.max(0, holding.costBasis + openingLot + t3Net);
   return {
     ...holding,
@@ -418,9 +401,7 @@ export type MarginInterestByYear = Record<number, number>;
  * skipped. Uses `net_cash_amount` (negative for charges) when present,
  * falling back to quantity × price.
  */
-export function computeMarginInterest(
-  transactions: AcbTransaction[],
-): MarginInterestByYear {
+export function computeMarginInterest(transactions: AcbTransaction[]): MarginInterestByYear {
   const byYear: MarginInterestByYear = {};
   for (const tx of transactions) {
     const activity = (tx.rawActivityType ?? "").trim().toLowerCase();
@@ -474,9 +455,7 @@ export function groupByAccount(transactions: AcbTransaction[]): AccountGroup[] {
   }
   // Stable sort: non-registered first, registered after, otherwise keeping
   // first-seen order.
-  return [...groups.values()].sort(
-    (a, b) => Number(a.isRegistered) - Number(b.isRegistered),
-  );
+  return [...groups.values()].sort((a, b) => Number(a.isRegistered) - Number(b.isRegistered));
 }
 
 /** Running ACB state for one symbol at the end of one calendar year. */
@@ -501,15 +480,11 @@ export type YearlySnapshot = {
  * calendar year with activity (years without transactions are skipped).
  * Rows without a parseable date are grouped under year 0 ("Unknown").
  */
-export function computeYearlyACB(
-  transactions: AcbTransaction[],
-  symbol: string,
-): YearlySnapshot[] {
+export function computeYearlyACB(transactions: AcbTransaction[], symbol: string): YearlySnapshot[] {
   const relevant = transactions
     .filter(
       (tx) =>
-        tx.symbol === symbol &&
-        (tx.type === "buy" || tx.type === "sell" || tx.type === "transfer"),
+        tx.symbol === symbol && (tx.type === "buy" || tx.type === "sell" || tx.type === "transfer"),
     )
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
 
@@ -520,8 +495,7 @@ export function computeYearlyACB(
 
   for (const tx of relevant) {
     const parsedYear = Number((tx.date ?? "").slice(0, 4));
-    const year =
-      Number.isInteger(parsedYear) && parsedYear > 0 ? parsedYear : 0;
+    const year = Number.isInteger(parsedYear) && parsedYear > 0 ? parsedYear : 0;
     if (current === null || current.year !== year) {
       if (current !== null) snapshots.push(current);
       current = {
@@ -552,8 +526,7 @@ export function computeYearlyACB(
     current.costBasis = costBasis;
     // A transfer-only history leaves shares with no cost basis: ACB is
     // unknown (null), not $0.
-    current.acbPerShare =
-      shares > 0 && costBasis > 0 ? costBasis / shares : null;
+    current.acbPerShare = shares > 0 && costBasis > 0 ? costBasis / shares : null;
   }
   if (current !== null) snapshots.push(current);
 

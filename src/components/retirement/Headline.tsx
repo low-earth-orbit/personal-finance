@@ -1,21 +1,9 @@
 import type { ReactNode } from "react";
-import {
-  Alert,
-  Card,
-  Divider,
-  Group,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Card, Divider, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { formatCADCompact } from "@/utils/format";
 import SwrTechnicalNote from "./SwrTechnicalNote";
-import type {
-  RetirementInput,
-  RetirementResult,
-} from "@/utils/retirement/types";
+import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 
 interface HeadlineProps {
   input: RetirementInput;
@@ -65,17 +53,16 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         title="Your plan does not reach the target yet"
       >
         <Text size="sm">
-          Even working to age {input.planningAge - 1}, your plan doesn&apos;t
-          reach your {input.targetSuccessRate}% confidence target of lasting to
-          age {input.planningAge}. Try a lower target income, a higher savings
-          rate, more guaranteed income, or a lower confidence target.
+          Even working to age {input.planningAge - 1}, your plan doesn&apos;t reach your{" "}
+          {input.targetSuccessRate}% confidence target of lasting to age {input.planningAge}. Try a
+          lower target income, a higher savings rate, more guaranteed income, or a lower confidence
+          target.
         </Text>
       </Alert>
     );
   }
 
-  const { earliestRetirementAge, yearsUntilRetirement, retirementAgeRange } =
-    result;
+  const { earliestRetirementAge, yearsUntilRetirement, retirementAgeRange } = result;
   const retireNow = yearsUntilRetirement === 0;
 
   return (
@@ -92,15 +79,12 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
             </Title>
             {!retireNow && (
               <Text size="sm">
-                in {yearsUntilRetirement}{" "}
-                {yearsUntilRetirement === 1 ? "year" : "years"}
+                in {yearsUntilRetirement} {yearsUntilRetirement === 1 ? "year" : "years"}
               </Text>
             )}
           </Group>
           <Text size="xs" c="dimmed">
-            {retireNow
-              ? `Your savings already support your target income.`
-              : ``}
+            {retireNow ? `Your savings already support your target income.` : ``}
             {!retireNow && retirementAgeRange && (
               <>
                 50% chance you retire between ages {retirementAgeRange.p25} and{" "}

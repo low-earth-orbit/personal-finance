@@ -1,8 +1,5 @@
 import { describe, test, expect } from "vitest";
-import {
-  calculateMortgagePrincipal,
-  calculateMonthlyMortgagePayment,
-} from "./math";
+import { calculateMortgagePrincipal, calculateMonthlyMortgagePayment } from "./math";
 
 describe("conventional mortgage calculations", () => {
   test("calculates mortgage principal without CMHC premiums", () => {

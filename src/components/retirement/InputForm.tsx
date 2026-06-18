@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Accordion,
-  Button,
-  Group,
-  Popover,
-  SimpleGrid,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Accordion, Button, Group, Popover, SimpleGrid, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import {
@@ -32,14 +24,8 @@ interface InputFormProps {
   onReset: () => void;
 }
 
-export default function InputForm({
-  input,
-  errors,
-  onChange,
-  onReset,
-}: InputFormProps) {
-  const bind = (key: RetirementInputKey) => (value: FieldValue) =>
-    onChange(key, value);
+export default function InputForm({ input, errors, onChange, onReset }: InputFormProps) {
+  const bind = (key: RetirementInputKey) => (value: FieldValue) => onChange(key, value);
 
   const isSameRate = (value: FieldValue, presetValue: number) =>
     typeof value === "number" && Math.abs(value - presetValue) < 0.001;
@@ -73,21 +59,13 @@ export default function InputForm({
 
   return (
     <>
-      <Accordion
-        multiple
-        defaultValue={["you", "goals", "assumptions"]}
-        variant="contained"
-      >
+      <Accordion multiple defaultValue={["you", "goals", "assumptions"]} variant="contained">
         <Accordion.Item value="you">
           <Accordion.Control>About you</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
-                <UserInputFormItem
-                  {...num("currentAge")}
-                  label="Current age"
-                  suffix=" yrs"
-                />
+                <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
                   {...num("currentIncome")}
                   label="Annual income"
@@ -164,23 +142,13 @@ export default function InputForm({
                   Plan success rate
                 </Text>
                 <Text size="xs" c="dimmed">
-                  The share of simulated markets your savings must outlast to
-                  your planning age.
+                  The share of simulated markets your savings must outlast to your planning age.
                 </Text>
-                <Group
-                  gap="xs"
-                  role="group"
-                  aria-label="Plan confidence target"
-                  mt="xs"
-                >
+                <Group gap="xs" role="group" aria-label="Plan confidence target" mt="xs">
                   {SUCCESS_RATE_PRESETS.map((rate) => (
                     <Button
                       key={rate}
-                      variant={
-                        isSameRate(input.targetSuccessRate, rate)
-                          ? "filled"
-                          : "light"
-                      }
+                      variant={isSameRate(input.targetSuccessRate, rate) ? "filled" : "light"}
                       size="xs"
                       radius="lg"
                       aria-pressed={isSameRate(input.targetSuccessRate, rate)}
@@ -189,12 +157,7 @@ export default function InputForm({
                       {rate}%
                     </Button>
                   ))}
-                  <Popover
-                    width={220}
-                    position="bottom-start"
-                    withArrow
-                    shadow="md"
-                  >
+                  <Popover width={220} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
                       <Button
                         variant={isCustomConfidence ? "filled" : "light"}
@@ -222,8 +185,8 @@ export default function InputForm({
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
                     <Text size="xs" c="yellow.8">
-                      Below 90% leans optimistic — it accepts more
-                      sequence-of-returns risk. 90% or higher is recommended.
+                      Below 90% leans optimistic — it accepts more sequence-of-returns risk. 90% or
+                      higher is recommended.
                     </Text>
                   </Group>
                 )}
@@ -234,10 +197,9 @@ export default function InputForm({
                   Max spending cut
                 </Text>
                 <Text size="xs" c="dimmed">
-                  How much you&apos;d trim spending in a weak market instead of
-                  risking running out. Optimistic by nature: it assumes
-                  you&apos;ll actually make the cut, and your confidence is
-                  measured against the reduced floor.
+                  How much you&apos;d trim spending in a weak market instead of risking running out.
+                  Optimistic by nature: it assumes you&apos;ll actually make the cut, and your
+                  confidence is measured against the reduced floor.
                 </Text>
                 <UserInputFormItem
                   {...num("spendingFlexibilityPct")}
@@ -253,9 +215,8 @@ export default function InputForm({
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
                     <Text size="xs" c="yellow.8">
-                      Cutting more than 20% is a big lifestyle reduction — make
-                      sure you could really live on the reduced floor for many
-                      years if markets stay weak.
+                      Cutting more than 20% is a big lifestyle reduction — make sure you could
+                      really live on the reduced floor for many years if markets stay weak.
                     </Text>
                   </Group>
                 )}
@@ -273,9 +234,9 @@ export default function InputForm({
                   Expected return
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Based on stock / bond mix — e.g. 80/20 is 80% stocks — before
-                  and after retirement. For simplicity, two distinct allocations
-                  are used, no gradual transition in-between.
+                  Based on stock / bond mix — e.g. 80/20 is 80% stocks — before and after
+                  retirement. For simplicity, two distinct allocations are used, no gradual
+                  transition in-between.
                 </Text>
                 <SimpleGrid
                   cols={{ base: 2, xs: 3 }}
@@ -287,11 +248,7 @@ export default function InputForm({
                   {RETURN_PRESETS.map((preset) => (
                     <Button
                       key={preset.id}
-                      variant={
-                        activeReturnPreset?.id === preset.id
-                          ? "filled"
-                          : "light"
-                      }
+                      variant={activeReturnPreset?.id === preset.id ? "filled" : "light"}
                       size="xs"
                       radius="lg"
                       h={44}
@@ -334,10 +291,9 @@ export default function InputForm({
                     <Popover.Dropdown>
                       <Stack gap="sm">
                         <Text size="xs" c="dimmed">
-                          Custom returns are easy to overstate. The presets use
-                          long-term capital market assumptions; higher figures
-                          make any plan look feasible. Use nominal
-                          (pre-inflation) returns.
+                          Custom returns are easy to overstate. The presets use long-term capital
+                          market assumptions; higher figures make any plan look feasible. Use
+                          nominal (pre-inflation) returns.
                         </Text>
                         <UserInputFormItem
                           {...num("accumReturn")}
@@ -361,18 +317,13 @@ export default function InputForm({
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
                     <Text size="xs" c="yellow.8">
-                      Using custom return assumptions — make sure they&apos;re
-                      reasonable.
+                      Using custom return assumptions — make sure they&apos;re reasonable.
                     </Text>
                   </Group>
                 )}
               </Stack>
               <Stack gap={4}>
-                <UserInputFormItem
-                  {...num("inflationRate")}
-                  label="Inflation"
-                  suffix="%"
-                />
+                <UserInputFormItem {...num("inflationRate")} label="Inflation" suffix="%" />
                 {(input.inflationRate > 2.5 || input.inflationRate < 2) && (
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle

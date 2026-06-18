@@ -1,12 +1,5 @@
 import { useState } from "react";
-import {
-  Group,
-  Input,
-  NumberInput,
-  SegmentedControl,
-  Stack,
-  Text,
-} from "@mantine/core";
+import { Group, Input, NumberInput, SegmentedControl, Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import FieldLabel from "./FieldLabel";
 import type { FieldValue } from "@/types";
@@ -62,21 +55,10 @@ export default function UserInputFormItem({
   const [unit, setUnit] = useState<string>(percentToggle?.defaultUnit ?? "$");
 
   if (percentToggle) {
-    const {
-      base,
-      dollarSuffix = " /yr",
-      amountStep,
-      unitAriaLabel,
-    } = percentToggle;
+    const { base, dollarSuffix = " /yr", amountStep, unitAriaLabel } = percentToggle;
     const valueIsEmpty = value === "" || value == null;
     const displayValue =
-      unit === "$"
-        ? valueIsEmpty
-          ? ""
-          : base > 0
-            ? Math.round((+value / 100) * base)
-            : 0
-        : value;
+      unit === "$" ? (valueIsEmpty ? "" : base > 0 ? Math.round((+value / 100) * base) : 0) : value;
 
     const handleChange = (next: FieldValue) => {
       if (next === "" || next == null) {
@@ -123,13 +105,7 @@ export default function UserInputFormItem({
           prefix={unit === "$" ? "$" : undefined}
           suffix={unit === "$" ? dollarSuffix : "%"}
           thousandSeparator={unit === "$" ? "," : undefined}
-          min={
-            unit === "$"
-              ? base > 0
-                ? Math.round(((min ?? 0) / 100) * base)
-                : 0
-              : (min ?? 0)
-          }
+          min={unit === "$" ? (base > 0 ? Math.round(((min ?? 0) / 100) * base) : 0) : (min ?? 0)}
           max={
             unit === "$"
               ? max != null && base > 0
