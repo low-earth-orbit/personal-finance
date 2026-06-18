@@ -6,12 +6,7 @@ import { useDebouncedValue } from "@mantine/hooks";
 import InputForm from "./InputForm";
 import Result from "./Result";
 import { DEFAULTS } from "@/utils/allocator/presets";
-import {
-  clearInput,
-  hasSavedInput,
-  loadInput,
-  saveInput,
-} from "@/utils/allocator/storage";
+import { clearInput, hasSavedInput, loadInput, saveInput } from "@/utils/allocator/storage";
 import type {
   AllocatorInput,
   AllocatorInputKey,
@@ -20,13 +15,7 @@ import type {
 } from "@/utils/allocator/types";
 import { validateAllocatorInput } from "@/utils/allocator/validation";
 
-export type AllocatorStatus =
-  | "idle"
-  | "loading"
-  | "updating"
-  | "invalid"
-  | "ready"
-  | "error";
+export type AllocatorStatus = "idle" | "loading" | "updating" | "invalid" | "ready" | "error";
 
 export default function Main() {
   const [input, setInput] = useState<AllocatorInput>(() => loadInput());
@@ -41,8 +30,7 @@ export default function Main() {
   const errors = validateAllocatorInput(input);
   const [debouncedInput] = useDebouncedValue(input, 400);
   const currentInputsValid = Object.keys(errors).length === 0;
-  const inputsValid =
-    Object.keys(validateAllocatorInput(debouncedInput)).length === 0;
+  const inputsValid = Object.keys(validateAllocatorInput(debouncedInput)).length === 0;
   const status: AllocatorStatus = !hasStarted
     ? "idle"
     : !currentInputsValid
@@ -64,9 +52,7 @@ export default function Main() {
     if (!hasStarted || !inputsValid) {
       return;
     }
-    const worker = new Worker(
-      new URL("../../workers/allocationWorker.ts", import.meta.url),
-    );
+    const worker = new Worker(new URL("../../workers/allocationWorker.ts", import.meta.url));
     workerRef.current = worker;
     worker.onmessage = (event: MessageEvent<AllocationResponse>) => {
       if (event.data.requestId === requestIdRef.current) {
@@ -124,10 +110,7 @@ export default function Main() {
   return (
     <Container size="xl" pb="xl">
       <Grid gap="xl">
-        <Grid.Col
-          span={{ base: 12, lg: 6 }}
-          order={{ base: allocation ? 2 : 1, lg: 1 }}
-        >
+        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: allocation ? 2 : 1, lg: 1 }}>
           <InputForm
             input={input}
             errors={errors}
@@ -138,10 +121,7 @@ export default function Main() {
             onShowRecommendation={handleShowRecommendation}
           />
         </Grid.Col>
-        <Grid.Col
-          span={{ base: 12, lg: 6 }}
-          order={{ base: allocation ? 1 : 2, lg: 2 }}
-        >
+        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: allocation ? 1 : 2, lg: 2 }}>
           <Result allocation={allocation} input={resultInput} status={status} />
         </Grid.Col>
       </Grid>

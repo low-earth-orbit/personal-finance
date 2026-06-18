@@ -16,19 +16,9 @@ import { useDisclosure } from "@mantine/hooks";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
 import { FIELD_CONSTRAINTS } from "@/utils/validation";
-import type {
-  FieldErrors,
-  FieldValue,
-  Preset,
-  SigmaKey,
-  UserInput,
-  UserInputKey,
-} from "@/types";
+import type { FieldErrors, FieldValue, Preset, SigmaKey, UserInput, UserInputKey } from "@/types";
 import { formatCAD, formatPercentage } from "@/utils/format";
-import {
-  calculateMonthlyMortgagePayment,
-  calculateMortgagePrincipal,
-} from "@/utils/math";
+import { calculateMonthlyMortgagePayment, calculateMortgagePrincipal } from "@/utils/math";
 
 interface UserInputFormProps {
   userInput: UserInput;
@@ -66,8 +56,7 @@ export default function UserInputForm({
   onDeletePreset,
 }: UserInputFormProps) {
   const [saveOpen, { open: openSave, close: closeSave }] = useDisclosure(false);
-  const [resetOpen, { open: openReset, close: closeReset }] =
-    useDisclosure(false);
+  const [resetOpen, { open: openReset, close: closeReset }] = useDisclosure(false);
   const [presetName, setPresetName] = useState("");
 
   const confirmReset = () => {
@@ -75,8 +64,7 @@ export default function UserInputForm({
     closeReset();
   };
 
-  const variantFor = (preset: Preset) =>
-    activePreset?.id === preset.id ? "filled" : "light";
+  const variantFor = (preset: Preset) => (activePreset?.id === preset.id ? "filled" : "light");
 
   const submitSave = () => {
     const trimmed = presetName.trim();
@@ -86,8 +74,7 @@ export default function UserInputForm({
     closeSave();
   };
 
-  const bind = (id: UserInputKey) => (value: FieldValue) =>
-    handleChange(id, value);
+  const bind = (id: UserInputKey) => (value: FieldValue) => handleChange(id, value);
   const c = (id: UserInputKey) => FIELD_CONSTRAINTS[id];
 
   // Perturbed variables: base value always, plus an inline ±2σ input + range
@@ -115,9 +102,7 @@ export default function UserInputForm({
     />
   );
 
-  const rentalYield = formatPercentage(
-    (userInput.monthlyRent * 12) / userInput.initialHomePrice,
-  );
+  const rentalYield = formatPercentage((userInput.monthlyRent * 12) / userInput.initialHomePrice);
 
   // While a field is mid-edit it can transiently be "" or 0. Show a placeholder
   // rather than a misleading "$0/mo" (empty amortization) or "NaN" (empty price).
@@ -126,10 +111,7 @@ export default function UserInputForm({
     userInput.amortization > 0 && userInput.initialHomePrice > 0
       ? formatCAD(
           calculateMonthlyMortgagePayment(
-            calculateMortgagePrincipal(
-              userInput.initialHomePrice,
-              userInput.downPaymentPercentage,
-            ),
+            calculateMortgagePrincipal(userInput.initialHomePrice, userInput.downPaymentPercentage),
             userInput.annualMortgageInterestRate,
             userInput.amortization,
           ),
@@ -174,17 +156,11 @@ export default function UserInputForm({
         </Group>
       </Stack>
 
-      <Modal
-        opened={resetOpen}
-        onClose={closeReset}
-        title="Reset everything?"
-        size="sm"
-        centered
-      >
+      <Modal opened={resetOpen} onClose={closeReset} title="Reset everything?" size="sm" centered>
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            This will remove all custom presets, restore any deleted built-in
-            presets, and discard your edits.
+            This will remove all custom presets, restore any deleted built-in presets, and discard
+            your edits.
           </Text>
           <Group justify="flex-end" gap="xs">
             <Button variant="subtle" color="gray" onClick={closeReset}>
@@ -197,13 +173,7 @@ export default function UserInputForm({
         </Stack>
       </Modal>
 
-      <Modal
-        opened={saveOpen}
-        onClose={closeSave}
-        title="Save as preset"
-        size="sm"
-        centered
-      >
+      <Modal opened={saveOpen} onClose={closeSave} title="Save as preset" size="sm" centered>
         <Stack gap="md">
           <TextInput
             label="Name"
@@ -229,11 +199,7 @@ export default function UserInputForm({
         </Stack>
       </Modal>
 
-      <Accordion
-        multiple
-        defaultValue={["rent", "property"]}
-        variant="contained"
-      >
+      <Accordion multiple defaultValue={["rent", "property"]} variant="contained">
         <Accordion.Item value="rent">
           <Accordion.Control>Rent</Accordion.Control>
           <Accordion.Panel>
@@ -387,10 +353,9 @@ export default function UserInputForm({
           <Accordion.Panel>
             <Stack gap="md">
               <Alert variant="default" color="gray">
-                Total Return is split into two parts: Annual Yield (taxed each
-                year) and deferred capital gains (taxed at sale). Use Annual
-                Yield Tax to set a blended rate that reflects your mix of
-                interest, dividends and realized capital gains.
+                Total Return is split into two parts: Annual Yield (taxed each year) and deferred
+                capital gains (taxed at sale). Use Annual Yield Tax to set a blended rate that
+                reflects your mix of interest, dividends and realized capital gains.
               </Alert>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {

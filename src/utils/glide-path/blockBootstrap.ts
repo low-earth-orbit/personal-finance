@@ -9,13 +9,7 @@
  */
 
 import { mulberry32 } from "./rng";
-import {
-  JST_BOND,
-  JST_EQUITY,
-  JST_OBSERVATIONS,
-  JST_SEG_LEN,
-  JST_SEG_START,
-} from "./jstData";
+import { JST_BOND, JST_EQUITY, JST_OBSERVATIONS, JST_SEG_LEN, JST_SEG_START } from "./jstData";
 
 /** Average block length (years) — matches the Python default. */
 const BLOCK_YEARS = 10;

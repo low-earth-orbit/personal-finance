@@ -34,9 +34,7 @@ describe("UserInputForm mortgage readout", () => {
   // "Amortization period must be greater than zero." during render, crashing the
   // app. The math now soft-fails and the readout guards against bad display.
   it("does not crash when amortization is cleared to empty", () => {
-    expect(() =>
-      renderForm({ amortization: "" as unknown as number }),
-    ).not.toThrow();
+    expect(() => renderForm({ amortization: "" as unknown as number })).not.toThrow();
   });
 
   it("does not crash when amortization is zero", () => {
@@ -44,8 +42,6 @@ describe("UserInputForm mortgage readout", () => {
   });
 
   it("does not crash when initial home price is cleared to empty", () => {
-    expect(() =>
-      renderForm({ initialHomePrice: "" as unknown as number }),
-    ).not.toThrow();
+    expect(() => renderForm({ initialHomePrice: "" as unknown as number })).not.toThrow();
   });
 });

@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  allocateLumpSum,
-  combinedAfterTaxValue,
-  type AllocationPlan,
-} from "./allocate";
+import { allocateLumpSum, combinedAfterTaxValue, type AllocationPlan } from "./allocate";
 import { DEFAULTS } from "./presets";
 import { taxOwed } from "./tax";
 import type { AllocatorInput } from "./types";
@@ -146,10 +142,7 @@ describe("one-time lump-sum allocator", () => {
         if (kind.startsWith("rrsp-")) {
           const age = Number(kind.slice(5));
           next.rrspContrib += 1_000;
-          next.claimedDeductionByAge.set(
-            age,
-            (next.claimedDeductionByAge.get(age) ?? 0) + 1_000,
-          );
+          next.claimedDeductionByAge.set(age, (next.claimedDeductionByAge.get(age) ?? 0) + 1_000);
         }
         enumerate(unit + 1, next);
       }
@@ -174,8 +167,7 @@ describe("one-time lump-sum allocator", () => {
     });
     const result = allocateLumpSum(input, input.lumpSum);
     const rrsp =
-      result.rrspDeductNow +
-      result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0);
+      result.rrspDeductNow + result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0);
 
     expect(result.tfsa).toBeLessThanOrEqual(input.availableTfsaRoom);
     expect(rrsp).toBeLessThanOrEqual(input.availableRrspRoom);
@@ -189,9 +181,7 @@ describe("one-time lump-sum allocator", () => {
 
   it("favors deduct-now RRSP with a low retirement rate and flat salary", () => {
     const input = fixture({ retirementWithdrawalRatePct: 0 });
-    expect(allocateLumpSum(input, input.lumpSum).rrspDeductNow).toBe(
-      input.lumpSum,
-    );
+    expect(allocateLumpSum(input, input.lumpSum).rrspDeductNow).toBe(input.lumpSum);
   });
 
   it("carries deductions forward when steep salary growth makes it meaningful", () => {
@@ -210,8 +200,7 @@ describe("one-time lump-sum allocator", () => {
     const allDeductNow: AllocationPlan = {
       tfsa: result.tfsa,
       rrspContrib:
-        result.rrspDeductNow +
-        result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0),
+        result.rrspDeductNow + result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0),
       claimedDeductionByAge: new Map([
         [
           input.currentAge,
@@ -225,9 +214,7 @@ describe("one-time lump-sum allocator", () => {
 
     expect(result.rrspCarryForward.length).toBeGreaterThan(0);
     expect(result.projectedAfterTaxTotal).toBeGreaterThan(allNowValue);
-    expect(result.carryForwardBenefit).toBeCloseTo(
-      result.projectedAfterTaxTotal - allNowValue,
-    );
+    expect(result.carryForwardBenefit).toBeCloseTo(result.projectedAfterTaxTotal - allNowValue);
   });
 
   it("can split carried deductions across multiple years", () => {
@@ -341,9 +328,7 @@ describe("one-time lump-sum allocator", () => {
     const rrsp = 10_000 * 1.1;
     const nonReg = 10_000 + reinvested;
 
-    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
-      rrsp + nonReg + refund,
-    );
+    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(rrsp + nonReg + refund);
   });
 
   it("keeps carried deductions nominal while tax brackets stay constant in real dollars", () => {
@@ -368,12 +353,9 @@ describe("one-time lump-sum allocator", () => {
     const freshRoom = Math.min(0.18 * input.currentIncome, 33_810);
     const claimFloor = input.currentIncome - freshRoom;
     const expectedRefund =
-      taxOwed(input.province, claimFloor) -
-      taxOwed(input.province, claimFloor - 10_000 / 1.05);
+      taxOwed(input.province, claimFloor) - taxOwed(input.province, claimFloor - 10_000 / 1.05);
 
-    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
-      10_000 + expectedRefund / 1.05,
-    );
+    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(10_000 + expectedRefund / 1.05);
   });
 
   it("does not grow a tax refund with inflation while it waits one year to arrive", () => {
@@ -397,9 +379,7 @@ describe("one-time lump-sum allocator", () => {
       taxOwed(input.province, input.currentIncome) -
       taxOwed(input.province, input.currentIncome - 10_000);
 
-    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo(
-      (10_000 + refund) / 1.1 ** 2,
-    );
+    expect(combinedAfterTaxValue(input, plan)).toBeCloseTo((10_000 + refund) / 1.1 ** 2);
   });
 
   it("keeps existing TFSA room nominal so it depreciates in real dollars", () => {
@@ -523,12 +503,9 @@ describe("one-time lump-sum allocator", () => {
     };
 
     expect(combinedAfterTaxValue(input, nonRegPlan)).toBe(11_000);
-    expect(
-      combinedAfterTaxValue(
-        { ...input, capitalGainsTaxRatePct: 60 },
-        nonRegPlan,
-      ),
-    ).toBe(10_400);
+    expect(combinedAfterTaxValue({ ...input, capitalGainsTaxRatePct: 60 }, nonRegPlan)).toBe(
+      10_400,
+    );
   });
 
   it("invests the full lump sum now, including a remainder", () => {
@@ -541,8 +518,7 @@ describe("one-time lump-sum allocator", () => {
       result.nonReg;
     expect(investedNow).toBe(input.lumpSum);
     expect(
-      result.rrspDeductNow +
-        result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0),
+      result.rrspDeductNow + result.rrspCarryForward.reduce((sum, item) => sum + item.amount, 0),
     ).toBeLessThanOrEqual(input.availableRrspRoom);
     expect(result.precision).toBe(1);
   });
@@ -554,15 +530,11 @@ describe("one-time lump-sum allocator", () => {
       availableRrspRoom: 5_000,
     });
 
-    expect(allocateLumpSum(input, input.lumpSum).rrspDeductNow).toBe(
-      input.lumpSum,
-    );
+    expect(allocateLumpSum(input, input.lumpSum).rrspDeductNow).toBe(input.lumpSum);
   });
 
   it("is deterministic", () => {
     const input = fixture();
-    expect(allocateLumpSum(input, input.lumpSum)).toEqual(
-      allocateLumpSum(input, input.lumpSum),
-    );
+    expect(allocateLumpSum(input, input.lumpSum)).toEqual(allocateLumpSum(input, input.lumpSum));
   });
 });

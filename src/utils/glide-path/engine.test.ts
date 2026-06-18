@@ -71,9 +71,7 @@ describe("recommendGlidePath", () => {
     const r = recommendGlidePath(base());
     // Flat weight is on the grid, within [0, maxLeverage].
     expect(r.flatEquityPct).toBeGreaterThanOrEqual(0);
-    expect(r.flatEquityPct).toBeLessThanOrEqual(
-      r.params.maxLeverage * 100 + 1e-9,
-    );
+    expect(r.flatEquityPct).toBeLessThanOrEqual(r.params.maxLeverage * 100 + 1e-9);
     expect(r.flatCeIncome).toBeGreaterThan(0);
     // The glide path is optimized over a superset of constant paths, so its
     // in-sample edge is real but small — within a few % of the flat CE income.
@@ -100,9 +98,7 @@ describe("recommendGlidePath", () => {
     expect(b.equityByYear).toEqual(c.equityByYear);
     expect(b.ceIncome).toBe(c.ceIncome);
     // The default (no seed) equals an explicit seed 0.
-    expect(
-      recommendGlidePath(base(), DEFAULT_ALLOC_CURVE, 0).equityByYear,
-    ).toEqual(a.equityByYear);
+    expect(recommendGlidePath(base(), DEFAULT_ALLOC_CURVE, 0).equityByYear).toEqual(a.equityByYear);
     // A different seed is a genuinely different draw (moves at least one reported figure).
     const differs =
       a.ceIncome !== b.ceIncome ||
@@ -112,9 +108,7 @@ describe("recommendGlidePath", () => {
   });
 
   it("falls back to a bounded path count for invalid direct engine calls", () => {
-    const bounded = recommendGlidePath(
-      base({ numPaths: Number.POSITIVE_INFINITY }),
-    );
+    const bounded = recommendGlidePath(base({ numPaths: Number.POSITIVE_INFINITY }));
     const minimum = recommendGlidePath(base({ numPaths: 200 }));
     expect(bounded.equityByYear).toEqual(minimum.equityByYear);
     expect(bounded.ceIncome).toBe(minimum.ceIncome);
@@ -152,23 +146,17 @@ describe("recommendGlidePath", () => {
       "iid-mc",
     );
     const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    expect(avg(cautious.equityByYear)).toBeLessThanOrEqual(
-      avg(aggressive.equityByYear) + 1e-9,
-    );
+    expect(avg(cautious.equityByYear)).toBeLessThanOrEqual(avg(aggressive.equityByYear) + 1e-9);
   });
 
   it("allows leverage (>100% equity) under low risk aversion and cheap borrowing", () => {
-    const r = recommendGlidePath(
-      base({ gamma: 1.5, maxEquityPct: 150, borrowCost: 0.5 }),
-    );
+    const r = recommendGlidePath(base({ gamma: 1.5, maxEquityPct: 150, borrowCost: 0.5 }));
     expect(r.params.maxLeverage).toBeCloseTo(1.5, 6);
     expect(Math.max(...r.equityByYear)).toBeGreaterThan(1.0);
   });
 
   it("never exceeds a max-equity cap between grid steps", () => {
-    const r = recommendGlidePath(
-      base({ gamma: 1.5, maxEquityPct: 118, borrowCost: 0.5 }),
-    );
+    const r = recommendGlidePath(base({ gamma: 1.5, maxEquityPct: 118, borrowCost: 0.5 }));
 
     expect(Math.max(...r.equityByYear)).toBeLessThanOrEqual(1.15);
     expect(r.flatEquityPct).toBeLessThanOrEqual(115);

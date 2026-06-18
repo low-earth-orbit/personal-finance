@@ -1,8 +1,4 @@
-import type {
-  IncomeBreakdown,
-  ProjectionPoint,
-  RetirementInput,
-} from "./types";
+import type { IncomeBreakdown, ProjectionPoint, RetirementInput } from "./types";
 
 /**
  * Real (inflation-adjusted) arithmetic mean return for a given nominal return.
@@ -14,11 +10,7 @@ export function realMean(nominalPct: number, inflationPct: number): number {
 }
 
 /** Real expected return for the phase the given age falls in. */
-export function phaseRealMean(
-  input: RetirementInput,
-  retirementAge: number,
-  age: number,
-): number {
+export function phaseRealMean(input: RetirementInput, retirementAge: number, age: number): number {
   const nominal = age < retirementAge ? input.accumReturn : input.retireReturn;
   return realMean(nominal, input.inflationRate);
 }
@@ -30,8 +22,7 @@ export function phaseRealMean(
  */
 export function incomeBreakdown(input: RetirementInput): IncomeBreakdown {
   const targetGrossIncome = (input.currentIncome * input.targetIncomePct) / 100;
-  const guaranteedIncome =
-    (input.currentIncome * input.guaranteedIncomePct) / 100;
+  const guaranteedIncome = (input.currentIncome * input.guaranteedIncomePct) / 100;
   return {
     targetGrossIncome,
     guaranteedIncome,
@@ -49,9 +40,7 @@ export function withdrawalAtAge(
   breakdown: IncomeBreakdown,
   age: number,
 ): number {
-  return age >= input.pensionStartAge
-    ? breakdown.portfolioWithdrawal
-    : breakdown.targetGrossIncome;
+  return age >= input.pensionStartAge ? breakdown.portfolioWithdrawal : breakdown.targetGrossIncome;
 }
 
 interface PathResult {
@@ -66,10 +55,7 @@ interface PathResult {
  * withdrawals happen mid-year, earning a half-year of return — matching the
  * rent-vs-buy convention.
  */
-export function projectPath(
-  input: RetirementInput,
-  retirementAge: number,
-): PathResult {
+export function projectPath(input: RetirementInput, retirementAge: number): PathResult {
   const contribution = (input.currentIncome * input.contributionPct) / 100;
   const breakdown = incomeBreakdown(input);
 
@@ -81,8 +67,7 @@ export function projectPath(
     const r = phaseRealMean(input, retirementAge, age);
     const flow =
       age < retirementAge
-        ? contribution +
-          (age >= input.pensionStartAge ? breakdown.guaranteedIncome : 0)
+        ? contribution + (age >= input.pensionStartAge ? breakdown.guaranteedIncome : 0)
         : -withdrawalAtAge(input, breakdown, age);
     balance = balance * (1 + r) + flow * (1 + r / 2);
 
@@ -101,9 +86,7 @@ export function projectPath(
  * so this is computed once and indexed by age for any candidate retirement age
  * (the value at age A is the portfolio you'd retire on at age A).
  */
-export function accumulationBalances(
-  input: RetirementInput,
-): ProjectionPoint[] {
+export function accumulationBalances(input: RetirementInput): ProjectionPoint[] {
   const contribution = (input.currentIncome * input.contributionPct) / 100;
   const { guaranteedIncome } = incomeBreakdown(input);
   const r = realMean(input.accumReturn, input.inflationRate);
@@ -112,8 +95,7 @@ export function accumulationBalances(
   const points: ProjectionPoint[] = [{ age: input.currentAge, balance }];
   for (let age = input.currentAge; age < input.planningAge; age++) {
     // A pension that starts while still working is saved (added to the portfolio).
-    const inflow =
-      contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
+    const inflow = contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
     balance = balance * (1 + r) + inflow * (1 + r / 2);
     points.push({ age: age + 1, balance });
   }

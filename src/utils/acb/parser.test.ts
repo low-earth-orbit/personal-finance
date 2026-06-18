@@ -105,9 +105,7 @@ describe("parseWealthsimpleCsv (legacy Type column)", () => {
   });
 
   it("defaults currency to CAD when the column is absent", () => {
-    const result = parseWealthsimpleCsv(
-      csv("2025-01-02,VEQT,10,40.00,buy,Bought"),
-    );
+    const result = parseWealthsimpleCsv(csv("2025-01-02,VEQT,10,40.00,buy,Bought"));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.transactions[0].currency).toBe("CAD");
@@ -124,9 +122,7 @@ describe("parseWealthsimpleCsv (legacy Type column)", () => {
   });
 
   it("reports missing required columns", () => {
-    const result = parseWealthsimpleCsv(
-      ["Date,Symbol,Type", "2025-01-02,VEQT,buy"].join("\n"),
-    );
+    const result = parseWealthsimpleCsv(["Date,Symbol,Type", "2025-01-02,VEQT,buy"].join("\n"));
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("Quantity");
@@ -149,9 +145,7 @@ describe("parseWealthsimpleCsv (legacy Type column)", () => {
   });
 
   it("parses legacy transfer rows", () => {
-    const result = parseWealthsimpleCsv(
-      csv("2025-01-02,VEQT,10,0,transfer,Transferred in"),
-    );
+    const result = parseWealthsimpleCsv(csv("2025-01-02,VEQT,10,0,transfer,Transferred in"));
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.transactions[0].type).toBe("transfer");
@@ -202,10 +196,7 @@ describe("parseWealthsimpleCsv (Wealthsimple activity columns)", () => {
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.transactions.map((tx) => tx.type)).toEqual([
-      "buy",
-      "interest",
-    ]);
+    expect(result.transactions.map((tx) => tx.type)).toEqual(["buy", "interest"]);
     expect(result.transactions[0].symbol).toBe("XEQT");
     expect(result.transactions[1]).toMatchObject({
       type: "interest",
@@ -280,11 +271,7 @@ describe("hasMixedCurrencies", () => {
 });
 
 describe("detectOverlappingFiles", () => {
-  const tx = (
-    date: string,
-    accountId?: string,
-    accountType?: string,
-  ): AcbTransaction => ({
+  const tx = (date: string, accountId?: string, accountType?: string): AcbTransaction => ({
     symbol: "VEQT",
     quantity: 1,
     price: 10,
@@ -340,10 +327,7 @@ describe("detectOverlappingFiles", () => {
     // no account appears in both files, so there is no real overlap.
     expect(
       detectOverlappingFiles([
-        [
-          tx("2024-01-01", "acc1", "non-registered"),
-          tx("2024-12-31", "acc1", "non-registered"),
-        ],
+        [tx("2024-01-01", "acc1", "non-registered"), tx("2024-12-31", "acc1", "non-registered")],
         [tx("2024-03-01", "acc2", "tfsa"), tx("2024-09-01", "acc2", "tfsa")],
       ]),
     ).toBe(false);
@@ -352,14 +336,8 @@ describe("detectOverlappingFiles", () => {
   it("flags overlapping date ranges for the same account across files", () => {
     expect(
       detectOverlappingFiles([
-        [
-          tx("2024-01-01", "acc1", "non-registered"),
-          tx("2024-06-30", "acc1", "non-registered"),
-        ],
-        [
-          tx("2024-06-01", "acc1", "non-registered"),
-          tx("2024-12-31", "acc1", "non-registered"),
-        ],
+        [tx("2024-01-01", "acc1", "non-registered"), tx("2024-06-30", "acc1", "non-registered")],
+        [tx("2024-06-01", "acc1", "non-registered"), tx("2024-12-31", "acc1", "non-registered")],
       ]),
     ).toBe(true);
   });
@@ -376,10 +354,7 @@ describe("detectOverlappingFiles", () => {
           tx("2024-07-01", "acc2", "tfsa"),
           tx("2024-12-31", "acc2", "tfsa"),
         ],
-        [
-          tx("2024-07-01", "acc1", "non-registered"),
-          tx("2024-12-31", "acc1", "non-registered"),
-        ],
+        [tx("2024-07-01", "acc1", "non-registered"), tx("2024-12-31", "acc1", "non-registered")],
       ]),
     ).toBe(false);
   });
@@ -394,10 +369,7 @@ describe("computeHoldings", () => {
   ): AcbTransaction => ({ symbol, quantity, price, type });
 
   it("accumulates buys into the cost basis pool", () => {
-    const holdings = computeHoldings([
-      tx("VEQT", 10, 40, "buy"),
-      tx("VEQT", 10, 50, "buy"),
-    ]);
+    const holdings = computeHoldings([tx("VEQT", 10, 40, "buy"), tx("VEQT", 10, 50, "buy")]);
     expect(holdings).toEqual([
       {
         symbol: "VEQT",
@@ -412,10 +384,7 @@ describe("computeHoldings", () => {
   it("sells reduce shares and cost basis pool pro-rata (CRA rule)", () => {
     // Buy 10 @ $40 → pool = $400, ACB/share = $40
     // Sell 4 → remaining 6 shares; pool = 400 × (6/10) = $240, ACB/share still $40
-    const holdings = computeHoldings([
-      tx("VEQT", 10, 40, "buy"),
-      tx("VEQT", 4, 60, "sell"),
-    ]);
+    const holdings = computeHoldings([tx("VEQT", 10, 40, "buy"), tx("VEQT", 4, 60, "sell")]);
     expect(holdings).toEqual([
       {
         symbol: "VEQT",
@@ -445,10 +414,7 @@ describe("computeHoldings", () => {
   });
 
   it("transfer rows add shares but no cost basis", () => {
-    const holdings = computeHoldings([
-      tx("VEQT", 5, 0, "transfer"),
-      tx("VEQT", 10, 40, "buy"),
-    ]);
+    const holdings = computeHoldings([tx("VEQT", 5, 0, "transfer"), tx("VEQT", 10, 40, "buy")]);
     expect(holdings).toEqual([
       {
         symbol: "VEQT",
@@ -462,10 +428,7 @@ describe("computeHoldings", () => {
 
   it("returns null ACB when all shares are sold (division by zero)", () => {
     // Pool fully zeroed out pro-rata when all shares sold
-    const holdings = computeHoldings([
-      tx("VEQT", 10, 40, "buy"),
-      tx("VEQT", 10, 60, "sell"),
-    ]);
+    const holdings = computeHoldings([tx("VEQT", 10, 40, "buy"), tx("VEQT", 10, 60, "sell")]);
     expect(holdings).toEqual([
       {
         symbol: "VEQT",
@@ -517,19 +480,13 @@ describe("computeHoldings", () => {
 
   it("pro-rata sell reduction preserves full precision (no 4dp truncation)", () => {
     // Pool $100, sell 1 of 3 shares → 100 × (2/3) = 66.666… kept in full.
-    const holdings = computeHoldings([
-      tx("VEQT", 3, 100 / 3, "buy"),
-      tx("VEQT", 1, 50, "sell"),
-    ]);
+    const holdings = computeHoldings([tx("VEQT", 3, 100 / 3, "buy"), tx("VEQT", 1, 50, "sell")]);
     expect(holdings[0].shares).toBe(2);
     expect(holdings[0].costBasis).toBeCloseTo(66.6667, 4);
   });
 
   it("groups by symbol and sorts alphabetically", () => {
-    const holdings = computeHoldings([
-      tx("XEQT", 5, 30, "buy"),
-      tx("VEQT", 10, 40, "buy"),
-    ]);
+    const holdings = computeHoldings([tx("XEQT", 5, 30, "buy"), tx("VEQT", 10, 40, "buy")]);
     expect(holdings.map((h) => h.symbol)).toEqual(["VEQT", "XEQT"]);
   });
 
@@ -539,17 +496,9 @@ describe("computeHoldings", () => {
       { ...tx("VEQT", 10, 40, "buy"), date: "2024-01-02" },
       { ...tx("VEQT", 4, 60, "sell"), date: "2024-06-01" },
     ];
-    const fileB: AcbTransaction[] = [
-      { ...tx("VEQT", 5, 50, "buy"), date: "2025-01-02" },
-    ];
-    const merged = [...fileB, ...fileA].sort((a, b) =>
-      (a.date ?? "").localeCompare(b.date ?? ""),
-    );
-    expect(merged.map((t) => t.date)).toEqual([
-      "2024-01-02",
-      "2024-06-01",
-      "2025-01-02",
-    ]);
+    const fileB: AcbTransaction[] = [{ ...tx("VEQT", 5, 50, "buy"), date: "2025-01-02" }];
+    const merged = [...fileB, ...fileA].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+    expect(merged.map((t) => t.date)).toEqual(["2024-01-02", "2024-06-01", "2025-01-02"]);
     // Buy 10 @ 40 → 400; sell 4 → 6 shares, 240; buy 5 @ 50 → 11 shares, 490
     expect(computeHoldings(merged)).toEqual([
       {
@@ -566,18 +515,14 @@ describe("computeHoldings", () => {
 describe("applyT3Adjustment", () => {
   it("subtracts ROC from cost basis and recalculates ACB", () => {
     // 10 shares @ $40 = $400 pool. ROC of $100 → pool = $300, ACB/share = $30.
-    const holding = computeHoldings([
-      { symbol: "VEQT", quantity: 10, price: 40, type: "buy" },
-    ])[0];
+    const holding = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }])[0];
     const adjusted = applyT3Adjustment(holding, 100);
     expect(adjusted.costBasis).toBe(300);
     expect(adjusted.acbPerShare).toBe(30);
   });
 
   it("clamps cost basis to zero (ROC cannot create negative ACB)", () => {
-    const holding = computeHoldings([
-      { symbol: "VEQT", quantity: 10, price: 40, type: "buy" },
-    ])[0];
+    const holding = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }])[0];
     const adjusted = applyT3Adjustment(holding, 9999);
     expect(adjusted.costBasis).toBe(0);
     expect(adjusted.acbPerShare).toBe(0);
@@ -614,18 +559,14 @@ describe("applyAdjustments", () => {
 
   it("adds a positive T3 net (box 21 capital gains distributions)", () => {
     // 10 shares @ $40 = $400. Net T3 +$100 → $500, ACB/share = $50.
-    const holding = computeHoldings([
-      { symbol: "VEQT", quantity: 10, price: 40, type: "buy" },
-    ])[0];
+    const holding = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }])[0];
     const adjusted = applyAdjustments(holding, 0, 100);
     expect(adjusted.costBasis).toBe(500);
     expect(adjusted.acbPerShare).toBe(50);
   });
 
   it("clamps the combined adjustment at zero", () => {
-    const holding = computeHoldings([
-      { symbol: "VEQT", quantity: 10, price: 40, type: "buy" },
-    ])[0];
+    const holding = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }])[0];
     const adjusted = applyAdjustments(holding, 100, -9999);
     expect(adjusted.costBasis).toBe(0);
   });
@@ -710,9 +651,7 @@ describe("computeMarginInterest", () => {
 
   it("falls back to |quantity × price| when net_cash_amount is absent", () => {
     const tx = interest("2025-01-31", undefined, "margin");
-    expect(
-      computeMarginInterest([{ ...tx, quantity: 1, price: 12.5 }]),
-    ).toEqual({ 2025: 12.5 });
+    expect(computeMarginInterest([{ ...tx, quantity: 1, price: 12.5 }])).toEqual({ 2025: 12.5 });
   });
 
   it("computes from a parsed Wealthsimple export end to end", () => {
@@ -757,9 +696,7 @@ describe("groupByAccount", () => {
     const c1 = tx("acc1", "margin");
     const groups = groupByAccount([a1, b1, a2, c1]);
     expect(groups).toHaveLength(3);
-    const accA = groups.find(
-      (g) => g.accountId === "acc1" && g.accountType === "non-registered",
-    );
+    const accA = groups.find((g) => g.accountId === "acc1" && g.accountType === "non-registered");
     expect(accA?.transactions).toEqual([a1, a2]);
     const accB = groups.find((g) => g.accountId === "acc2");
     expect(accB?.transactions).toEqual([b1]);
@@ -788,9 +725,7 @@ describe("groupByAccount", () => {
       tx("d", "Margin Account"),
       tx("e", "non-registered"),
     ]);
-    const registeredById = new Map(
-      groups.map((g) => [g.accountId, g.isRegistered]),
-    );
+    const registeredById = new Map(groups.map((g) => [g.accountId, g.isRegistered]));
     expect(registeredById.get("a")).toBe(true);
     expect(registeredById.get("b")).toBe(true);
     expect(registeredById.get("c")).toBe(true);
@@ -825,9 +760,7 @@ describe("computeYearlyACB", () => {
   });
 
   it("returns an empty list when the symbol has no transactions", () => {
-    expect(computeYearlyACB([tx("2024-01-02", 10, 40, "buy")], "XEQT")).toEqual(
-      [],
-    );
+    expect(computeYearlyACB([tx("2024-01-02", 10, 40, "buy")], "XEQT")).toEqual([]);
   });
 
   it("accumulates buys year by year with a running pool", () => {
@@ -929,11 +862,7 @@ describe("computeYearlyACB", () => {
 
   it("groups rows without a parseable date under year 0 (Unknown)", () => {
     const snapshots = computeYearlyACB(
-      [
-        tx(undefined, 10, 40, "buy"),
-        tx("", 5, 50, "buy"),
-        tx("2025-01-02", 5, 60, "buy"),
-      ],
+      [tx(undefined, 10, 40, "buy"), tx("", 5, 50, "buy"), tx("2025-01-02", 5, 60, "buy")],
       "VEQT",
     );
     expect(snapshots.map((s) => s.year)).toEqual([0, 2025]);

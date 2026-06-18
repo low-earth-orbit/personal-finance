@@ -28,11 +28,7 @@ import {
 import GlidePathChart from "./GlidePathChart";
 import FieldLabel from "@/components/shared/FieldLabel";
 import { formatCAD } from "@/utils/format";
-import type {
-  GlidePathInput,
-  GlidePathResult,
-  SlopeDir,
-} from "@/utils/glide-path/types";
+import type { GlidePathInput, GlidePathResult, SlopeDir } from "@/utils/glide-path/types";
 
 interface ResultProps {
   input: GlidePathInput;
@@ -95,10 +91,7 @@ interface Recommendation {
  * or full-path shortfall. When both CE scores are tail-dominated, the comparison is inconclusive;
  * when only one is, prefer the allocation that avoids the near-zero-income tail.
  */
-function pickRecommendation(
-  input: GlidePathInput,
-  result: GlidePathResult,
-): Recommendation {
+function pickRecommendation(input: GlidePathInput, result: GlidePathResult): Recommendation {
   const glideBad = ceIsDegenerate(result.ceIncome, input.targetIncome);
   const flatBad = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
   if (glideBad && flatBad) {
@@ -111,16 +104,12 @@ function pickRecommendation(
     return { preferConstant: false, inconclusive: false, glideBad, flatBad };
   }
 
-  const ceWithin =
-    result.flatCeIncome >= result.ceIncome * (1 - SIMPLICITY_CE_THRESHOLD);
+  const ceWithin = result.flatCeIncome >= result.ceIncome * (1 - SIMPLICITY_CE_THRESHOLD);
   const drawdownWithin =
-    result.flatDrawdownDepletion <=
-    result.drawdownDepletion + SIMPLICITY_DRAWDOWN_THRESHOLD;
-  const fullPathWithin =
-    result.flatDepletion <= result.depletion + SIMPLICITY_FULLPATH_THRESHOLD;
+    result.flatDrawdownDepletion <= result.drawdownDepletion + SIMPLICITY_DRAWDOWN_THRESHOLD;
+  const fullPathWithin = result.flatDepletion <= result.depletion + SIMPLICITY_FULLPATH_THRESHOLD;
   const constantWinsCe = result.flatCeIncome > result.ceIncome;
-  const preferConstant =
-    constantWinsCe || (ceWithin && drawdownWithin && fullPathWithin);
+  const preferConstant = constantWinsCe || (ceWithin && drawdownWithin && fullPathWithin);
 
   return { preferConstant, inconclusive: false, glideBad, flatBad };
 }
@@ -207,14 +196,11 @@ function ShapeSummary({
     return <GlideShape input={input} result={result} compact={compact} />;
   }
   const bonds = 100 - flatPct;
-  const mix =
-    bonds >= 0 ? `${flatPct}% stocks / ${bonds}% bonds` : `${flatPct}% equity`;
+  const mix = bonds >= 0 ? `${flatPct}% stocks / ${bonds}% bonds` : `${flatPct}% equity`;
   return (
     <Text size="sm" c="dimmed">
       Hold {mix} at every age
-      {compact
-        ? "."
-        : " — the simplest plan to implement and to hold through market swings."}
+      {compact ? "." : " — the simplest plan to implement and to hold through market swings."}
     </Text>
   );
 }
@@ -242,9 +228,7 @@ function MetricItem({
         <Text fw={700} fz="lg">
           {value}
         </Text>
-        {flagged && (
-          <IconAlertTriangle size={15} color="var(--mantine-color-yellow-6)" />
-        )}
+        {flagged && <IconAlertTriangle size={15} color="var(--mantine-color-yellow-6)" />}
       </Group>
       {note && (
         <Text size="xs" c="dimmed">
@@ -273,9 +257,7 @@ function CompactStat({
       <Text size="sm" fw={600}>
         {value}
       </Text>
-      {flagged && (
-        <IconAlertTriangle size={13} color="var(--mantine-color-yellow-6)" />
-      )}
+      {flagged && <IconAlertTriangle size={13} color="var(--mantine-color-yellow-6)" />}
     </Group>
   );
 }
@@ -288,16 +270,8 @@ interface OptionStats {
 }
 
 /** The three outcome metrics for one option, as a full grid or a compact inline row. */
-function OutcomeMetrics({
-  stats,
-  compact = false,
-}: {
-  stats: OptionStats;
-  compact?: boolean;
-}) {
-  const ceValue = stats.ceDegenerate
-    ? "Tail-dominated"
-    : `${formatCAD(stats.ceIncome)}/yr`;
+function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compact?: boolean }) {
+  const ceValue = stats.ceDegenerate ? "Tail-dominated" : `${formatCAD(stats.ceIncome)}/yr`;
   const drawValue = `${(stats.drawdownDepletion * 100).toFixed(1)}%`;
   const fullValue = `${(stats.fullPathShortfall * 100).toFixed(1)}%`;
   const drawFlag = stats.drawdownDepletion >= DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD;
@@ -306,11 +280,7 @@ function OutcomeMetrics({
   if (compact) {
     return (
       <Group gap="lg" wrap="wrap">
-        <CompactStat
-          label="CE income"
-          value={ceValue}
-          flagged={stats.ceDegenerate}
-        />
+        <CompactStat label="CE income" value={ceValue} flagged={stats.ceDegenerate} />
         <CompactStat label="Drawdown" value={drawValue} flagged={drawFlag} />
         <CompactStat label="Full-path" value={fullValue} flagged={fullFlag} />
       </Group>
@@ -324,9 +294,7 @@ function OutcomeMetrics({
         help={METRIC_HELP.ce}
         value={ceValue}
         note={
-          stats.ceDegenerate
-            ? "bad tails overwhelm the score"
-            : "risk-adjusted lifetime income"
+          stats.ceDegenerate ? "bad tails overwhelm the score" : "risk-adjusted lifetime income"
         }
         flagged={stats.ceDegenerate}
       />
@@ -362,12 +330,7 @@ export default function Result({
 }: ResultProps) {
   if (hasErrors && !result) {
     return (
-      <Alert
-        variant="light"
-        color="gray"
-        icon={<IconInfoCircle />}
-        title="Incomplete inputs"
-      >
+      <Alert variant="light" color="gray" icon={<IconInfoCircle />} title="Incomplete inputs">
         Fix the highlighted fields to compare your allocation options.
       </Alert>
     );
@@ -375,14 +338,8 @@ export default function Result({
 
   if (error && !result) {
     return (
-      <Alert
-        variant="light"
-        color="red"
-        icon={<IconAlertTriangle />}
-        title="Couldn't compute"
-      >
-        Something went wrong while optimizing your allocation. Adjust an input
-        and generate again.
+      <Alert variant="light" color="red" icon={<IconAlertTriangle />} title="Couldn't compute">
+        Something went wrong while optimizing your allocation. Adjust an input and generate again.
       </Alert>
     );
   }
@@ -427,10 +384,7 @@ export default function Result({
   const reco = pickRecommendation(input, result);
   const flatPct = Math.round(result.flatEquityPct);
   const incomeDegenerate = ceIsDegenerate(result.ceIncome, input.targetIncome);
-  const flatDegenerate = ceIsDegenerate(
-    result.flatCeIncome,
-    input.targetIncome,
-  );
+  const flatDegenerate = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
 
   const glide = {
     kind: "glide" as const,
@@ -455,17 +409,14 @@ export default function Result({
   const primary = reco.preferConstant ? constant : glide;
   const secondary = reco.preferConstant ? glide : constant;
   const hasHighDrawdownRisk =
-    !reco.inconclusive &&
-    primary.stats.drawdownDepletion >= DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD;
+    !reco.inconclusive && primary.stats.drawdownDepletion >= DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD;
   const hasHighFullPathRisk =
-    !reco.inconclusive &&
-    primary.stats.fullPathShortfall >= FULLPATH_RISK_HIGHLIGHT_THRESHOLD;
+    !reco.inconclusive && primary.stats.fullPathShortfall >= FULLPATH_RISK_HIGHLIGHT_THRESHOLD;
   const planNeedsAdjustment = hasHighDrawdownRisk || hasHighFullPathRisk;
   // At high spending flexibility the shortfall rate is ~0 by construction (the target scales with
   // the balance), so a low drawdown shortfall no longer signals genuine slack — suppress the
   // "room to adjust" nudge there and let CE income / income variability carry the tail-risk read.
-  const flexibility =
-    typeof input.flexibility === "number" ? input.flexibility : 0;
+  const flexibility = typeof input.flexibility === "number" ? input.flexibility : 0;
   const shortfallIsMeaningful = flexibility < 0.5;
   const hasRoomToAdjustPlan =
     shortfallIsMeaningful &&
@@ -514,15 +465,13 @@ export default function Result({
               <Text fw={600}>Your plan may need adjustment</Text>
               {hasHighDrawdownRisk && (
                 <Text size="sm" c="dimmed">
-                  Drawdown shortfall is{" "}
-                  {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. Consider
-                  retiring later, reducing retirement spending, or saving more.
+                  Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher.
+                  Consider retiring later, reducing retirement spending, or saving more.
                 </Text>
               )}
               {!hasHighDrawdownRisk && hasHighFullPathRisk && (
                 <Text size="sm" c="dimmed">
-                  Full-path shortfall is{" "}
-                  {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
+                  Full-path shortfall is {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
                   pre-retirement market luck has a meaningful effect.
                 </Text>
               )}
@@ -553,9 +502,8 @@ export default function Result({
                 CE income is tail-dominated
               </Title>
               <Text size="sm" c="dimmed">
-                Near-zero income in bad-luck paths overwhelms CE income, so it
-                cannot reliably distinguish these allocations. Compare their
-                shortfall rates below.
+                Near-zero income in bad-luck paths overwhelms CE income, so it cannot reliably
+                distinguish these allocations. Compare their shortfall rates below.
               </Text>
             </Stack>
           </Group>
@@ -569,12 +517,7 @@ export default function Result({
               <Title order={3} fz="lg">
                 {option.title}
               </Title>
-              <ShapeSummary
-                kind={option.kind}
-                input={input}
-                result={result}
-                flatPct={flatPct}
-              />
+              <ShapeSummary kind={option.kind} input={input} result={result} flatPct={flatPct} />
               <Divider />
               <OutcomeMetrics stats={option.stats} />
             </Stack>
@@ -607,12 +550,7 @@ export default function Result({
                 </Stack>
               </Group>
 
-              <ShapeSummary
-                kind={primary.kind}
-                input={input}
-                result={result}
-                flatPct={flatPct}
-              />
+              <ShapeSummary kind={primary.kind} input={input} result={result} flatPct={flatPct} />
 
               <Divider />
 
@@ -651,8 +589,8 @@ export default function Result({
             <Stack gap={2}>
               <Text fw={600}>You may have room to adjust your plan</Text>
               <Text size="sm" c="dimmed">
-                This plan&apos;s drawdown shortfall is below 5%. You may be able
-                to retire earlier or increase your retirement spending.
+                This plan&apos;s drawdown shortfall is below 5%. You may be able to retire earlier
+                or increase your retirement spending.
               </Text>
             </Stack>
           </Group>

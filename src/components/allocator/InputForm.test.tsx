@@ -15,18 +15,12 @@ describe("allocator InputForm", () => {
       onReset: vi.fn(),
       onShowRecommendation: vi.fn(),
     };
-    const { rerender } = renderWithMantine(
-      <InputForm input={DEFAULTS} {...props} />,
-    );
+    const { rerender } = renderWithMantine(<InputForm input={DEFAULTS} {...props} />);
 
-    expect(
-      screen.queryByLabelText("Real income growth"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Real income growth")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Growth period")).not.toBeInTheDocument();
 
-    rerender(
-      <InputForm input={{ ...DEFAULTS, salaryCurve: "custom" }} {...props} />,
-    );
+    rerender(<InputForm input={{ ...DEFAULTS, salaryCurve: "custom" }} {...props} />);
 
     expect(screen.getByLabelText("Real income growth")).toBeInTheDocument();
     expect(screen.getByLabelText("Growth period")).toBeInTheDocument();
@@ -42,9 +36,7 @@ describe("allocator InputForm", () => {
       onReset: vi.fn(),
       onShowRecommendation: vi.fn(),
     };
-    const { rerender } = renderWithMantine(
-      <InputForm input={DEFAULTS} {...props} />,
-    );
+    const { rerender } = renderWithMantine(<InputForm input={DEFAULTS} {...props} />);
 
     await user.click(
       screen.getByRole("button", {
@@ -53,12 +45,7 @@ describe("allocator InputForm", () => {
     );
     expect(screen.queryByLabelText("Nominal return")).not.toBeInTheDocument();
 
-    rerender(
-      <InputForm
-        input={{ ...DEFAULTS, portfolioPresetId: "custom" }}
-        {...props}
-      />,
-    );
+    rerender(<InputForm input={{ ...DEFAULTS, portfolioPresetId: "custom" }} {...props} />);
     expect(screen.getByLabelText("Nominal return")).toBeInTheDocument();
   });
 
@@ -77,9 +64,7 @@ describe("allocator InputForm", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "Show recommendation" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Show recommendation" }));
     expect(onShowRecommendation).toHaveBeenCalledOnce();
   });
 
@@ -98,12 +83,8 @@ describe("allocator InputForm", () => {
 
     // Once started, the recommendation recomputes automatically: no Show button,
     // just the notice — including while a recompute is in flight (loading).
-    expect(
-      screen.queryByRole("button", { name: "Show recommendation" }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Recommendation updates automatically/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show recommendation" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Recommendation updates automatically/i)).toBeInTheDocument();
   });
 
   it("uses one explicit RRSP withdrawal tax-rate input", async () => {
@@ -126,12 +107,8 @@ describe("allocator InputForm", () => {
       }),
     );
 
-    expect(
-      screen.getByLabelText("Effective RRSP withdrawal tax rate"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText("Capital gains tax rate at retirement"),
-    ).toHaveValue("15%");
+    expect(screen.getByLabelText("Effective RRSP withdrawal tax rate")).toBeInTheDocument();
+    expect(screen.getByLabelText("Capital gains tax rate at retirement")).toHaveValue("15%");
     expect(screen.queryByText("Derive from income")).not.toBeInTheDocument();
     expect(
       screen.queryByLabelText("Expected annual taxable retirement income"),

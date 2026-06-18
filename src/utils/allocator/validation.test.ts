@@ -16,12 +16,12 @@ describe("allocator validation", () => {
   });
 
   it("requires a lump sum within the supported range", () => {
-    expect(
-      validateAllocatorInput({ ...DEFAULTS, lumpSum: Number.NaN }).lumpSum,
-    ).toBe("Lump sum is required.");
-    expect(
-      validateAllocatorInput({ ...DEFAULTS, lumpSum: 10_000_001 }).lumpSum,
-    ).toBe("Must be between 1 and 10000000");
+    expect(validateAllocatorInput({ ...DEFAULTS, lumpSum: Number.NaN }).lumpSum).toBe(
+      "Lump sum is required.",
+    );
+    expect(validateAllocatorInput({ ...DEFAULTS, lumpSum: 10_000_001 }).lumpSum).toBe(
+      "Must be between 1 and 10000000",
+    );
   });
 
   it("validates cross-field and tax-rate assumptions", () => {

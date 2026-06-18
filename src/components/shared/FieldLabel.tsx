@@ -13,12 +13,7 @@ export default function FieldLabel({ label, helperText }: FieldLabelProps) {
   if (!helperText) return label;
 
   return (
-    <Group
-      gap={4}
-      wrap="nowrap"
-      display="inline-flex"
-      style={{ alignItems: "center" }}
-    >
+    <Group gap={4} wrap="nowrap" display="inline-flex" style={{ alignItems: "center" }}>
       <span>{label}</span>
       <Popover
         opened={opened}

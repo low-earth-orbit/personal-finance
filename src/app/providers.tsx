@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  MantineProvider,
-  createTheme,
-  localStorageColorSchemeManager,
-} from "@mantine/core";
+import { MantineProvider, createTheme, localStorageColorSchemeManager } from "@mantine/core";
 import type { ReactNode } from "react";
 import DisclaimerGate from "@/components/shared/DisclaimerGate";
 

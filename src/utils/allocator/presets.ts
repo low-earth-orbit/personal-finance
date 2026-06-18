@@ -1,10 +1,5 @@
 import { ALLOCATIONS } from "@/utils/allocations";
-import type {
-  AllocatorInput,
-  PortfolioPresetId,
-  Province,
-  SalaryCurvePreset,
-} from "./types";
+import type { AllocatorInput, PortfolioPresetId, Province, SalaryCurvePreset } from "./types";
 
 export const PROVINCES: { value: Province; label: string }[] = [
   { value: "BC", label: "British Columbia" },

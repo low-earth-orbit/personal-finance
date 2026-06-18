@@ -1,11 +1,7 @@
 import { Paper, Stack, Table, Title } from "@mantine/core";
 import HoldingsTable from "./HoldingsTable";
 import { formatCADDecimal } from "@/utils/format";
-import {
-  computeHoldings,
-  computeMarginInterest,
-  type AccountGroup,
-} from "@/utils/acb/parser";
+import { computeHoldings, computeMarginInterest, type AccountGroup } from "@/utils/acb/parser";
 
 type AccountSectionProps = {
   group: AccountGroup;
@@ -17,8 +13,7 @@ const AccountSection = ({ group }: AccountSectionProps) => {
   }
 
   const header =
-    [group.accountType, group.accountId].filter(Boolean).join(" · ") ||
-    "Unknown account";
+    [group.accountType, group.accountId].filter(Boolean).join(" · ") || "Unknown account";
   const holdings = computeHoldings(group.transactions);
   const marginInterest = computeMarginInterest(group.transactions);
   const marginYears = Object.keys(marginInterest)
@@ -48,9 +43,7 @@ const AccountSection = ({ group }: AccountSectionProps) => {
                 {marginYears.map((year) => (
                   <Table.Tr key={year}>
                     <Table.Td>{year}</Table.Td>
-                    <Table.Td ta="right">
-                      {formatCADDecimal(marginInterest[year])}
-                    </Table.Td>
+                    <Table.Td ta="right">{formatCADDecimal(marginInterest[year])}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
@@ -77,10 +70,7 @@ type AccountViewProps = {
 const AccountView = ({ groups }: AccountViewProps) => (
   <Stack gap="lg">
     {groups.map((group) => (
-      <AccountSection
-        key={`${group.accountId}|${group.accountType}`}
-        group={group}
-      />
+      <AccountSection key={`${group.accountId}|${group.accountType}`} group={group} />
     ))}
   </Stack>
 );

@@ -11,21 +11,15 @@ test.beforeEach(async ({ context }) => {
 test("hub landing page lists the available tools", async ({ page }) => {
   await page.goto("/");
 
-  await expect(
-    page.getByRole("heading", { name: "Personal Finance" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Personal Finance" })).toBeVisible();
 
   // The rent-vs-buy tool is linked from the hub.
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();
-  await expect(
-    page.getByRole("link", { name: /where to invest/i }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /where to invest/i })).toHaveCount(0);
   await expect(page.getByText("Coming soon")).toBeVisible();
 });
 
-test("allocator requires input review before showing a recommendation", async ({
-  page,
-}) => {
+test("allocator requires input review before showing a recommendation", async ({ page }) => {
   await page.goto("/allocator");
 
   await expect(
@@ -34,56 +28,35 @@ test("allocator requires input review before showing a recommendation", async ({
     }),
   ).toBeVisible();
   await expect(page.getByText("Review your numbers first")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Invest about/ })).toHaveCount(
-    0,
-  );
+  await expect(page.getByRole("heading", { name: /Invest about/ })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Show recommendation" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Invest about $50,000" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Invest about $50,000" })).toBeVisible();
   await expect(page.getByText("Why this split")).toBeVisible();
   await expect(page.getByText("Before acting")).toBeVisible();
 
   await page.getByLabel("Lump sum to invest now").fill("51000");
-  await expect(
-    page.getByRole("heading", { name: "Invest about $50,000" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Invest about $51,000" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Invest about $50,000" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Invest about $51,000" })).toBeVisible();
 
   await page.getByRole("link", { name: "Review detailed assumptions" }).click();
   await expect(page).toHaveURL(/#model-assumptions$/);
-  await expect(page.locator("#model-assumptions details")).toHaveAttribute(
-    "open",
-    "",
-  );
+  await expect(page.locator("#model-assumptions details")).toHaveAttribute("open", "");
 });
 
-test("loads the calculator and renders the net worth chart", async ({
-  page,
-}) => {
+test("loads the calculator and renders the net worth chart", async ({ page }) => {
   await page.goto("/rent-vs-buy");
 
-  await expect(
-    page.getByRole("heading", { name: "Is it better to rent or buy?" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Is it better to rent or buy?" })).toBeVisible();
 
   // The chart is rendered client-side after the Monte Carlo worker responds.
-  await expect(
-    page.getByRole("img", { name: /net worth projection chart/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("img", { name: /net worth projection chart/i })).toBeVisible();
 });
 
-test("retirement planner shows an earliest retirement age and chart", async ({
-  page,
-}) => {
+test("retirement planner shows an earliest retirement age and chart", async ({ page }) => {
   await page.goto("/retirement");
 
-  await expect(
-    page.getByRole("heading", { name: "When can I retire?" }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: "When can I retire?" })).toBeVisible();
 
   // The Summary headline reports a retirement age on the default inputs.
   await expect(page.getByText(/retire/i).first()).toBeVisible();

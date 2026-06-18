@@ -23,11 +23,11 @@ Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 ### Task tiers
 
-| Tier         | Examples                               | Who plans                | Who executes | Who reviews         |
-| ------------ | -------------------------------------- | ------------------------ | ------------ | ------------------- |
-| **trivial**  | lint fix, rename, label change         | nobody                   | Codex        | human spot-check    |
-| **standard** | new feature, multi-file, test coverage | Claude (1 turn)          | Codex        | human reviews diff  |
-| **complex**  | finance engine, new tool, architecture | Claude full plan + risks | Codex        | Claude reviews diff |
+| Tier | Examples | Who plans | Who executes | Who reviews |
+| --- | --- | --- | --- | --- |
+| **trivial** | lint fix, rename, label change | nobody | Codex | human spot-check |
+| **standard** | new feature, multi-file, test coverage | Claude (1 turn) | Codex | human reviews diff |
+| **complex** | finance engine, new tool, architecture | Claude full plan + risks | Codex | Claude reviews diff |
 
 For small 1-2 file edits where Claude already in context — Claude does it directly; no Codex handoff.
 
@@ -61,13 +61,13 @@ codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <r
 
 ## Tools
 
-| Route          | Tool                                    | Description                                                                 |
-| -------------- | --------------------------------------- | --------------------------------------------------------------------------- |
-| `/rent-vs-buy` | Rent vs Buy                             | Year-by-year net worth comparison, MC bands, win probability                |
-| `/retirement`  | When can I retire?                      | Portfolio projection in real $; grows to retirement, draws to target income |
-| `/glide-path`  | Lifetime Allocation (Glide Path)        | MC coordinate ascent, CRRA utility, optimized vs constant allocation        |
-| `/acb`         | ACB Calculator                          | Computes adjusted cost basis from Wealthsimple activity CSV export          |
-| `/allocator`   | Where to invest: TFSA, RRSP or Non-Reg? | Invests one lump sum now across TFSA, RRSP, and non-registered accounts     |
+| Route | Tool | Description |
+| --- | --- | --- |
+| `/rent-vs-buy` | Rent vs Buy | Year-by-year net worth comparison, MC bands, win probability |
+| `/retirement` | When can I retire? | Portfolio projection in real $; grows to retirement, draws to target income |
+| `/glide-path` | Lifetime Allocation (Glide Path) | MC coordinate ascent, CRRA utility, optimized vs constant allocation |
+| `/acb` | ACB Calculator | Computes adjusted cost basis from Wealthsimple activity CSV export |
+| `/allocator` | Where to invest: TFSA, RRSP or Non-Reg? | Invests one lump sum now across TFSA, RRSP, and non-registered accounts |
 
 **New tool pattern:** `src/app/<tool>/` + `src/components/<tool>/`. Reuse `src/components/shared/` and `src/utils/`. Import alias: `@/` → `./src/`.
 

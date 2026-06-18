@@ -29,10 +29,6 @@ export function incomeAtAge(
   customGrowthYears: number,
 ): number {
   const years = Math.max(0, age - currentAge);
-  const { growthPct, growthYears } = salaryCurveTerms(
-    curve,
-    customGrowthPct,
-    customGrowthYears,
-  );
+  const { growthPct, growthYears } = salaryCurveTerms(curve, customGrowthPct, customGrowthYears);
   return startIncome * (1 + growthPct / 100) ** Math.min(years, growthYears);
 }

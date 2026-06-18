@@ -14,10 +14,7 @@ export default function FormResetButton({
   mb?: string | number;
 }) {
   const handleClick = () => {
-    if (
-      confirm &&
-      !window.confirm("Reset all inputs to their default values?")
-    ) {
+    if (confirm && !window.confirm("Reset all inputs to their default values?")) {
       return;
     }
     onReset();

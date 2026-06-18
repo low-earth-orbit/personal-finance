@@ -1,9 +1,6 @@
 // monthly interest rate, semi-annual compounding
-export function calculateMonthlyMortgageInterestRate(
-  annualMortgageInterestRate: number,
-): number {
-  const rate =
-    Math.pow(Math.pow(annualMortgageInterestRate / 2 / 100 + 1, 2), 1 / 12) - 1;
+export function calculateMonthlyMortgageInterestRate(annualMortgageInterestRate: number): number {
+  const rate = Math.pow(Math.pow(annualMortgageInterestRate / 2 / 100 + 1, 2), 1 / 12) - 1;
   return rate;
 }
 
@@ -23,9 +20,7 @@ export function calculateMonthlyMortgagePayment(
     return mortgagePrincipal / (amortization * 12);
   }
 
-  const monthlyRate = calculateMonthlyMortgageInterestRate(
-    annualMortgageInterestRate,
-  );
+  const monthlyRate = calculateMonthlyMortgageInterestRate(annualMortgageInterestRate);
 
   const totalPayments = amortization * 12;
 
@@ -34,8 +29,7 @@ export function calculateMonthlyMortgagePayment(
   }
 
   const monthlyPayment =
-    (mortgagePrincipal * monthlyRate) /
-    (1 - Math.pow(1 + monthlyRate, -totalPayments));
+    (mortgagePrincipal * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalPayments));
 
   return monthlyPayment;
 }

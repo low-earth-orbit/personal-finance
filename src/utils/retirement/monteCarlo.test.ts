@@ -47,11 +47,7 @@ describe("simulateRetirementPhase", () => {
   });
 
   it("0% flexibility produces identical results to no-flexibility baseline", () => {
-    const withZero = simulateRetirementPhase(
-      base({ spendingFlexibilityPct: 0 }),
-      60,
-      900_000,
-    );
+    const withZero = simulateRetirementPhase(base({ spendingFlexibilityPct: 0 }), 60, 900_000);
     const baseline = simulateRetirementPhase(base(), 60, 900_000);
     expect(withZero.successRate).toBe(baseline.successRate);
   });
@@ -107,12 +103,10 @@ describe("computeRetirement", () => {
     expect(result.successRate!).toBeGreaterThanOrEqual(target);
 
     // One year earlier should fall short of the target (else it'd be chosen).
-    const earlierBalance = accumulationBalances(input).find(
-      (p) => p.age === age - 1,
-    )!.balance;
-    expect(
-      simulateRetirementPhase(input, age - 1, earlierBalance).successRate,
-    ).toBeLessThan(target);
+    const earlierBalance = accumulationBalances(input).find((p) => p.age === age - 1)!.balance;
+    expect(simulateRetirementPhase(input, age - 1, earlierBalance).successRate).toBeLessThan(
+      target,
+    );
   });
 
   it("exposes the accumulation path and retirement bands for the chosen age", () => {
@@ -123,10 +117,7 @@ describe("computeRetirement", () => {
     expect(result.accumulationPath!.at(-1)!.age).toBe(age);
     expect(result.retirementBands![0].age).toBe(age);
     expect(result.retirementBands!.at(-1)!.age).toBe(DEFAULTS.planningAge);
-    expect(result.portfolioAtRetirement).toBeCloseTo(
-      result.accumulationPath!.at(-1)!.balance,
-      6,
-    );
+    expect(result.portfolioAtRetirement).toBeCloseTo(result.accumulationPath!.at(-1)!.balance, 6);
   });
 
   it("retires no earlier when the confidence target is higher", () => {
@@ -135,15 +126,11 @@ describe("computeRetirement", () => {
 
     expect(relaxed.earliestRetirementAge).not.toBeNull();
     expect(strict.earliestRetirementAge).not.toBeNull();
-    expect(strict.earliestRetirementAge!).toBeGreaterThanOrEqual(
-      relaxed.earliestRetirementAge!,
-    );
+    expect(strict.earliestRetirementAge!).toBeGreaterThanOrEqual(relaxed.earliestRetirementAge!);
   });
 
   it("lets a heavily funded saver retire immediately", () => {
-    const result = computeRetirement(
-      base({ currentAge: 50, currentSavings: 10_000_000 }),
-    );
+    const result = computeRetirement(base({ currentAge: 50, currentSavings: 10_000_000 }));
     expect(result.earliestRetirementAge).toBe(50);
     expect(result.yearsUntilRetirement).toBe(0);
     expect(result.successRate!).toBeGreaterThanOrEqual(0.95);
@@ -177,12 +164,8 @@ describe("computeRetirement", () => {
   });
 
   it("widens little and shifts later for a higher confidence target", () => {
-    const relaxed = computeRetirement(
-      base({ targetSuccessRate: 80 }),
-    ).retirementAgeRange!;
-    const strict = computeRetirement(
-      base({ targetSuccessRate: 95 }),
-    ).retirementAgeRange!;
+    const relaxed = computeRetirement(base({ targetSuccessRate: 80 })).retirementAgeRange!;
+    const strict = computeRetirement(base({ targetSuccessRate: 95 })).retirementAgeRange!;
     expect(strict.p50).toBeGreaterThanOrEqual(relaxed.p50);
   });
 
@@ -206,13 +189,8 @@ describe("computeRetirement", () => {
   it("retires no later with spending flexibility than without", () => {
     const strict = computeRetirement(base({ spendingFlexibilityPct: 0 }));
     const flexible = computeRetirement(base({ spendingFlexibilityPct: 20 }));
-    if (
-      strict.earliestRetirementAge !== null &&
-      flexible.earliestRetirementAge !== null
-    ) {
-      expect(flexible.earliestRetirementAge).toBeLessThanOrEqual(
-        strict.earliestRetirementAge,
-      );
+    if (strict.earliestRetirementAge !== null && flexible.earliestRetirementAge !== null) {
+      expect(flexible.earliestRetirementAge).toBeLessThanOrEqual(strict.earliestRetirementAge);
     }
   });
 });

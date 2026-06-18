@@ -36,18 +36,10 @@ const YearlyACBTable = ({ snapshots }: YearlyACBTableProps) => (
       {snapshots.map((snapshot) => (
         <Table.Tr key={snapshot.year}>
           <Table.Td>{snapshot.year === 0 ? "Unknown" : snapshot.year}</Table.Td>
-          <Table.Td ta="right">
-            {sharesFormatter.format(snapshot.buyQty)}
-          </Table.Td>
-          <Table.Td ta="right">
-            {sharesFormatter.format(snapshot.sellQty)}
-          </Table.Td>
-          <Table.Td ta="right">
-            {sharesFormatter.format(snapshot.endShares)}
-          </Table.Td>
-          <Table.Td ta="right">
-            {currencyFormatter.format(snapshot.costBasis)}
-          </Table.Td>
+          <Table.Td ta="right">{sharesFormatter.format(snapshot.buyQty)}</Table.Td>
+          <Table.Td ta="right">{sharesFormatter.format(snapshot.sellQty)}</Table.Td>
+          <Table.Td ta="right">{sharesFormatter.format(snapshot.endShares)}</Table.Td>
+          <Table.Td ta="right">{currencyFormatter.format(snapshot.costBasis)}</Table.Td>
           <Table.Td ta="right">
             {snapshot.acbPerShare === null ? (
               <Text component="span" c="dimmed">

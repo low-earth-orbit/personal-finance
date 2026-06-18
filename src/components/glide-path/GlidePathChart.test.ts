@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  buildEquityAxis,
-  buildGlidePathChartData,
-  withSmoothed,
-} from "./GlidePathChart";
+import { buildEquityAxis, buildGlidePathChartData, withSmoothed } from "./GlidePathChart";
 
 describe("buildEquityAxis", () => {
   it("keeps 100% as the minimum axis ceiling", () => {

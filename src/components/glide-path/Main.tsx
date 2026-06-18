@@ -5,12 +5,7 @@ import { Container, Grid } from "@mantine/core";
 import InputForm from "./InputForm";
 import Result from "./Result";
 import { DEFAULTS } from "@/utils/glide-path/presets";
-import {
-  loadInput,
-  loadReturnMode,
-  saveInput,
-  saveReturnMode,
-} from "@/utils/glide-path/storage";
+import { loadInput, loadReturnMode, saveInput, saveReturnMode } from "@/utils/glide-path/storage";
 import { validateGlidePathInput } from "@/utils/glide-path/validation";
 import type {
   GlidePathInput,
@@ -31,9 +26,7 @@ interface Computed {
 
 export default function Main() {
   const [input, setInput] = useState<GlidePathInput>(() => loadInput());
-  const [returnMode, setReturnMode] = useState<GlidePathReturnMode>(() =>
-    loadReturnMode(),
-  );
+  const [returnMode, setReturnMode] = useState<GlidePathReturnMode>(() => loadReturnMode());
   const [computed, setComputed] = useState<Computed | null>(null);
   const [computing, setComputing] = useState(false);
   const [rerolling, setRerolling] = useState(false);
@@ -77,9 +70,7 @@ export default function Main() {
     const requestId = requestIdRef.current;
     terminateWorker();
 
-    const worker = new Worker(
-      new URL("../../workers/glidePathWorker.ts", import.meta.url),
-    );
+    const worker = new Worker(new URL("../../workers/glidePathWorker.ts", import.meta.url));
     workerRef.current = worker;
     worker.onmessage = (event: MessageEvent<GlidePathResponse>) => {
       const { requestId: responseId, result } = event.data;

@@ -70,10 +70,7 @@ export function buildGlidePathChartData(
  * 5%-grid blocks (the welfare surface is near-flat, so the step-to-step shape is mostly Monte
  * Carlo noise); the smoothed series shows the underlying trend/level the steps wobble around.
  */
-export function withSmoothed(
-  data: ChartPoint[],
-  window: number,
-): SmoothedPoint[] {
+export function withSmoothed(data: ChartPoint[], window: number): SmoothedPoint[] {
   const half = Math.floor(Math.max(1, window) / 2);
   return data.map((p, i) => {
     let sum = 0;
@@ -126,14 +123,8 @@ export default function GlidePathChart({
   const [view, setView] = useState<ChartView>("smoothed");
   const retireAge = input.startAge + result.params.accumYears;
   // Window scales with the step size so it bridges adjacent blocks without erasing the macro shape.
-  const smoothWindow = Math.min(
-    13,
-    Math.max(5, 2 * result.params.interval + 1),
-  );
-  const data = withSmoothed(
-    buildGlidePathChartData(input, result),
-    smoothWindow,
-  );
+  const smoothWindow = Math.min(13, Math.max(5, 2 * result.params.interval + 1));
+  const data = withSmoothed(buildGlidePathChartData(input, result), smoothWindow);
   const lastAge = data.length ? data[data.length - 1].age : retireAge;
   const levCap = result.params.maxLeverage * 100;
   const { yMax, ticks: equityTicks } = buildEquityAxis(levCap);
@@ -152,13 +143,7 @@ export default function GlidePathChart({
 
   return (
     <Card withBorder radius="md" padding="md">
-      <Group
-        justify="space-between"
-        align="center"
-        mb="md"
-        wrap="wrap"
-        gap="xs"
-      >
+      <Group justify="space-between" align="center" mb="md" wrap="wrap" gap="xs">
         <Text fw={600}>Optimal equity allocation by age</Text>
         <SegmentedControl
           size="xs"
@@ -178,10 +163,7 @@ export default function GlidePathChart({
         style={{ width: "100%", minWidth: 0 }}
       >
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart
-            data={data}
-            margin={{ top: 16, right: 12, bottom: 28, left: 0 }}
-          >
+          <ComposedChart data={data} margin={{ top: 16, right: 12, bottom: 28, left: 0 }}>
             <ReferenceArea
               x1={retireAge}
               x2={lastAge}
@@ -247,12 +229,7 @@ export default function GlidePathChart({
         </Group>
         {showConstant && (
           <Group gap={6} wrap="nowrap">
-            <Box
-              w={18}
-              h={0}
-              style={{ borderTop: `2px dashed ${INDIGO}` }}
-              aria-hidden
-            />
+            <Box w={18} h={0} style={{ borderTop: `2px dashed ${INDIGO}` }} aria-hidden />
             <Text size="xs" c="dimmed">
               Best constant {result.flatEquityPct.toFixed(0)}% equity
             </Text>
@@ -275,11 +252,10 @@ export default function GlidePathChart({
           <Text span fw={600}>
             Note:
           </Text>{" "}
-          the dip in the final years is a fixed-horizon artifact, not real.
-          Because the model plans to a fixed age with nothing set aside to leave
-          behind, holding stocks in the last years only adds risk with no upside
-          (you can&apos;t spend a final-year windfall), so the optimizer derisks
-          them.
+          the dip in the final years is a fixed-horizon artifact, not real. Because the model plans
+          to a fixed age with nothing set aside to leave behind, holding stocks in the last years
+          only adds risk with no upside (you can&apos;t spend a final-year windfall), so the
+          optimizer derisks them.
         </Text>
       )}
     </Card>

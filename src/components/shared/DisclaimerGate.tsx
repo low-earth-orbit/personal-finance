@@ -2,10 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import DisclaimerModal from "./DisclaimerModal";
-import {
-  loadDisclaimerAccepted,
-  saveDisclaimerAccepted,
-} from "@/utils/storage";
+import { loadDisclaimerAccepted, saveDisclaimerAccepted } from "@/utils/storage";
 
 // Minimal store over the "disclaimer accepted" flag so the gate can read
 // localStorage without a hydration mismatch (and without a setState-in-effect).

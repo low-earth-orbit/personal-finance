@@ -90,15 +90,10 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-export function getActivePreset(
-  userInput: UserInput,
-  allPresets: Preset[],
-): Preset | null {
+export function getActivePreset(userInput: UserInput, allPresets: Preset[]): Preset | null {
   return (
     allPresets.find((p) =>
-      (Object.keys(p.values) as UserInputKey[]).every(
-        (k) => p.values[k] === userInput[k],
-      ),
+      (Object.keys(p.values) as UserInputKey[]).every((k) => p.values[k] === userInput[k]),
     ) ?? null
   );
 }

@@ -20,8 +20,7 @@ export default function Result({
       <Paper withBorder radius="md" p="lg">
         <Text fw={700}>Review your numbers first</Text>
         <Text size="sm" c="dimmed" mt={4}>
-          The values shown are examples. Review the starting inputs, then
-          generate a recommendation.
+          The values shown are examples. Review the starting inputs, then generate a recommendation.
         </Text>
       </Paper>
     );
@@ -42,11 +41,7 @@ export default function Result({
   }
   if (!allocation) {
     return (
-      <Alert
-        icon={<Loader size="sm" />}
-        title="Calculating recommendation"
-        aria-live="polite"
-      >
+      <Alert icon={<Loader size="sm" />} title="Calculating recommendation" aria-live="polite">
         Comparing account splits and RRSP deduction years.
       </Alert>
     );

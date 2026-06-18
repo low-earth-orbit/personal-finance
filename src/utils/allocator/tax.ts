@@ -17,10 +17,7 @@ function bracketTax(income: number, brackets: readonly TaxBracket[]): number {
   for (let i = 0; i < brackets.length; i++) {
     const current = brackets[i];
     const next = brackets[i + 1];
-    const amount = Math.max(
-      0,
-      Math.min(taxable, next?.threshold ?? taxable) - current.threshold,
-    );
+    const amount = Math.max(0, Math.min(taxable, next?.threshold ?? taxable) - current.threshold);
     tax += amount * current.rate;
   }
   return tax;
@@ -30,8 +27,7 @@ function federalBpa(income: number): number {
   if (income <= FEDERAL_BPA.phaseoutStart) return FEDERAL_BPA.max;
   if (income >= FEDERAL_BPA.phaseoutEnd) return FEDERAL_BPA.min;
   const share =
-    (income - FEDERAL_BPA.phaseoutStart) /
-    (FEDERAL_BPA.phaseoutEnd - FEDERAL_BPA.phaseoutStart);
+    (income - FEDERAL_BPA.phaseoutStart) / (FEDERAL_BPA.phaseoutEnd - FEDERAL_BPA.phaseoutStart);
   return FEDERAL_BPA.max - share * (FEDERAL_BPA.max - FEDERAL_BPA.min);
 }
 
@@ -60,8 +56,7 @@ function bcReduction(income: number): number {
   return Math.max(
     0,
     BC_TAX_REDUCTION.max -
-      Math.max(0, income - BC_TAX_REDUCTION.phaseoutStart) *
-        BC_TAX_REDUCTION.phaseoutRate,
+      Math.max(0, income - BC_TAX_REDUCTION.phaseoutStart) * BC_TAX_REDUCTION.phaseoutRate,
   );
 }
 
@@ -75,20 +70,17 @@ export function taxOwed(province: Province, income: number): number {
 
   const constants = PROVINCIAL_TAX[province];
   const basic =
-    bracketTax(taxableIncome, constants.brackets) -
-    constants.bpa * constants.brackets[0].rate;
+    bracketTax(taxableIncome, constants.brackets) - constants.bpa * constants.brackets[0].rate;
 
   let provincial: number;
   if (province === "ON") {
     const surtaxBase = Math.max(0, basic);
     const surtax = ON_SURTAX.reduce(
-      (sum, tier) =>
-        sum + Math.max(0, surtaxBase - tier.overBasicTax) * tier.rate,
+      (sum, tier) => sum + Math.max(0, surtaxBase - tier.overBasicTax) * tier.rate,
       0,
     );
     provincial =
-      Math.max(0, basic + surtax - onReduction(basic + surtax)) +
-      onHealthPremium(taxableIncome);
+      Math.max(0, basic + surtax - onReduction(basic + surtax)) + onHealthPremium(taxableIncome);
   } else if (province === "BC") {
     provincial = Math.max(0, basic - bcReduction(taxableIncome));
   } else {
@@ -100,8 +92,7 @@ export function taxOwed(province: Province, income: number): number {
 
 export function marginalRate(province: Province, income: number): number {
   return (
-    (taxOwed(province, income + MARGINAL_RATE_DELTA) -
-      taxOwed(province, income)) /
+    (taxOwed(province, income + MARGINAL_RATE_DELTA) - taxOwed(province, income)) /
     MARGINAL_RATE_DELTA
   );
 }

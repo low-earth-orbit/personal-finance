@@ -18,11 +18,7 @@ interface FieldHeaderProps {
  * description sit flush — matching `NumberInput`, where the wrapper puts no
  * margin between them — instead of inheriting the parent `Stack`'s gap.
  */
-export default function FieldHeader({
-  label,
-  labelHelperText,
-  description,
-}: FieldHeaderProps) {
+export default function FieldHeader({ label, labelHelperText, description }: FieldHeaderProps) {
   return (
     <Box>
       <Input.Label>

@@ -1,9 +1,4 @@
-import type {
-  FieldConstraint,
-  FieldErrors,
-  UserInput,
-  UserInputKey,
-} from "../types";
+import type { FieldConstraint, FieldErrors, UserInput, UserInputKey } from "../types";
 
 export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
   monthlyRent: { min: 1, max: undefined, step: 100 },
@@ -69,10 +64,7 @@ export function validateUserInput(input: UserInput): FieldErrors {
     UserInputKey,
     FieldConstraint,
   ][]) {
-    if (
-      mortgageDisabled &&
-      (field === "annualMortgageInterestRate" || field === "amortization")
-    ) {
+    if (mortgageDisabled && (field === "annualMortgageInterestRate" || field === "amortization")) {
       continue;
     }
 

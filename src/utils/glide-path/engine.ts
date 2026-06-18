@@ -18,12 +18,7 @@
 
 import { fillNormals } from "./rng";
 import { sampleBlockPaths } from "./blockBootstrap";
-import {
-  DEFAULT_ALLOC_CURVE,
-  GRID_STEP,
-  WEB_GLIDE_INTERVAL,
-  type AllocAnchor,
-} from "./presets";
+import { DEFAULT_ALLOC_CURVE, GRID_STEP, WEB_GLIDE_INTERVAL, type AllocAnchor } from "./presets";
 import type {
   GlidePathInput,
   GlidePathResult,
@@ -143,12 +138,7 @@ interface SimCtx {
  * Mean discounted utility over `n` paths for a per-year grid-index path. The single
  * inner kernel for both the flat init and the per-block grid search.
  */
-function meanUtility(
-  yearIdx: Int32Array,
-  ctx: SimCtx,
-  Z: Float64Array,
-  n: number,
-): number {
+function meanUtility(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number): number {
   const {
     mode,
     gridMean,
@@ -209,9 +199,7 @@ function meanUtility(
       bal = grown - wdr * (1 + r / 2);
       let c = guarArr[t] + wdr;
       if (c < FLOOR) c = FLOOR;
-      eu +=
-        disc[t] *
-        (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      eu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
     }
     sum += eu;
   }
@@ -306,9 +294,7 @@ function computeStats(
       bal = grown - wdr * (1 + r / 2);
       let c = guarArr[t] + wdr;
       if (c < FLOOR) c = FLOOR;
-      consEu +=
-        disc[t] *
-        (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      consEu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
       sumC += c;
       sumC2 += c * c;
       // Shortfall = the portfolio couldn't fund the targeted draw (income fell short of plan).
@@ -410,9 +396,7 @@ function computeDrawdownStats(
       bal = grown - wdr * (1 + r / 2);
       let c = guarArr[t] + wdr;
       if (c < FLOOR) c = FLOOR;
-      consEu +=
-        disc[t] *
-        (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      consEu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
       sumC += c;
       sumC2 += c * c;
       if (wdr < target) shortfall = true;
@@ -489,11 +473,7 @@ function optimize(
   return blockIdx;
 }
 
-function expand(
-  blockIdx: Int32Array,
-  blockOfYear: Int32Array,
-  nYears: number,
-): Int32Array {
+function expand(blockIdx: Int32Array, blockOfYear: Int32Array, nYears: number): Int32Array {
   const yearIdx = new Int32Array(nYears);
   for (let i = 0; i < nYears; i++) yearIdx[i] = blockIdx[blockOfYear[i]];
   return yearIdx;
@@ -513,8 +493,7 @@ export function buildEquityGrid(maxLeverage: number): Float64Array {
   const fullSteps = Math.floor((maxLeverage + 1e-9) / GRID_STEP);
   const grid = new Float64Array(fullSteps + 1);
 
-  for (let g = 0; g <= fullSteps; g++)
-    grid[g] = Math.round(g * GRID_STEP * 1e6) / 1e6;
+  for (let g = 0; g <= fullSteps; g++) grid[g] = Math.round(g * GRID_STEP * 1e6) / 1e6;
 
   return grid;
 }
@@ -541,14 +520,8 @@ export function recommendGlidePath(
   seed = 0,
   returnMode: GlidePathReturnMode = "iid-mc",
 ): GlidePathResult {
-  const accumYears = Math.max(
-    1,
-    Math.round(input.retirementAge - input.startAge),
-  );
-  const retireYears = Math.max(
-    1,
-    Math.round(input.planningAge - input.retirementAge),
-  );
+  const accumYears = Math.max(1, Math.round(input.retirementAge - input.startAge));
+  const retireYears = Math.max(1, Math.round(input.planningAge - input.retirementAge));
   const nYears = accumYears + retireYears;
   const interval = WEB_GLIDE_INTERVAL;
   const gamma = input.gamma;
@@ -577,8 +550,7 @@ export function recommendGlidePath(
   const blockOfYear = new Int32Array(nYears);
   const blockStart = new Int32Array(nBlocks);
   const blockEnd = new Int32Array(nBlocks);
-  for (let i = 0; i < nYears; i++)
-    blockOfYear[i] = Math.min(Math.floor(i / interval), nBlocks - 1);
+  for (let i = 0; i < nYears; i++) blockOfYear[i] = Math.min(Math.floor(i / interval), nBlocks - 1);
   for (let b = 0; b < nBlocks; b++) {
     blockStart[b] = b * interval;
     blockEnd[b] = b < nBlocks - 1 ? (b + 1) * interval : nYears;
@@ -611,21 +583,9 @@ export function recommendGlidePath(
     Z = new Float64Array(0);
     Zf = new Float64Array(0);
     Zs = new Float64Array(0);
-    ({ eqPaths: optEqPaths, bdPaths: optBdPaths } = sampleBlockPaths(
-      nYears,
-      nOpt,
-      optSeed,
-    ));
-    ({ eqPaths: stEqPaths, bdPaths: stBdPaths } = sampleBlockPaths(
-      nYears,
-      nStats,
-      statsSeed,
-    ));
-    ({ eqPaths: selEqPaths, bdPaths: selBdPaths } = sampleBlockPaths(
-      nYears,
-      nStats,
-      selectSeed,
-    ));
+    ({ eqPaths: optEqPaths, bdPaths: optBdPaths } = sampleBlockPaths(nYears, nOpt, optSeed));
+    ({ eqPaths: stEqPaths, bdPaths: stBdPaths } = sampleBlockPaths(nYears, nStats, statsSeed));
+    ({ eqPaths: selEqPaths, bdPaths: selBdPaths } = sampleBlockPaths(nYears, nStats, selectSeed));
   } else {
     Z = fillNormals(optSeed, nYears * nOpt);
     Zf = fillNormals(statsSeed, nYears * nStats);
@@ -646,10 +606,7 @@ export function recommendGlidePath(
     detMean = new Float64Array(G);
     for (let g = 0; g < G; g++) {
       const w = grid[g];
-      detMean[g] =
-        w > 1
-          ? w * eqMean - (w - 1) * borrowReal
-          : w * eqMean + (1 - w) * bondMean;
+      detMean[g] = w > 1 ? w * eqMean - (w - 1) * borrowReal : w * eqMean + (1 - w) * bondMean;
     }
   }
 
@@ -692,16 +649,7 @@ export function recommendGlidePath(
   };
 
   // ── optimization + out-of-sample stats ───────────────────────────────────────
-  const blockIdx = optimize(
-    ctx,
-    Z,
-    nOpt,
-    G,
-    blockStart,
-    blockEnd,
-    blockOfYear,
-    passes,
-  );
+  const blockIdx = optimize(ctx, Z, nOpt, G, blockStart, blockEnd, blockOfYear, passes);
   const yearIdx = expand(blockIdx, blockOfYear, nYears);
   const weights: number[] = [];
   for (let i = 0; i < nYears; i++) weights.push(grid[yearIdx[i]]);
@@ -732,13 +680,7 @@ export function recommendGlidePath(
   }
   flatIdx.fill(bestFlatG);
   const flatStats = computeStats(flatIdx, ctxStats, Zf, nStats, gamma);
-  const flatDrawdownStats = computeDrawdownStats(
-    flatIdx,
-    ctxStats,
-    Zf,
-    nStats,
-    gamma,
-  );
+  const flatDrawdownStats = computeDrawdownStats(flatIdx, ctxStats, Zf, nStats, gamma);
 
   // ── schedule + shape descriptors ─────────────────────────────────────────────
   const schedule: ScheduleBlock[] = [];

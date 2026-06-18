@@ -9,8 +9,8 @@ describe("TaxAssumptions", () => {
 
     fireEvent(window, new HashChangeEvent("hashchange"));
 
-    expect(
-      screen.getByText("Detailed model assumptions").closest("details"),
-    ).toHaveAttribute("open");
+    expect(screen.getByText("Detailed model assumptions").closest("details")).toHaveAttribute(
+      "open",
+    );
   });
 });

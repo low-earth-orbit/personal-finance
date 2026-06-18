@@ -24,8 +24,7 @@ type HeaderProps = {
 const Header = ({ title, subtitle, showHomeLink = false }: HeaderProps) => {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
 
-  const toggle = () =>
-    setColorScheme(colorScheme === "dark" ? "light" : "dark");
+  const toggle = () => setColorScheme(colorScheme === "dark" ? "light" : "dark");
 
   return (
     <Container component="header" size="xl" pt="xl" pb="xs">
@@ -42,12 +41,7 @@ const Header = ({ title, subtitle, showHomeLink = false }: HeaderProps) => {
           <Title order={1}>{title}</Title>
           {subtitle && <Text c="dimmed">{subtitle}</Text>}
         </Stack>
-        <ActionIcon
-          variant="default"
-          size="lg"
-          onClick={toggle}
-          aria-label="Toggle color scheme"
-        >
+        <ActionIcon variant="default" size="lg" onClick={toggle} aria-label="Toggle color scheme">
           <Box component="span" darkHidden>
             <IconMoon size={18} />
           </Box>

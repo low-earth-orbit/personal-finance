@@ -5,10 +5,7 @@ import { IconInfoCircle } from "@tabler/icons-react";
 import Headline from "./Headline";
 import ProjectionChart from "./ProjectionChart";
 import { formatCAD } from "@/utils/format";
-import type {
-  RetirementInput,
-  RetirementResult,
-} from "@/utils/retirement/types";
+import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 
 interface ResultProps {
   input: RetirementInput;
@@ -124,31 +121,18 @@ function PhaseRow({
           {note}
         </Text>
       </Group>
-      <IncomeBar
-        guaranteed={guaranteed}
-        portfolio={portfolio}
-        total={total}
-        flexPct={flexPct}
-      />
+      <IncomeBar guaranteed={guaranteed} portfolio={portfolio} total={total} flexPct={flexPct} />
     </Stack>
   );
 }
 
-function IncomeSummary({
-  input,
-  result,
-}: {
-  input: RetirementInput;
-  result: RetirementResult;
-}) {
+function IncomeSummary({ input, result }: { input: RetirementInput; result: RetirementResult }) {
   const { targetGrossIncome, guaranteedIncome, portfolioWithdrawal } = result;
   const retireAge = result.earliestRetirementAge;
   const pensionAge = input.pensionStartAge;
   const hasBridge = retireAge != null && retireAge < pensionAge;
   const bridgeRange =
-    retireAge === pensionAge - 1
-      ? `age ${retireAge}`
-      : `age ${retireAge}–${pensionAge - 1}`;
+    retireAge === pensionAge - 1 ? `age ${retireAge}` : `age ${retireAge}–${pensionAge - 1}`;
 
   const flexPct = input.spendingFlexibilityPct;
   const isFlexible = flexPct > 0;
@@ -185,12 +169,7 @@ function IncomeSummary({
           <Group gap="xl">
             <LegendItem color={TEAL} label="Guaranteed (CPP/OAS/pension)" />
             <LegendItem color={INDIGO} label="From your savings" />
-            {isFlexible && (
-              <LegendItem
-                hatch
-                label={`Trimmed in weak markets (−${flexPct}%)`}
-              />
-            )}
+            {isFlexible && <LegendItem hatch label={`Trimmed in weak markets (−${flexPct}%)`} />}
           </Group>
         </Stack>
       ) : (
@@ -212,12 +191,7 @@ function IncomeSummary({
               label="From your portfolio"
               value={formatCAD(portfolioWithdrawal)}
             />
-            {isFlexible && (
-              <LegendItem
-                hatch
-                label={`Trimmed in weak markets (−${flexPct}%)`}
-              />
-            )}
+            {isFlexible && <LegendItem hatch label={`Trimmed in weak markets (−${flexPct}%)`} />}
           </Group>
         </>
       )}
@@ -225,8 +199,8 @@ function IncomeSummary({
       {isFlexible && (
         <Text size="xs" c="dimmed" mt="md">
           Flexible spending: in weak markets you&apos;d trim up to {flexPct}% to{" "}
-          {formatCAD(floorIncome)} /yr. The full target is your normal-market
-          spend; confidence is measured against the lower floor.
+          {formatCAD(floorIncome)} /yr. The full target is your normal-market spend; confidence is
+          measured against the lower floor.
         </Text>
       )}
     </Card>
@@ -236,12 +210,7 @@ function IncomeSummary({
 export default function Result({ input, result, planSWR }: ResultProps) {
   if (!result) {
     return (
-      <Alert
-        variant="light"
-        color="gray"
-        icon={<IconInfoCircle />}
-        title="Incomplete inputs"
-      >
+      <Alert variant="light" color="gray" icon={<IconInfoCircle />} title="Incomplete inputs">
         Fix the highlighted fields to see your retirement projection.
       </Alert>
     );

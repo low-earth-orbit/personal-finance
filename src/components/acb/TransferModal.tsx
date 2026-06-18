@@ -1,12 +1,4 @@
-import {
-  Button,
-  Group,
-  Modal,
-  NumberInput,
-  Stack,
-  Table,
-  Text,
-} from "@mantine/core";
+import { Button, Group, Modal, NumberInput, Stack, Table, Text } from "@mantine/core";
 import { sumOpeningLot, type TransferLot } from "@/utils/acb/parser";
 import { formatCADDecimal } from "@/utils/format";
 
@@ -32,13 +24,7 @@ const sharesFormatter = new Intl.NumberFormat("en-CA", {
  * share count — so the user never has to aggregate multiple transfers by hand.
  * Edits apply immediately; Close just dismisses.
  */
-const TransferModal = ({
-  symbol,
-  lots,
-  acbs,
-  onChange,
-  onClose,
-}: TransferModalProps) => {
+const TransferModal = ({ symbol, lots, acbs, onChange, onClose }: TransferModalProps) => {
   const total = sumOpeningLot(acbs);
 
   function updateAcb(index: number, value: number) {
@@ -55,9 +41,9 @@ const TransferModal = ({
     >
       <Stack gap="sm">
         <Text size="sm" c="dimmed">
-          Transferred-in shares have no purchase history. Enter the total ACB
-          (cost basis) for each transferred lot — the share count and date are
-          shown to help you match each lot to your records.
+          Transferred-in shares have no purchase history. Enter the total ACB (cost basis) for each
+          transferred lot — the share count and date are shown to help you match each lot to your
+          records.
         </Text>
         {lots.length > 0 ? (
           <Table>
@@ -78,9 +64,7 @@ const TransferModal = ({
                       </Text>
                     )}
                   </Table.Td>
-                  <Table.Td ta="right">
-                    {sharesFormatter.format(lot.quantity)}
-                  </Table.Td>
+                  <Table.Td ta="right">{sharesFormatter.format(lot.quantity)}</Table.Td>
                   <Table.Td>
                     <NumberInput
                       aria-label={`Opening lot ACB for ${symbol} lot ${index + 1}`}

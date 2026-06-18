@@ -37,10 +37,7 @@ const SummaryBar = ({
       <Stat label="Total cost basis" value={formatCAD(totalCostBasis)} />
       <Stat label="Holdings" value={String(holdingsCount)} />
       <Stat label="Transactions" value={String(transactionCount)} />
-      <Stat
-        label="Coverage"
-        value={dateRange ? `${dateRange.min} – ${dateRange.max}` : "—"}
-      />
+      <Stat label="Coverage" value={dateRange ? `${dateRange.min} – ${dateRange.max}` : "—"} />
     </SimpleGrid>
   </Paper>
 );

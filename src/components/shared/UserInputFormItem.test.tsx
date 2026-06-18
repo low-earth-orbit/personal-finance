@@ -5,12 +5,7 @@ import UserInputFormItem from "./UserInputFormItem";
 describe("UserInputFormItem", () => {
   it("only reserves space for additional text when it is present", () => {
     const { container, rerender } = renderWithMantine(
-      <UserInputFormItem
-        id="amount"
-        label="Amount"
-        value={100}
-        onChange={vi.fn()}
-      />,
+      <UserInputFormItem id="amount" label="Amount" value={100} onChange={vi.fn()} />,
     );
 
     expect(container.querySelector("[aria-live='polite']")).toBeNull();
@@ -25,10 +20,7 @@ describe("UserInputFormItem", () => {
       />,
     );
 
-    expect(screen.getByText("Calculated detail")).toHaveAttribute(
-      "aria-live",
-      "polite",
-    );
+    expect(screen.getByText("Calculated detail")).toHaveAttribute("aria-live", "polite");
   });
 
   it("keeps the field label associated with the input when switching units", () => {
@@ -49,14 +41,12 @@ describe("UserInputFormItem", () => {
       />,
     );
 
-    expect(
-      screen.getByLabelText("Annual savings", { selector: "input" }),
-    ).toHaveValue("20%");
+    expect(screen.getByLabelText("Annual savings", { selector: "input" })).toHaveValue("20%");
 
     fireEvent.click(screen.getByRole("radio", { name: "$" }));
 
-    expect(
-      screen.getByLabelText("Annual savings", { selector: "input" }),
-    ).toHaveValue("$20,000 /yr");
+    expect(screen.getByLabelText("Annual savings", { selector: "input" })).toHaveValue(
+      "$20,000 /yr",
+    );
   });
 });

@@ -1,16 +1,6 @@
 export type Province = "NB" | "ON" | "BC";
-export type SalaryCurvePreset =
-  | "flat"
-  | "modest"
-  | "strong"
-  | "fast"
-  | "custom";
-export type PortfolioPresetId =
-  | "conservative"
-  | "balanced"
-  | "growth"
-  | "aggressive"
-  | "custom";
+export type SalaryCurvePreset = "flat" | "modest" | "strong" | "fast" | "custom";
+export type PortfolioPresetId = "conservative" | "balanced" | "growth" | "aggressive" | "custom";
 
 export interface AllocatorInput {
   currentAge: number;

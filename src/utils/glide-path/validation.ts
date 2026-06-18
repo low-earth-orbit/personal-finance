@@ -1,10 +1,6 @@
 import { MAX_OPT_PATHS } from "./engine";
 import { DEFAULTS } from "./presets";
-import type {
-  GlidePathErrors,
-  GlidePathInput,
-  GlidePathInputKey,
-} from "./types";
+import type { GlidePathErrors, GlidePathInput, GlidePathInputKey } from "./types";
 
 interface Constraint {
   min: number;
@@ -93,18 +89,10 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
   }
 
   // Cross-field: phases must have positive length.
-  if (
-    !errors.retirementAge &&
-    !errors.startAge &&
-    input.retirementAge <= input.startAge
-  ) {
+  if (!errors.retirementAge && !errors.startAge && input.retirementAge <= input.startAge) {
     errors.retirementAge = "Retirement age must be after your start age.";
   }
-  if (
-    !errors.planningAge &&
-    !errors.retirementAge &&
-    input.planningAge <= input.retirementAge
-  ) {
+  if (!errors.planningAge && !errors.retirementAge && input.planningAge <= input.retirementAge) {
     errors.planningAge = "Plan-until age must be after retirement.";
   }
 

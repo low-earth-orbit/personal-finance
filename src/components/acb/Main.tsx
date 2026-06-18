@@ -1,15 +1,5 @@
 import { useState } from "react";
-import {
-  Alert,
-  Container,
-  List,
-  Paper,
-  Stack,
-  Table,
-  Tabs,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Container, List, Paper, Stack, Table, Tabs, Text, Title } from "@mantine/core";
 import AccountView from "./AccountView";
 import FilePreviewModal from "./FilePreviewModal";
 import FileUpload, { type UploadedFileSummary } from "./FileUpload";
@@ -44,16 +34,11 @@ function isRegisteredTransaction(tx: AcbTransaction): boolean {
 
 /** "TYPE · ID" label for an account group, or "Unknown account". */
 function accountLabel(group: AccountGroup): string {
-  return (
-    [group.accountType, group.accountId].filter(Boolean).join(" · ") ||
-    "Unknown account"
-  );
+  return [group.accountType, group.accountId].filter(Boolean).join(" · ") || "Unknown account";
 }
 
 /** `{ min, max }` over dated transactions; null when none carry a date. */
-function dateRangeOf(
-  transactions: AcbTransaction[],
-): { min: string; max: string } | null {
+function dateRangeOf(transactions: AcbTransaction[]): { min: string; max: string } | null {
   let min = "";
   let max = "";
   for (const tx of transactions) {
@@ -78,12 +63,8 @@ const Main = () => {
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const [t3Slips, setT3Slips] = useState<T3Slips>({});
   const [t3ModalSymbol, setT3ModalSymbol] = useState<string | null>(null);
-  const [openingLotEntries, setOpeningLotEntries] = useState<OpeningLotEntries>(
-    {},
-  );
-  const [transferModalSymbol, setTransferModalSymbol] = useState<string | null>(
-    null,
-  );
+  const [openingLotEntries, setOpeningLotEntries] = useState<OpeningLotEntries>({});
+  const [transferModalSymbol, setTransferModalSymbol] = useState<string | null>(null);
   const [previewFileIndex, setPreviewFileIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>("holdings");
 
@@ -168,15 +149,11 @@ const Main = () => {
   // ACB pools across all of a taxpayer's non-registered accounts (CRA rule),
   // so the Holdings tab combines them and excludes TFSA/RRSP/FHSA. The By
   // account tab still receives every account for reconciliation.
-  const nonRegisteredTransactions = transactions.filter(
-    (tx) => !isRegisteredTransaction(tx),
-  );
+  const nonRegisteredTransactions = transactions.filter((tx) => !isRegisteredTransaction(tx));
   const holdings = computeHoldings(nonRegisteredTransactions);
   const visibleHoldings = holdings.filter((h) => h.shares > 0);
   const mixedCurrencies = hasMixedCurrencies(transactions);
-  const overlappingFiles = detectOverlappingFiles(
-    loadedFiles.map((file) => file.transactions),
-  );
+  const overlappingFiles = detectOverlappingFiles(loadedFiles.map((file) => file.transactions));
   const marginInterest = computeMarginInterest(nonRegisteredTransactions);
   const marginYears = Object.keys(marginInterest)
     .map(Number)
@@ -199,9 +176,7 @@ const Main = () => {
     0,
   );
   const fileSummaries: UploadedFileSummary[] = loadedFiles.map((file) => {
-    const fileRegisteredAccounts = groupByAccount(file.transactions).filter(
-      (g) => g.isRegistered,
-    );
+    const fileRegisteredAccounts = groupByAccount(file.transactions).filter((g) => g.isRegistered);
     const excludedLabels = fileRegisteredAccounts
       .map(accountLabel)
       .filter((label) => label !== "Unknown account");
@@ -213,22 +188,17 @@ const Main = () => {
       name: file.name,
       detail: fileDetail(file),
       excludedAccounts: excludedLabels.length > 0 ? excludedLabels : undefined,
-      excludedTransactionCount:
-        excludedTxCount > 0 ? excludedTxCount : undefined,
+      excludedTransactionCount: excludedTxCount > 0 ? excludedTxCount : undefined,
     };
   });
-  const previewFile =
-    previewFileIndex !== null ? (loadedFiles[previewFileIndex] ?? null) : null;
-  const modalEntries =
-    t3ModalSymbol !== null ? (t3Slips[t3ModalSymbol] ?? []) : [];
+  const previewFile = previewFileIndex !== null ? (loadedFiles[previewFileIndex] ?? null) : null;
+  const modalEntries = t3ModalSymbol !== null ? (t3Slips[t3ModalSymbol] ?? []) : [];
   const transferLots =
     transferModalSymbol !== null
       ? transferLotsForSymbol(nonRegisteredTransactions, transferModalSymbol)
       : [];
   const transferAcbs =
-    transferModalSymbol !== null
-      ? (openingLotEntries[transferModalSymbol] ?? [])
-      : [];
+    transferModalSymbol !== null ? (openingLotEntries[transferModalSymbol] ?? []) : [];
 
   // Shared between the gated Tabs layout and the no-tabs layout below.
   const holdingsPanel = (
@@ -239,16 +209,13 @@ const Main = () => {
             Holdings
           </Title>
           <Text c="dimmed" size="sm">
-            Pooled across all non-registered accounts (CRA rule). ACB per share
-            = total cost basis ÷ shares held. Sells reduce both shares and the
-            cost basis pool pro-rata, so ACB/share stays constant after a sale.
-            Expand a row for its year-by-year ACB history. Click{" "}
-            <strong>Edit T3</strong> to enter capital gains distributions (box
-            21, adds to ACB) and return of capital (box 42, reduces ACB) from
-            your T3 slips, per tax year. For holdings with transferred-in
-            shares, click <strong>Edit transfers</strong> to enter the opening
-            lot ACB (total cost basis) for each transferred lot, so the ACB is
-            complete.
+            Pooled across all non-registered accounts (CRA rule). ACB per share = total cost basis ÷
+            shares held. Sells reduce both shares and the cost basis pool pro-rata, so ACB/share
+            stays constant after a sale. Expand a row for its year-by-year ACB history. Click{" "}
+            <strong>Edit T3</strong> to enter capital gains distributions (box 21, adds to ACB) and
+            return of capital (box 42, reduces ACB) from your T3 slips, per tax year. For holdings
+            with transferred-in shares, click <strong>Edit transfers</strong> to enter the opening
+            lot ACB (total cost basis) for each transferred lot, so the ACB is complete.
           </Text>
           {visibleHoldings.length > 0 ? (
             <HoldingsTable
@@ -288,9 +255,7 @@ const Main = () => {
                 {marginYears.map((year) => (
                   <Table.Tr key={year}>
                     <Table.Td>{year}</Table.Td>
-                    <Table.Td ta="right">
-                      {formatCADDecimal(marginInterest[year])}
-                    </Table.Td>
+                    <Table.Td ta="right">{formatCADDecimal(marginInterest[year])}</Table.Td>
                   </Table.Tr>
                 ))}
               </Table.Tbody>
@@ -328,16 +293,14 @@ const Main = () => {
                 How it works
               </Title>
               <List type="ordered" size="sm" spacing="xs">
+                <List.Item>Export your account activity as a CSV from Wealthsimple.</List.Item>
                 <List.Item>
-                  Export your account activity as a CSV from Wealthsimple.
+                  Upload one or more files. Everything is parsed locally in your browser — nothing
+                  is uploaded.
                 </List.Item>
                 <List.Item>
-                  Upload one or more files. Everything is parsed locally in your
-                  browser — nothing is uploaded.
-                </List.Item>
-                <List.Item>
-                  Review your pooled ACB. Enter T3 amounts (box 21 / box 42) and
-                  the opening-lot ACB for any transferred-in shares.
+                  Review your pooled ACB. Enter T3 amounts (box 21 / box 42) and the opening-lot ACB
+                  for any transferred-in shares.
                 </List.Item>
               </List>
             </Stack>
@@ -346,18 +309,17 @@ const Main = () => {
         {overlappingFiles && (
           <Alert color="yellow" title="Overlapping date ranges detected">
             <Text size="sm">
-              Overlapping date ranges detected across files — transactions may
-              be duplicated. Check that each file covers a distinct date range.
+              Overlapping date ranges detected across files — transactions may be duplicated. Check
+              that each file covers a distinct date range.
             </Text>
           </Alert>
         )}
         {mixedCurrencies && (
           <Alert color="yellow" title="Mixed currencies detected">
             <Text size="sm">
-              This export contains both CAD and USD holdings. ACB calculations
-              assume a single currency. USD holdings will need separate ACB
-              tracking in CAD using the exchange rate at the time of each
-              transaction.
+              This export contains both CAD and USD holdings. ACB calculations assume a single
+              currency. USD holdings will need separate ACB tracking in CAD using the exchange rate
+              at the time of each transaction.
             </Text>
           </Alert>
         )}
@@ -382,11 +344,9 @@ const Main = () => {
               <Stack gap="lg">
                 <Alert color="yellow" title="For reconciliation only">
                   <Text size="sm">
-                    Book costs below are per account and unadjusted — no T3 or
-                    opening-lot adjustments — matching what your account
-                    statements show. The CRA requires ACB pooled across all
-                    non-registered accounts; use the Holdings tab for tax
-                    figures.
+                    Book costs below are per account and unadjusted — no T3 or opening-lot
+                    adjustments — matching what your account statements show. The CRA requires ACB
+                    pooled across all non-registered accounts; use the Holdings tab for tax figures.
                   </Text>
                 </Alert>
                 <AccountView groups={accountGroups} />

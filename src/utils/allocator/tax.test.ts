@@ -37,15 +37,11 @@ describe("2026 tax engine", () => {
   });
 
   it("shows ON health-premium ramp endings are non-monotonic", () => {
-    expect(marginalRate("ON", 48_200)).toBeGreaterThan(
-      marginalRate("ON", 49_000),
-    );
+    expect(marginalRate("ON", 48_200)).toBeGreaterThan(marginalRate("ON", 49_000));
   });
 
   it("shows ON surtax and ON/BC reduction phaseouts", () => {
-    expect(marginalRate("ON", 23_000)).toBeGreaterThan(
-      marginalRate("ON", 30_000),
-    );
+    expect(marginalRate("ON", 23_000)).toBeGreaterThan(marginalRate("ON", 30_000));
     expect(marginalRate("ON", 120_000)).toBeGreaterThan(0.43);
     expect(marginalRate("BC", 30_000)).toBeGreaterThan(0.23);
   });
@@ -57,8 +53,6 @@ describe("2026 tax engine", () => {
     const income = 17_000;
     const federalOnly = Math.max(0, income * 0.14 - 16_452 * 0.14);
     expect(taxOwed("ON", income)).toBeCloseTo(federalOnly, 2);
-    expect(taxOwed("ON", 26_000)).toBeGreaterThan(
-      Math.max(0, 26_000 * 0.14 - 16_452 * 0.14),
-    );
+    expect(taxOwed("ON", 26_000)).toBeGreaterThan(Math.max(0, 26_000 * 0.14 - 16_452 * 0.14));
   });
 });

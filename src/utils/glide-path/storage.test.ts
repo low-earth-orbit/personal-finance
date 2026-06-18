@@ -34,10 +34,7 @@ describe("glide-path storage", () => {
   });
 
   it("drops a legacy web interval instead of silently changing the engine cadence", () => {
-    window.localStorage.setItem(
-      "glide_input",
-      JSON.stringify({ ...DEFAULTS, interval: 10 }),
-    );
+    window.localStorage.setItem("glide_input", JSON.stringify({ ...DEFAULTS, interval: 10 }));
 
     expect(loadInput()).not.toHaveProperty("interval");
   });
