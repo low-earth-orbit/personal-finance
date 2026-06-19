@@ -1,4 +1,6 @@
-// Parser for Wealthsimple account activity CSV exports.
+import { readSheetRows } from "./xlsx";
+
+// Parser for brokerage account activity exports.
 //
 // Supports two formats:
 // 1. The real Wealthsimple export with columns
@@ -39,6 +41,8 @@ export type AcbTransaction = {
   accountType?: string;
   /** Parsed `net_cash_amount` column value; undefined when absent. */
   netCashAmount?: number;
+  /** Source brokerage parser that emitted this transaction. */
+  broker?: "wealthsimple" | "questrade" | "ibkr";
 };
 
 /** One T3 slip's ACB-relevant boxes for a single tax year. */
@@ -87,6 +91,20 @@ export type OpeningLotEntries = Record<string, number[]>;
 /** Total opening-lot ACB across a symbol's transfer lots. */
 export function sumOpeningLot(acbs: number[] | undefined): number {
   return (acbs ?? []).reduce((sum, acb) => sum + (acb || 0), 0);
+}
+
+export type AccountRegistrationOverrides = Record<string, "registered" | "nonRegistered">;
+
+/** Resolve registered-account status from user override first, then parser account type. */
+export function resolveRegistered(
+  accountId: string,
+  accountType: string,
+  overrides?: AccountRegistrationOverrides,
+): boolean {
+  if (overrides && accountId in overrides) {
+    return overrides[accountId] === "registered";
+  }
+  return /tfsa|rrsp|fhsa|registered retirement savings plan/i.test(accountType);
 }
 
 /** Net ACB adjustment across all years: sum(box21) − sum(box42). */
@@ -145,6 +163,10 @@ function splitCsvLine(line: string): string[] {
 function parseNumber(field: string | undefined): number {
   const cleaned = (field ?? "").trim().replace(/[$,]/g, "");
   return cleaned === "" ? 0 : Number(cleaned);
+}
+
+function normalizedHeader(field: string): string {
+  return field.trim().toLowerCase().replace(/\s+/g, "");
 }
 
 /**
@@ -248,6 +270,7 @@ export function parseWealthsimpleCsv(text: string): ParseResult {
       quantity: Number.isFinite(quantity) ? quantity : 0,
       price: Number.isFinite(price) ? price : 0,
       type,
+      broker: "wealthsimple",
       currency: rawCurrency === "" ? "CAD" : rawCurrency.toUpperCase(),
       date: field(dateIdx),
       rawActivityType,
@@ -262,6 +285,155 @@ export function parseWealthsimpleCsv(text: string): ParseResult {
   }
 
   return { ok: true, transactions };
+}
+
+export function parseQuestradeRows(rows: string[][]): ParseResult {
+  if (rows.length === 0) {
+    return { ok: false, error: "No transactions found" };
+  }
+
+  const header = rows[0].map(normalizedHeader);
+  const col = (name: string): number => header.indexOf(normalizedHeader(name));
+  const symbolIdx = col("Symbol");
+  const quantityIdx = col("Quantity");
+  const priceIdx = col("Price");
+  const actionIdx = col("Action");
+  const activityTypeIdx = col("Activity Type");
+  const currencyIdx = col("Currency");
+  const dateIdx = col("Transaction Date");
+  const accountIdIdx = col("Account #");
+  const accountTypeIdx = col("Account Type");
+  const netAmountIdx = col("Net Amount");
+
+  const missing: string[] = [];
+  if (symbolIdx === -1) missing.push("Symbol");
+  if (quantityIdx === -1) missing.push("Quantity");
+  if (priceIdx === -1) missing.push("Price");
+  if (actionIdx === -1) missing.push("Action");
+  if (activityTypeIdx === -1) missing.push("Activity Type");
+  if (netAmountIdx === -1) missing.push("Net Amount");
+  if (missing.length > 0) {
+    return {
+      ok: false,
+      error: `Missing required column${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}`,
+    };
+  }
+
+  const transactions: AcbTransaction[] = [];
+  for (const row of rows.slice(1)) {
+    const field = (idx: number): string => (idx === -1 ? "" : (row[idx] ?? "").trim());
+    const rawActivityType = field(activityTypeIdx);
+    const action = field(actionIdx).toLowerCase();
+    let type: AcbTransaction["type"] | null = null;
+    if (action === "buy") type = "buy";
+    else if (action === "sell") type = "sell";
+    else if (rawActivityType.toLowerCase() === "dividends") type = "dividend";
+    if (type === null) continue;
+
+    const symbol = field(symbolIdx);
+    if (!symbol) continue;
+    const quantity = parseNumber(field(quantityIdx));
+    const price = parseNumber(field(priceIdx));
+    const accountId = field(accountIdIdx);
+    const accountType = field(accountTypeIdx);
+    transactions.push({
+      symbol,
+      quantity: Number.isFinite(quantity) ? Math.abs(quantity) : 0,
+      price: Number.isFinite(price) ? price : 0,
+      type,
+      broker: "questrade",
+      currency: field(currencyIdx) === "" ? "CAD" : field(currencyIdx).toUpperCase(),
+      date: field(dateIdx).slice(0, 10),
+      rawActivityType,
+      ...(accountId !== "" ? { accountId } : {}),
+      ...(accountType !== "" ? { accountType } : {}),
+      netCashAmount: parseNumber(field(netAmountIdx)),
+    });
+  }
+
+  if (transactions.length === 0) {
+    return { ok: false, error: "No transactions found" };
+  }
+
+  return { ok: true, transactions };
+}
+
+export function parseIbkrCsv(text: string): ParseResult {
+  const lines = text.split(/\r\n|\r|\n/).filter((line) => line.trim().length > 0);
+  let statementAccountType = "";
+  let statementCustomerType = "";
+  let isConsolidated = false;
+  const transactions: AcbTransaction[] = [];
+
+  for (const line of lines) {
+    const fields = splitCsvLine(line);
+    if (fields[0] === "Account Information" && fields[1] === "Data") {
+      const name = (fields[2] ?? "").trim();
+      const value = fields.slice(3).join(",").trim();
+      if (name === "Account Type" && value !== "") {
+        statementAccountType = value;
+      } else if (name === "Customer Type" && value !== "") {
+        statementCustomerType = value;
+      } else if (name === "Account" && /consolidated/i.test(value)) {
+        isConsolidated = true;
+      } else if (
+        name === "Accounts Included" &&
+        value
+          .split(",")
+          .map((account) => account.trim())
+          .filter(Boolean).length > 1
+      ) {
+        isConsolidated = true;
+      }
+    }
+  }
+
+  const accountType = isConsolidated
+    ? ""
+    : statementCustomerType !== ""
+      ? statementCustomerType
+      : statementAccountType;
+
+  for (const line of lines) {
+    const fields = splitCsvLine(line);
+    if (
+      fields[0] !== "Trades" ||
+      fields[1] !== "Data" ||
+      fields[2] !== "Order" ||
+      fields[3] !== "Stocks"
+    ) {
+      continue;
+    }
+
+    const quantity = parseNumber(fields[8]);
+    const basis = parseNumber(fields[13]);
+    transactions.push({
+      symbol: (fields[6] ?? "").trim(),
+      quantity: Number.isFinite(quantity) ? Math.abs(quantity) : 0,
+      price: parseNumber(fields[9]),
+      type: quantity >= 0 ? "buy" : "sell",
+      broker: "ibkr",
+      currency: ((fields[4] ?? "").trim() || "CAD").toUpperCase(),
+      accountId: (fields[5] ?? "").trim(),
+      date: (fields[7] ?? "").trim().slice(0, 10),
+      rawActivityType: "Trades",
+      ...(accountType !== "" ? { accountType } : {}),
+      netCashAmount: Number.isFinite(basis) ? Math.abs(basis) : 0,
+    });
+  }
+
+  if (transactions.length === 0) {
+    return { ok: false, error: "No transactions found" };
+  }
+
+  return { ok: true, transactions };
+}
+
+export function parseActivityText(text: string): ParseResult {
+  const isIbkr =
+    text.split(/\r\n|\r|\n/).some((line) => line.startsWith("Statement,")) ||
+    text.includes(",DataDiscriminator,");
+  return isIbkr ? parseIbkrCsv(text) : parseWealthsimpleCsv(text);
 }
 
 /**
@@ -425,7 +597,7 @@ export type AccountGroup = {
   accountId: string;
   /** From the `account_type` column; "" for the legacy format. */
   accountType: string;
-  /** True when accountType contains "TFSA", "RRSP", or "FHSA". */
+  /** True when accountType contains "TFSA", "RRSP", "FHSA", or the IBKR RRSP long name. */
   isRegistered: boolean;
   transactions: AcbTransaction[];
 };
@@ -435,7 +607,10 @@ export type AccountGroup = {
  * each group's transaction order. Non-registered accounts sort before
  * registered ones (TFSA / RRSP / FHSA, case-insensitive).
  */
-export function groupByAccount(transactions: AcbTransaction[]): AccountGroup[] {
+export function groupByAccount(
+  transactions: AcbTransaction[],
+  overrides?: AccountRegistrationOverrides,
+): AccountGroup[] {
   const groups = new Map<string, AccountGroup>();
   for (const tx of transactions) {
     const accountId = tx.accountId ?? "";
@@ -446,7 +621,7 @@ export function groupByAccount(transactions: AcbTransaction[]): AccountGroup[] {
       group = {
         accountId,
         accountType,
-        isRegistered: /tfsa|rrsp|fhsa/i.test(accountType),
+        isRegistered: resolveRegistered(accountId, accountType, overrides),
         transactions: [],
       };
       groups.set(key, group);
@@ -551,14 +726,24 @@ export async function parseFiles(
   const parsed: ParsedFile[] = [];
   const errors: string[] = [];
   for (const file of files) {
-    let text: string;
-    try {
-      text = await file.text();
-    } catch {
-      errors.push(`${file.name}: could not read the file.`);
-      continue;
-    }
-    const result = parseWealthsimpleCsv(text);
+    const isSpreadsheet =
+      /\.xlsx$/i.test(file.name) ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    const result = isSpreadsheet
+      ? await (async (): Promise<ParseResult> => {
+          try {
+            return parseQuestradeRows(await readSheetRows(await file.arrayBuffer()));
+          } catch {
+            return { ok: false, error: "could not read the spreadsheet." };
+          }
+        })()
+      : await (async (): Promise<ParseResult> => {
+          try {
+            return parseActivityText(await file.text());
+          } catch {
+            return { ok: false, error: "could not read the file." };
+          }
+        })();
     if (result.ok) {
       parsed.push({ name: file.name, transactions: result.transactions });
     } else {

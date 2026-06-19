@@ -54,6 +54,8 @@ codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <r
 
 **Always review Codex diff.** Watch for: out-of-scope edits, logic changes in "mechanical" passes, glossed regressions.
 
+Before pushing a branch, run `npm run format:check` in addition to the task-relevant tests/checks.
+
 ## CI/CD
 
 - `ci.yml`: lint + typecheck + format + tests + build + Playwright on every PR and `main` push

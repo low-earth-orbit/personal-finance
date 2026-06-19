@@ -31,10 +31,10 @@ const FileUpload = ({ files, onFilesAdded, onRemoveFile, onPreview }: FileUpload
     <Stack gap="xs">
       <FileInput
         key={inputKey}
-        label="Wealthsimple activity export (CSV)"
-        description="Non-registered account activity exports. Select one or more files covering distinct date ranges — each upload adds to the list below. Parsed entirely in your browser — nothing is uploaded."
-        placeholder="Add CSV file(s)"
-        accept=".csv,text/csv"
+        label="Wealthsimple, Questrade, or IBKR activity export (CSV or XLSX)"
+        description="Select one or more files from supported brokers covering distinct date ranges — each upload adds to the list below. Parsed entirely in your browser — nothing is uploaded."
+        placeholder="Add CSV or XLSX file(s)"
+        accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         multiple
         onChange={(selected) => {
           if (selected.length > 0) onFilesAdded(selected);
