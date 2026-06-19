@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { Alert, Container, List, Paper, Stack, Table, Tabs, Text, Title } from "@mantine/core";
+import {
+  Alert,
+  Container,
+  List,
+  Paper,
+  SegmentedControl,
+  Stack,
+  Table,
+  Tabs,
+  Text,
+  Title,
+} from "@mantine/core";
+import AccountTypeMarker from "./AccountTypeMarker";
 import AccountView from "./AccountView";
 import FilePreviewModal from "./FilePreviewModal";
 import FileUpload, { type UploadedFileSummary } from "./FileUpload";
@@ -16,9 +28,11 @@ import {
   groupByAccount,
   hasMixedCurrencies,
   parseFiles,
+  resolveRegistered,
   sumOpeningLot,
   t3NetAdjustment,
   transferLotsForSymbol,
+  type AccountRegistrationOverrides,
   type AcbTransaction,
   type AccountGroup,
   type OpeningLotEntries,
@@ -27,9 +41,19 @@ import {
   type T3Slips,
 } from "@/utils/acb/parser";
 
-/** True when the transaction belongs to a registered account (TFSA/RRSP/FHSA). */
-function isRegisteredTransaction(tx: AcbTransaction): boolean {
-  return /tfsa|rrsp|fhsa/i.test(tx.accountType ?? "");
+type BrokerKey = NonNullable<AcbTransaction["broker"]>;
+type FileBroker = BrokerKey | "unknown";
+
+const BROKER_ORDER: BrokerKey[] = ["wealthsimple", "questrade", "ibkr"];
+
+const BROKER_LABELS: Record<BrokerKey, string> = {
+  wealthsimple: "Wealthsimple",
+  questrade: "Questrade",
+  ibkr: "IBKR",
+};
+
+function fileBroker(file: ParsedFile): FileBroker {
+  return file.transactions[0]?.broker ?? "unknown";
 }
 
 /** "TYPE · ID" label for an account group, or "Unknown account". */
@@ -67,6 +91,8 @@ const Main = () => {
   const [transferModalSymbol, setTransferModalSymbol] = useState<string | null>(null);
   const [previewFileIndex, setPreviewFileIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>("holdings");
+  const [activeBroker, setActiveBroker] = useState<string | null>(null);
+  const [accountOverrides, setAccountOverrides] = useState<AccountRegistrationOverrides>({});
 
   async function handleFilesAdded(newFiles: File[]) {
     const { parsed, errors } = await parseFiles(newFiles);
@@ -91,8 +117,8 @@ const Main = () => {
     rowIndex: number,
     patch: Partial<AcbTransaction>,
   ) {
-    // Holdings, overlap detection, and margin interest are all derived from
-    // loadedFiles below, so they recompute automatically on this update.
+    // Holdings, overlap detection, and margin interest derive from loadedFiles
+    // below, so they recompute automatically on this update.
     setLoadedFiles((prev) =>
       prev.map((file, i) =>
         i === fileIndex
@@ -141,9 +167,23 @@ const Main = () => {
   }
 
   const hasFiles = loadedFiles.length > 0;
+  const presentBrokers = new Set(loadedFiles.map(fileBroker));
+  const availableBrokers = BROKER_ORDER.filter((broker) => presentBrokers.has(broker));
+  const effectiveBroker =
+    activeBroker !== null && availableBrokers.includes(activeBroker as BrokerKey)
+      ? activeBroker
+      : (availableBrokers[0] ?? null);
+  const activeFiles =
+    effectiveBroker === null
+      ? []
+      : loadedFiles.filter((file) => fileBroker(file) === effectiveBroker);
 
-  // Merge all files into one chronologically sorted transaction list.
-  const transactions = loadedFiles
+  function isRegisteredTransaction(tx: AcbTransaction): boolean {
+    return resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", accountOverrides);
+  }
+
+  // Merge active brokerage files into one chronologically sorted transaction list.
+  const transactions = activeFiles
     .flatMap((file) => file.transactions)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
   // ACB pools across all of a taxpayer's non-registered accounts (CRA rule),
@@ -153,12 +193,24 @@ const Main = () => {
   const holdings = computeHoldings(nonRegisteredTransactions);
   const visibleHoldings = holdings.filter((h) => h.shares > 0);
   const mixedCurrencies = hasMixedCurrencies(transactions);
-  const overlappingFiles = detectOverlappingFiles(loadedFiles.map((file) => file.transactions));
+  const overlappingFiles = detectOverlappingFiles(activeFiles.map((file) => file.transactions));
   const marginInterest = computeMarginInterest(nonRegisteredTransactions);
   const marginYears = Object.keys(marginInterest)
     .map(Number)
     .sort((a, b) => a - b);
-  const accountGroups = groupByAccount(transactions);
+  const accountGroups = groupByAccount(transactions, accountOverrides);
+  const accountTypeMarkerAccounts = accountGroups.map((group) => ({
+    accountId: group.accountId,
+    accountType: group.accountType,
+    detectedRegistered: group.isRegistered,
+  }));
+  const hasUnknownAccountTypes = accountTypeMarkerAccounts.some(
+    (account) => account.accountType === "",
+  );
+  const showAccountTypeMarker = effectiveBroker === "ibkr" && hasUnknownAccountTypes;
+  const hasDefaultedUnknownAccountTypes = accountTypeMarkerAccounts.some(
+    (account) => account.accountType === "" && accountOverrides[account.accountId] === undefined,
+  );
   // Total opening-lot ACB per symbol, summed across its transfer lots — the
   // single number `applyAdjustments` and HoldingsTable consume.
   const openingLotTotals: Record<string, number> = {};
@@ -176,7 +228,9 @@ const Main = () => {
     0,
   );
   const fileSummaries: UploadedFileSummary[] = loadedFiles.map((file) => {
-    const fileRegisteredAccounts = groupByAccount(file.transactions).filter((g) => g.isRegistered);
+    const fileRegisteredAccounts = groupByAccount(file.transactions, accountOverrides).filter(
+      (g) => g.isRegistered,
+    );
     const excludedLabels = fileRegisteredAccounts
       .map(accountLabel)
       .filter((label) => label !== "Unknown account");
@@ -323,6 +377,17 @@ const Main = () => {
             </Text>
           </Alert>
         )}
+        {hasFiles && effectiveBroker !== null && availableBrokers.length > 1 && (
+          <SegmentedControl
+            aria-label="Brokerage"
+            data={availableBrokers.map((broker) => ({
+              value: broker,
+              label: BROKER_LABELS[broker],
+            }))}
+            value={effectiveBroker}
+            onChange={setActiveBroker}
+          />
+        )}
         {hasFiles && (
           <SummaryBar
             totalCostBasis={totalCostBasis}
@@ -330,6 +395,27 @@ const Main = () => {
             transactionCount={nonRegisteredTransactions.length}
             dateRange={dateRangeOf(nonRegisteredTransactions)}
           />
+        )}
+        {hasFiles && showAccountTypeMarker && (
+          <Paper withBorder p="md" radius="md">
+            <Stack gap="md">
+              {hasDefaultedUnknownAccountTypes && (
+                <Alert color="yellow" title="Mark account types">
+                  <Text size="sm">
+                    IBKR consolidated statements do not say which sub-account is registered. Mark
+                    each account so RRSP/TFSA/FHSA accounts are excluded from ACB.
+                  </Text>
+                </Alert>
+              )}
+              <AccountTypeMarker
+                accounts={accountTypeMarkerAccounts}
+                overrides={accountOverrides}
+                onChange={(accountId, value) =>
+                  setAccountOverrides((prev) => ({ ...prev, [accountId]: value }))
+                }
+              />
+            </Stack>
+          </Paper>
         )}
         {hasFiles && (
           <Tabs value={activeTab} onChange={setActiveTab}>

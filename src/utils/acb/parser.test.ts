@@ -8,13 +8,18 @@ import {
   detectOverlappingFiles,
   groupByAccount,
   hasMixedCurrencies,
+  parseActivityText,
   parseFiles,
+  parseIbkrCsv,
+  parseQuestradeRows,
   parseWealthsimpleCsv,
+  resolveRegistered,
   sumOpeningLot,
   t3NetAdjustment,
   transferLotsForSymbol,
   type AcbTransaction,
 } from "./parser";
+import { readSheetRows } from "./xlsx";
 
 const HEADER = "Date,Symbol,Quantity,Price,Type,Description";
 
@@ -27,6 +32,85 @@ const WS_HEADER =
 
 function wsCsv(...rows: string[]): string {
   return [WS_HEADER, ...rows].join("\n");
+}
+
+function storedXlsx(): ArrayBuffer {
+  const encoder = new TextEncoder();
+  const files = [
+    {
+      name: "xl/workbook.xml",
+      text: '<x:workbook xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheets><x:sheet name="Sheet1" sheetId="1" r:id="rId1" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" /></x:sheets></x:workbook>',
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      text: '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="/xl/worksheets/sheet.xml" Id="rId1" /></Relationships>',
+    },
+    {
+      name: "xl/worksheets/sheet.xml",
+      text: '<x:worksheet xmlns:x="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><x:sheetData><x:row><x:c r="A1" t="str"><x:v>Symbol</x:v></x:c><x:c r="B1" t="str"><x:v>Name</x:v></x:c></x:row><x:row><x:c r="A2" t="str"><x:v>XSB.TO</x:v></x:c><x:c r="B2" t="str"><x:v>Bond &amp; Cash</x:v></x:c></x:row></x:sheetData></x:worksheet>',
+    },
+  ];
+  const bytes: number[] = [];
+  const central: number[] = [];
+  const write16 = (target: number[], value: number) => {
+    target.push(value & 0xff, (value >> 8) & 0xff);
+  };
+  const write32 = (target: number[], value: number) => {
+    target.push(value & 0xff, (value >> 8) & 0xff, (value >> 16) & 0xff, (value >> 24) & 0xff);
+  };
+  const append = (target: number[], data: Uint8Array) => {
+    for (const byte of data) target.push(byte);
+  };
+
+  for (const file of files) {
+    const name = encoder.encode(file.name);
+    const data = encoder.encode(file.text);
+    const localOffset = bytes.length;
+    write32(bytes, 0x04034b50);
+    write16(bytes, 20);
+    write16(bytes, 0);
+    write16(bytes, 0);
+    write16(bytes, 0);
+    write16(bytes, 0);
+    write32(bytes, 0);
+    write32(bytes, data.length);
+    write32(bytes, data.length);
+    write16(bytes, name.length);
+    write16(bytes, 0);
+    append(bytes, name);
+    append(bytes, data);
+
+    write32(central, 0x02014b50);
+    write16(central, 20);
+    write16(central, 20);
+    write16(central, 0);
+    write16(central, 0);
+    write16(central, 0);
+    write16(central, 0);
+    write32(central, 0);
+    write32(central, data.length);
+    write32(central, data.length);
+    write16(central, name.length);
+    write16(central, 0);
+    write16(central, 0);
+    write16(central, 0);
+    write16(central, 0);
+    write32(central, 0);
+    write32(central, localOffset);
+    append(central, name);
+  }
+
+  const centralOffset = bytes.length;
+  bytes.push(...central);
+  write32(bytes, 0x06054b50);
+  write16(bytes, 0);
+  write16(bytes, 0);
+  write16(bytes, files.length);
+  write16(bytes, files.length);
+  write32(bytes, central.length);
+  write32(bytes, centralOffset);
+  write16(bytes, 0);
+  return new Uint8Array(bytes).buffer;
 }
 
 describe("parseWealthsimpleCsv (legacy Type column)", () => {
@@ -47,6 +131,7 @@ describe("parseWealthsimpleCsv (legacy Type column)", () => {
       quantity: 10,
       price: 40,
       type: "buy",
+      broker: "wealthsimple",
       currency: "CAD",
       date: "",
       rawActivityType: "buy",
@@ -80,6 +165,7 @@ describe("parseWealthsimpleCsv (legacy Type column)", () => {
       quantity: 2,
       price: 25.5,
       type: "buy",
+      broker: "wealthsimple",
       currency: "CAD",
       date: "",
       rawActivityType: "buy",
@@ -175,6 +261,7 @@ describe("parseWealthsimpleCsv (Wealthsimple activity columns)", () => {
       quantity: 10,
       price: 40,
       type: "buy",
+      broker: "wealthsimple",
       currency: "CAD",
       date: "2025-01-02",
       rawActivityType: "Trade",
@@ -240,6 +327,309 @@ describe("parseWealthsimpleCsv (Wealthsimple activity columns)", () => {
     expect(result.error).toContain("unit_price");
     expect(result.error).toContain("activity_type");
   });
+});
+
+describe("parseQuestradeRows", () => {
+  const rows = [
+    [
+      "Transaction Date",
+      "Settlement Date",
+      "Action",
+      "Symbol",
+      "Description",
+      "Quantity",
+      "Price",
+      "Gross Amount",
+      "Commission",
+      "Net Amount",
+      "Currency",
+      "Account #",
+      "Activity Type",
+      "Account Type",
+    ],
+    [
+      "2026-06-01 12:00:00 AM",
+      "2026-06-01 12:00:00 AM",
+      "",
+      "XSB.TO",
+      "Distribution",
+      "0.00000",
+      "0.06000000",
+      "0.00",
+      "0.00",
+      "25.60",
+      "CAD",
+      "40148448",
+      "Dividends",
+      "Individual cash",
+    ],
+    [
+      "2026-04-17 12:00:00 AM",
+      "2026-04-17 12:00:00 AM",
+      "DEP",
+      "",
+      "TD DIR DEP",
+      "0.00000",
+      "0.00000000",
+      "0.00",
+      "0.00",
+      "10000.00",
+      "CAD",
+      "40148448",
+      "Deposits",
+      "Individual cash",
+    ],
+    [
+      "2026-04-17 12:00:00 AM",
+      "2026-04-20 12:00:00 AM",
+      "Buy",
+      "XSB.TO",
+      "ISHARES CORE CANADIAN SHORT TERM BOND INDEX ETF",
+      "71.00000",
+      "26.95000000",
+      "-1913.45",
+      "0.00",
+      "-1913.45",
+      "CAD",
+      "40148448",
+      "Trades",
+      "Individual cash",
+    ],
+    [
+      "2026-04-17 12:00:00 AM",
+      "2026-04-20 12:00:00 AM",
+      "Buy",
+      "XSB.TO",
+      "ISHARES CORE CANADIAN SHORT TERM BOND INDEX ETF",
+      "300.00000",
+      "26.95000000",
+      "-8085.00",
+      "0.00",
+      "-8085.00",
+      "CAD",
+      "40148448",
+      "Trades",
+      "Individual cash",
+    ],
+    [
+      "2026-03-13 12:00:00 AM",
+      "2026-03-16 12:00:00 AM",
+      "Buy",
+      "XEF.TO",
+      "ISHARES CORE MSCI EAFE IMI INDEX ETF",
+      "19.00000",
+      "46.59000000",
+      "-885.21",
+      "0.00",
+      "-885.21",
+      "CAD",
+      "53670632",
+      "Trades",
+      "Individual FHSA",
+    ],
+    [
+      "2026-04-01 12:00:00 AM",
+      "2026-04-02 12:00:00 AM",
+      "Buy",
+      "XEF.TO",
+      "ISHARES CORE MSCI EAFE IMI INDEX ETF",
+      "63.00000",
+      "48.16000000",
+      "-3034.08",
+      "0.00",
+      "-3034.08",
+      "CAD",
+      "53670632",
+      "Trades",
+      "Individual FHSA",
+    ],
+    [
+      "2026-04-09 12:00:00 AM",
+      "2026-04-10 12:00:00 AM",
+      "Buy",
+      "XEF.TO",
+      "ISHARES CORE MSCI EAFE IMI INDEX ETF",
+      "61.00000",
+      "49.12000000",
+      "-2996.32",
+      "0.00",
+      "-2996.32",
+      "CAD",
+      "53670632",
+      "Trades",
+      "Individual FHSA",
+    ],
+    [
+      "2026-04-10 12:00:00 AM",
+      "2026-04-13 12:00:00 AM",
+      "Buy",
+      "XEF.TO",
+      "ISHARES CORE MSCI EAFE IMI INDEX ETF",
+      "75.00000",
+      "49.82000000",
+      "-3736.50",
+      "0.00",
+      "-3736.50",
+      "CAD",
+      "53670632",
+      "Trades",
+      "Individual FHSA",
+    ],
+  ];
+
+  it("parses Questrade activity rows and keeps raw symbols", () => {
+    const result = parseQuestradeRows(rows);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const holdings = computeHoldings(result.transactions);
+    expect(holdings.find((holding) => holding.symbol === "XSB.TO")).toMatchObject({
+      shares: 371,
+      costBasis: 1913.45 + 8085,
+    });
+    expect(holdings.find((holding) => holding.symbol === "XEF.TO")?.shares).toBe(218);
+    expect(holdings.find((holding) => holding.symbol === "")).toBeUndefined();
+    expect(result.transactions.some((tx) => tx.type === "dividend")).toBe(true);
+    expect(result.transactions.every((tx) => tx.broker === "questrade")).toBe(true);
+  });
+
+  it("tags Questrade FHSA rows as registered", () => {
+    const result = parseQuestradeRows(rows);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const groups = groupByAccount(result.transactions);
+    const fhsa = groups.find((group) => group.accountType === "Individual FHSA");
+    expect(fhsa?.isRegistered).toBe(true);
+  });
+});
+
+describe("parseIbkrCsv", () => {
+  const ibkrText = [
+    "Statement,Data,BrokerName,Interactive Brokers Canada Inc.",
+    "Account Information,Header,Field Name,Field Value",
+    'Account Information,Data,Account,"U23432652 (Custom Consolidated)"',
+    'Account Information,Data,Accounts Included,"U23432652, U23432845"',
+    "Account Information,Data,Account Type,Individual",
+    "Account Information,Data,Customer Type,Registered Retirement Savings Plan",
+    "Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code",
+    'Trades,Data,Order,Stocks,CAD,U23432845,VCN,"2026-04-17, 11:23:59",836,69.78,69.87,-58336.08,-8.36,58344.44,0,75.24,O;P',
+    "Trades,SubTotal,,Stocks,CAD,VCN,,,836,,,-58336.08,-8.36,58344.44,0,75.24,",
+    'Trades,Data,Order,Stocks,CAD,U23432845,VEQT,"2026-04-17, 11:08:43",109,57.71,57.71,-6290.39,-1.09,6291.48,0,0,O;P',
+    'Trades,Data,Order,Stocks,USD,U23432652,VT,"2026-04-16, 11:20:06",70.2835,148.839994756,148.79,-10460.99577145,-1,10461.99577145,0,-3.5138,O;P;RPA',
+    'Trades,Data,Order,Forex,CAD,U23432652,USD.CAD,"2026-04-16, 09:16:28","10,462.66",1.37195,,-14354.246387,-2.7484,,,-16.217123,',
+  ].join("\n");
+
+  it("parses IBKR stock trades and uses Basis as cost", () => {
+    const result = parseIbkrCsv(ibkrText);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const holdings = computeHoldings(result.transactions);
+    expect(holdings.find((holding) => holding.symbol === "VCN")).toMatchObject({
+      shares: 836,
+      costBasis: 58344.44,
+    });
+    expect(holdings.find((holding) => holding.symbol === "VEQT")).toMatchObject({
+      shares: 109,
+      costBasis: 6291.48,
+    });
+    expect(holdings.find((holding) => holding.symbol === "VT")).toMatchObject({
+      shares: 70.2835,
+      costBasis: 10461.99577145,
+    });
+    expect(holdings.find((holding) => holding.symbol === "USD.CAD")).toBeUndefined();
+    expect(result.transactions.every((tx) => tx.broker === "ibkr")).toBe(true);
+  });
+
+  it("keeps consolidated account registration unknown per trade", () => {
+    const result = parseIbkrCsv(ibkrText);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.transactions.find((tx) => tx.symbol === "VCN")?.accountId).toBe("U23432845");
+    expect(result.transactions.find((tx) => tx.symbol === "VEQT")?.accountId).toBe("U23432845");
+    const vt = result.transactions.find((tx) => tx.symbol === "VT");
+    expect(vt?.accountId).toBe("U23432652");
+    expect(vt?.currency).toBe("USD");
+    expect(hasMixedCurrencies(result.transactions)).toBe(true);
+    expect(result.transactions.every((tx) => (tx.accountType ?? "") === "")).toBe(true);
+    const groups = groupByAccount(result.transactions);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((group) => group.accountId).sort()).toEqual(["U23432652", "U23432845"]);
+    expect(groups.every((group) => group.accountType === "")).toBe(true);
+    expect(groups.every((group) => group.isRegistered === false)).toBe(true);
+  });
+
+  it("applies statement account type for single-account IBKR exports", () => {
+    const result = parseIbkrCsv(
+      [
+        "Statement,Data,BrokerName,Interactive Brokers Canada Inc.",
+        "Account Information,Header,Field Name,Field Value",
+        "Account Information,Data,Account,U23432652",
+        "Account Information,Data,Accounts Included,U23432652",
+        "Account Information,Data,Account Type,Individual",
+        "Account Information,Data,Customer Type,Registered Retirement Savings Plan",
+        "Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code",
+        'Trades,Data,Order,Stocks,USD,U23432652,VT,"2026-04-16, 11:20:06",70.2835,148.839994756,148.79,-10460.99577145,-1,10461.99577145,0,-3.5138,O;P;RPA',
+      ].join("\n"),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.transactions[0]).toMatchObject({
+      accountId: "U23432652",
+      accountType: "Registered Retirement Savings Plan",
+      broker: "ibkr",
+    });
+    const groups = groupByAccount(result.transactions);
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      accountId: "U23432652",
+      accountType: "Registered Retirement Savings Plan",
+      isRegistered: true,
+    });
+  });
+});
+
+describe("parseActivityText", () => {
+  it("sniffs IBKR statements", () => {
+    const result = parseActivityText(
+      [
+        "Statement,Data,Title,Activity Statement",
+        "Account Information,Data,Customer Type,Registered Retirement Savings Plan",
+        "Trades,Header,DataDiscriminator,Asset Category,Currency,Account,Symbol,Date/Time,Quantity,T. Price,C. Price,Proceeds,Comm/Fee,Basis,Realized P/L,MTM P/L,Code",
+        'Trades,Data,Order,Stocks,CAD,U1,VCN,"2026-04-17, 11:23:59",1,69.78,69.87,-69.78,-1,70.78,0,0,O;P',
+      ].join("\n"),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.transactions[0].symbol).toBe("VCN");
+  });
+
+  it("leaves Wealthsimple parsing unchanged", () => {
+    const text = wsCsv(
+      "2025-01-02,2025-01-03,acc1,non-registered,Trade,BUY,LONG,VEQT,Vanguard All-Equity,CAD,10,40.00,0,-400.00",
+    );
+    const result = parseActivityText(text);
+    const expected = parseWealthsimpleCsv(text);
+    expect(result).toEqual(expected);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.transactions[0]).toMatchObject({
+      symbol: "VEQT",
+      quantity: 10,
+      netCashAmount: -400,
+    });
+  });
+});
+
+describe("readSheetRows", () => {
+  it.skipIf(typeof DecompressionStream === "undefined")(
+    "reads a stored XLSX worksheet",
+    async () => {
+      const rows = await readSheetRows(storedXlsx());
+      expect(rows).toEqual([
+        ["Symbol", "Name"],
+        ["XSB.TO", "Bond & Cash"],
+      ]);
+    },
+  );
 });
 
 describe("hasMixedCurrencies", () => {
@@ -741,6 +1131,30 @@ describe("groupByAccount", () => {
       tx("d", "non-registered"),
     ]);
     expect(groups.map((g) => g.accountId)).toEqual(["b", "d", "a", "c"]);
+  });
+
+  it("uses overrides when grouping consolidated IBKR accounts", () => {
+    const groups = groupByAccount([tx("U123", "", "VT"), tx("U456", "", "VCN")], {
+      U123: "registered",
+    });
+    const registeredById = new Map(groups.map((g) => [g.accountId, g.isRegistered]));
+    expect(registeredById.get("U123")).toBe(true);
+    expect(registeredById.get("U456")).toBe(false);
+  });
+});
+
+describe("resolveRegistered", () => {
+  it("lets a non-registered override win over RRSP account type", () => {
+    expect(resolveRegistered("acc1", "RRSP", { acc1: "nonRegistered" })).toBe(false);
+  });
+
+  it("lets a registered override mark an empty account type", () => {
+    expect(resolveRegistered("acc1", "", { acc1: "registered" })).toBe(true);
+  });
+
+  it("falls back to account type regex without an override", () => {
+    expect(resolveRegistered("acc1", "Registered Retirement Savings Plan")).toBe(true);
+    expect(resolveRegistered("acc2", "")).toBe(false);
   });
 });
 

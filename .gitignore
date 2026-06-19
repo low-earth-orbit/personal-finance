@@ -56,3 +56,6 @@ yarn-error.log*
 # JST Macrohistory data cache (downloaded, not committed)
 analysis/.data/
 analysis/artifacts/
+
+# local files
+.local

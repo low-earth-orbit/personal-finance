@@ -21,6 +21,12 @@ Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 **Roles:** Claude plans/reviews (conceptual risk: direction, UX, finance modeling, architecture). Codex executes/verifies (concrete risk: edits, refactors, tests, lint/build/checks). One writer at a time.
 
+**Default split:** Codex handles scoped implementation directly. Use Claude planning when the task changes finance semantics, adds a tool/route, reshapes UX workflows, or crosses architecture boundaries. If the task is a narrow UI/copy/test fix, keep it with Codex unless Claude is already editing the same files.
+
+**Scope discipline:** Match the user's requested surface. For narrow copy/UI/mechanical tasks, do not refactor adjacent code, update unrelated docs, or "fix" nearby stale tests unless needed to complete the request. Report unrelated failures separately.
+
+**Worktree safety:** Start with `git status --short` before edits. Never revert or overwrite unrelated user changes. If touched files already contain user edits, work with them and keep the patch minimal.
+
 ### Task tiers
 
 | Tier | Examples | Who plans | Who executes | Who reviews |
@@ -42,7 +48,7 @@ scripts/codex-run.sh standard "<task>"   # gpt-5.4,      medium
 scripts/codex-run.sh complex  "<task>"   # gpt-5.5,      high
 ```
 
-`auto` promotes finance/modeling, methodology, architecture, migration, and security work to `complex`; chooses `trivial` only for clearly mechanical tasks; and defaults uncertain work to `standard`. Preview routing without launching Codex using `scripts/codex-run.sh --dry-run auto "<task>"`.
+`auto` promotes finance/modeling, methodology, architecture, migration, and security work to `complex`; chooses `trivial` only for clearly mechanical tasks; and defaults uncertain work to `standard`. Prefer `trivial` for unambiguous small changes; promote when user-visible workflow, modeling semantics, architecture, or data migration risk is unclear. Preview routing without launching Codex using `scripts/codex-run.sh --dry-run auto "<task>"`.
 
 Use `$route-codex-task` when classification needs judgment or file inspection. The repo-scoped skill recommends a tier and verification scope; the wrapper performs the actual model and effort selection.
 
@@ -53,6 +59,15 @@ codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <r
 ```
 
 **Always review Codex diff.** Watch for: out-of-scope edits, logic changes in "mechanical" passes, glossed regressions.
+
+## Definition of Done
+
+- Run the narrowest relevant verification first: `npm run lint`, `npm run typecheck`, `npm test`, Python unittest, or targeted suites.
+- Run `npm run format:check` before pushing or handing off a branch.
+- For visible UI or interaction changes, run the dev server and verify in browser when feasible. If browser verification is blocked, say so explicitly.
+- For build/export behavior, run `npm run build`.
+- For e2e-sensitive flows, run `npm run test:e2e` or the relevant Playwright spec.
+- Summarize changed files, verification run, and any known unrelated failures.
 
 ## CI/CD
 
