@@ -62,6 +62,8 @@ export const DEFAULTS = {
   // ── Leverage ──────────────────────────────────────────────
   /** Max equity weight as a % (100 = no leverage; 150 = up to 1.5×). */
   maxEquityPct: 100,
+  /** Max equity weight during retirement only (may be lower than the all-years cap). */
+  retirementMaxEquityPct: 100,
   /** Real annual cost of borrowing (used only when maxEquityPct > 100). */
   borrowCost: 2,
 

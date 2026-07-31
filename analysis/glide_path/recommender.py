@@ -70,6 +70,9 @@ KEY INPUTS
                               risk-adjusted gain beats the borrowing drag — typically early
                               accumulation under a low γ ("lifecycle investing"); it avoids leverage
                               in retirement where sequence risk dominates.
+  retirement_max_equity     : equity ceiling during retirement only. Expressed as a fraction
+                              (0.6 = 60%); it may be lower than `max_leverage` and does not
+                              restrict accumulation allocations.
   interval                  : years per glide step (1 = per-age, 5 = change allocation every 5y…).
                               Equity weight is held constant within each interval block.
   gamma                     : CRRA risk aversion applied to RETIREMENT CONSUMPTION. Higher = more
@@ -531,6 +534,7 @@ def recommend_glide_path(
     exclude_years=None,
     # leverage (borrowing to invest); 1.0 = none
     max_leverage: float = 1.0,                  # cap on equity weight (1.5 = up to 150%)
+    retirement_max_equity: float | None = None, # retirement-only cap; None = max_leverage
     borrow_cost: float = 2.0,                   # REAL cost of borrowing (used only when leveraged)
     # household scale (real dollars) — affects the constant-$ floor/gap economics
     current_savings: float = 200_000.0,
@@ -572,6 +576,10 @@ def recommend_glide_path(
         raise ValueError("need at least one year")
     if not (grid_step <= max_leverage <= 3.0):
         raise ValueError("max_leverage must be in [grid_step, 3.0] (1.0 = no leverage)")
+    if retirement_max_equity is None:
+        retirement_max_equity = max_leverage
+    if not (0.0 <= retirement_max_equity <= max_leverage):
+        raise ValueError("retirement_max_equity must be in [0, max_leverage]")
 
     market = _build_market(
         return_mode,
@@ -609,10 +617,25 @@ def recommend_glide_path(
     def _constant_path(allocation):
         return np.broadcast_to(allocation, (n_years,) + np.shape(allocation))
 
-    # Map each year to its interval block; equity weight is constant within a block.
-    # The clamp to n_blocks-1 absorbs any remainder when n_years % interval != 0.
-    n_blocks = math.ceil(n_years / interval)
-    block_of_year = np.minimum(np.arange(n_years) // interval, n_blocks - 1)
+    # Split a block at retirement. This makes the retirement ceiling exact without
+    # applying it to the final working years of an otherwise crossing interval.
+    block_starts, block_ends = [], []
+    start = 0
+    while start < n_years:
+        phase_end = accum_years if start < accum_years else n_years
+        end = min(start + interval, phase_end)
+        block_starts.append(start)
+        block_ends.append(end)
+        start = end
+    n_blocks = len(block_starts)
+    block_of_year = np.empty(n_years, dtype=int)
+    for b, (start, end) in enumerate(zip(block_starts, block_ends)):
+        block_of_year[start:end] = b
+    retirement_grid_i = int(math.floor((retirement_max_equity + 1e-9) / grid_step))
+    max_candidate_i = np.array([
+        len(candidates) - 1 if start < accum_years else retirement_grid_i
+        for start in block_starts
+    ])
 
     def _optimize(opt_sample, max_passes):
         """Coordinate-ascent the per-block equity weights.
@@ -620,9 +643,10 @@ def recommend_glide_path(
         Returns the per-block weights that maximise expected discounted consumption utility."""
         # Initialise at the best flat weight (shape-neutral) to avoid biasing the shape and
         # reduce the risk of the coordinate ascent settling in a poor local optimum.
-        flat = _eu(_constant_paths(candidates), opt_sample, accum_years, retire_years, market,
+        flat_candidates = candidates[:retirement_grid_i + 1]
+        flat = _eu(_constant_paths(flat_candidates), opt_sample, accum_years, retire_years, market,
                    gamma=gamma, **common)
-        best_flat = candidates[int(np.argmax(flat))]
+        best_flat = flat_candidates[int(np.argmax(flat))]
         block_w = np.broadcast_to(
             best_flat,
             (n_blocks,) + np.shape(best_flat),
@@ -633,11 +657,12 @@ def recommend_glide_path(
             for b in order:
                 years = block_w[block_of_year]
                 # Current path in all columns; block b's rows evaluate every candidate.
-                W = np.repeat(years[:, None, ...], G, axis=1)
-                W[block_of_year == b, ...] = candidates
+                block_candidates = candidates[:max_candidate_i[b] + 1]
+                W = np.repeat(years[:, None, ...], len(block_candidates), axis=1)
+                W[block_of_year == b, ...] = block_candidates
                 eu = _eu(W, opt_sample, accum_years, retire_years, market,
                          gamma=gamma, **common)
-                best = candidates[int(np.argmax(eu))]
+                best = block_candidates[int(np.argmax(eu))]
                 if not np.array_equal(best, block_w[b]):
                     block_w[b] = best
                     changed = True
@@ -666,7 +691,7 @@ def recommend_glide_path(
     # materially better.
     select_sample = market.sample(n_years, max(n_paths, 40_000), seed + 4242)
     flat_stats = []
-    for allocation in candidates:
+    for allocation in candidates[:retirement_grid_i + 1]:
         candidate = _stats(_constant_path(allocation), select_sample, accum_years, retire_years,
                            market, gamma=gamma, **common)
         flat_stats.append(candidate)
@@ -696,17 +721,15 @@ def recommend_glide_path(
     # Build the interval schedule.
     schedule = []
     for b in range(n_blocks):
-        blk_start = b * interval
-        blk_end = min((b + 1) * interval, n_years) - 1
         entry = {
             "step": b,
-            "year_start": blk_start,
-            "year_end": blk_end,
-            "phase": "accum" if blk_start < accum_years else "retire",
+            "year_start": block_starts[b],
+            "year_end": block_ends[b] - 1,
+            "phase": "accum" if block_starts[b] < accum_years else "retire",
         }
         entry["equity_pct"] = round(market.allocation_weights(block_w[b]) * 100, 1)
         if start_age is not None:
-            entry["age_start"] = start_age + blk_start
+            entry["age_start"] = start_age + block_starts[b]
         schedule.append(entry)
 
     tent_label = "tent_age" if start_age is not None else "tent_year"
@@ -737,6 +760,7 @@ def recommend_glide_path(
             "portfolio_income_gap": float(target_income - guaranteed), "interval": interval,
             "gamma": gamma,
             "max_leverage": max_leverage, "borrow_cost": borrow_cost,
+            "retirement_max_equity": retirement_max_equity,
             "n_paths": n_paths, "grid_step": grid_step,
             **market.metadata,
         },
@@ -904,6 +928,7 @@ def format_reproduction_command(
     block_years,
     n_paths,
     dataset="pooled",
+    retirement_max_equity=None,
 ):
     """Build a shell-safe flag-CLI command matching an interactive run."""
 
@@ -944,6 +969,8 @@ def format_reproduction_command(
         "--paths",
         value(int(n_paths)),
     ]
+    if retirement_max_equity is not None:
+        args.extend(["--retirement-max-equity", value(retirement_max_equity)])
     if max_leverage > 1:
         args.extend(["--borrow-cost", value(borrow_cost)])
     if return_mode in _BLOCK_MODES:
@@ -1065,6 +1092,9 @@ def _run_interactive():
     print("  Enter the max equity % (100 = no leverage, 150 = up to 1.5×).")
     max_equity_pct = _ask("Max equity %", 100.0, float, "100 = none, 150 = max 1.5x leverage")
     max_leverage = max(max_equity_pct / 100.0, 0.05)
+    retirement_max_equity = _ask(
+        "Retirement max equity %", min(max_equity_pct, 100.0), float,
+        "equity ceiling only after retirement; cannot exceed max equity") / 100.0
     if max_leverage > 1.0:
         borrow_cost = _ask("  Real cost of borrowing (% per year)", 2.0, float,
                            "2 = margin/HELOC real rate")
@@ -1128,6 +1158,7 @@ def _run_interactive():
         gamma=gamma,
         beta=beta,
         max_leverage=max_leverage,
+        retirement_max_equity=retirement_max_equity,
         borrow_cost=borrow_cost,
         n_paths=int(n_paths),
         start_age=current_age,
@@ -1196,6 +1227,7 @@ def _run_interactive():
         gamma=gamma,
         beta=beta,
         max_leverage=max_leverage,
+        retirement_max_equity=retirement_max_equity,
         borrow_cost=borrow_cost,
         current_savings=current_savings,
         annual_contribution=annual_contrib,

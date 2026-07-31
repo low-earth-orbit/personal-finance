@@ -90,9 +90,14 @@ def print_rec(rec):
     by_age = "age_start" in rec["schedule"][0]
     lev = (f" | leverage≤{p['max_leverage']:g}× @{p['borrow_cost']:g}% real"
            if p.get("max_leverage", 1.0) > 1 else "")
+    retirement_cap = p.get("retirement_max_equity", p.get("max_leverage", 1.0))
+    ret_cap_note = (
+        f" | retirement equity≤{retirement_cap * 100:g}%"
+        if retirement_cap < p.get("max_leverage", 1.0) else ""
+    )
     print("Optimized equity glide path")
     print(f"  {p['accum_years']}y accumulation + {p['retire_years']}y retirement | {spend} | "
-          f"guaranteed income ${p['guaranteed_income']:,.0f}/yr | γ {p['gamma']:g}{lev} | "
+          f"guaranteed income ${p['guaranteed_income']:,.0f}/yr | γ {p['gamma']:g}{lev}{ret_cap_note} | "
           f"{p['interval']}y steps")
     print(f"  return mode: {p['return_mode']}")
     if p["return_mode"] != "iid-mc":
@@ -162,6 +167,8 @@ def main(argv=None):
     # leverage
     ap.add_argument("--max-leverage", type=float, default=1.0,
                     help="cap on equity weight (1.0=none, 1.5=up to 150%% via borrowing)")
+    ap.add_argument("--retirement-max-equity", type=float, default=None,
+                    help="retirement-only equity ceiling (0.6=60%%; default: --max-leverage)")
     ap.add_argument("--borrow-cost", type=float, default=2.0,
                     help="real cost of borrowing %%/yr (used only when --max-leverage > 1)")
     ap.add_argument("--paths", "--n-paths", dest="n_paths", type=int, default=15_000,
@@ -193,6 +200,7 @@ def main(argv=None):
         args.accum, args.retire, flexibility=args.flex, guaranteed_income=args.guaranteed_income,
         alloc_curve=curve, interval=args.interval, gamma=args.gamma, beta=args.beta,
         max_leverage=args.max_leverage, borrow_cost=args.borrow_cost,
+        retirement_max_equity=args.retirement_max_equity,
         start_age=args.start_age, current_savings=args.savings, annual_contribution=args.contrib,
         target_income=args.target_income, withdrawal_rate=args.withdrawal_rate, inflation=args.inflation,
         return_mode=mode, block_years=args.block_years,

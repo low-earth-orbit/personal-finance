@@ -52,6 +52,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     label: "Retirement time preference (β)",
   },
   maxEquityPct: { min: 100, max: 200, step: 5, label: "Max equity %" },
+  retirementMaxEquityPct: { min: 0, max: 200, step: 5, label: "Retirement max equity %" },
   borrowCost: { min: 0, max: 10, step: 0.25, label: "Borrow cost" },
   // Max matches the engine's MAX_OPT_PATHS hard cap
   numPaths: {
@@ -94,6 +95,13 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
   }
   if (!errors.planningAge && !errors.retirementAge && input.planningAge <= input.retirementAge) {
     errors.planningAge = "Plan-until age must be after retirement.";
+  }
+  if (
+    !errors.retirementMaxEquityPct &&
+    !errors.maxEquityPct &&
+    input.retirementMaxEquityPct > input.maxEquityPct
+  ) {
+    errors.retirementMaxEquityPct = "Must not exceed max equity.";
   }
 
   return errors;

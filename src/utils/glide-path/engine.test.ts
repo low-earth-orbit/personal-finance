@@ -166,4 +166,21 @@ describe("recommendGlidePath", () => {
     const r = recommendGlidePath(base({ maxEquityPct: 100 }));
     expect(Math.max(...r.equityByYear)).toBeLessThanOrEqual(1.0 + 1e-9);
   });
+
+  it("applies the retirement ceiling without limiting working years", () => {
+    const input = base({
+      retirementAge: 62, // intentionally splits the normal five-year cadence
+      planningAge: 82,
+      gamma: 1.5,
+      maxEquityPct: 150,
+      retirementMaxEquityPct: 50,
+      borrowCost: 0.5,
+    });
+    const r = recommendGlidePath(input);
+    const retireStart = input.retirementAge - input.startAge;
+    expect(Math.max(...r.equityByYear.slice(retireStart))).toBeLessThanOrEqual(0.5 + 1e-9);
+    expect(Math.max(...r.equityByYear.slice(0, retireStart))).toBeGreaterThan(0.5);
+    expect(r.schedule.find((block) => block.yearStart === retireStart)?.phase).toBe("retire");
+    expect(r.params.retirementMaxLeverage).toBe(0.5);
+  });
 });

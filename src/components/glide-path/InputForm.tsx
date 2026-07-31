@@ -230,6 +230,12 @@ export default function InputForm({
                   labelHelperText="The most equity the optimizer may use. Above 100% means borrowing to invest."
                   suffix="%"
                 />
+                <UserInputFormItem
+                  {...num("retirementMaxEquityPct")}
+                  label="Retirement max equity"
+                  labelHelperText="The equity ceiling in retirement. It cannot exceed max equity."
+                  suffix="%"
+                />
                 {leveraged && (
                   <UserInputFormItem
                     {...num("borrowCost")}
