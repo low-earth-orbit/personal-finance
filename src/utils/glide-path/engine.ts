@@ -18,7 +18,7 @@
 
 import { fillNormals } from "./rng";
 import { sampleBlockPaths } from "./blockBootstrap";
-import { DEFAULT_ALLOC_CURVE, GRID_STEP, WEB_GLIDE_INTERVAL, type AllocAnchor } from "./presets";
+import { DEFAULT_ALLOC_CURVE, GRID_STEP, type AllocAnchor } from "./presets";
 import type {
   GlidePathInput,
   GlidePathResult,
@@ -524,7 +524,8 @@ export function recommendGlidePath(
   const accumYears = Math.max(1, Math.round(input.retirementAge - input.startAge));
   const retireYears = Math.max(1, Math.round(input.planningAge - input.retirementAge));
   const nYears = accumYears + retireYears;
-  const interval = WEB_GLIDE_INTERVAL;
+  // The UI accepts whole years; normalize defensively for callers that bypass form validation.
+  const interval = Math.min(10, Math.max(1, Math.round(input.interval)));
   const gamma = input.gamma;
   const maxLeverage = Math.max(GRID_STEP, input.maxEquityPct / 100);
   const retirementMaxLeverage = Math.min(

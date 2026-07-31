@@ -3,7 +3,7 @@ import { DEFAULTS, DEFAULT_ALLOC_CURVE } from "./presets";
 import { buildEquityGrid, recommendGlidePath } from "./engine";
 import type { GlidePathInput } from "./types";
 
-// Fast settings for tests: few paths; the browser interval is fixed at 5 years.
+// Fast settings for tests: few paths; the default glide-step interval is 5 years.
 const base = (overrides: Partial<GlidePathInput> = {}): GlidePathInput => ({
   ...DEFAULTS,
   numPaths: 200,
@@ -35,6 +35,13 @@ describe("recommendGlidePath", () => {
       expect(w).toBeGreaterThanOrEqual(0);
       expect(w).toBeLessThanOrEqual(r.params.maxLeverage + 1e-9);
     }
+  });
+
+  it("uses the requested whole-year glide-step interval", () => {
+    const r = recommendGlidePath(base({ interval: 2 }));
+
+    expect(r.params.interval).toBe(2);
+    expect(r.schedule[0]).toMatchObject({ yearStart: 0, yearEnd: 1 });
   });
 
   it("reports sane outcome stats", () => {

@@ -52,10 +52,10 @@ describe("glide-path InputForm guidance", () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", {
-        name: /more information about glide step/i,
+      await screen.findByRole("button", {
+        name: /more information about glide-step interval/i,
       }),
-    ).not.toBeInTheDocument();
+    ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
         name: /more information about monte carlo paths/i,

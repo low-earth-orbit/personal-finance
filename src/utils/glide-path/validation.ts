@@ -62,6 +62,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     label: "Monte Carlo paths",
   },
   inflation: { min: 0, max: 5, step: 0.1, label: "Inflation" },
+  interval: { min: 1, max: 10, step: 1, label: "Glide-step interval" },
 };
 
 const KEYS = Object.keys(DEFAULTS) as GlidePathInputKey[];
@@ -87,6 +88,10 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
         errors[key] = `Must be at most ${max}`;
       }
     }
+  }
+
+  if (!errors.interval && !Number.isInteger(input.interval)) {
+    errors.interval = "Must be a whole number of years.";
   }
 
   // Cross-field: phases must have positive length.

@@ -250,6 +250,12 @@ export default function InputForm({
                   labelHelperText="The number of simulated market histories. More paths give steadier results but take longer."
                   thousandSeparator
                 />
+                <UserInputFormItem
+                  {...num("interval")}
+                  label="Glide-step interval"
+                  labelHelperText="Years each recommended allocation is held before the next step. Shorter intervals make a more detailed path."
+                  suffix=" yrs"
+                />
               </SimpleGrid>
             </Stack>
           </Accordion.Panel>
