@@ -52,6 +52,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     label: "Retirement time preference (β)",
   },
   maxEquityPct: { min: 100, max: 200, step: 5, label: "Max equity %" },
+  retirementMaxEquityPct: { min: 0, max: 200, step: 5, label: "Retirement max equity %" },
   borrowCost: { min: 0, max: 10, step: 0.25, label: "Borrow cost" },
   // Max matches the engine's MAX_OPT_PATHS hard cap
   numPaths: {
@@ -61,6 +62,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     label: "Monte Carlo paths",
   },
   inflation: { min: 0, max: 5, step: 0.1, label: "Inflation" },
+  interval: { min: 1, max: 10, step: 1, label: "Glide-step interval" },
 };
 
 const KEYS = Object.keys(DEFAULTS) as GlidePathInputKey[];
@@ -88,12 +90,23 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
     }
   }
 
+  if (!errors.interval && !Number.isInteger(input.interval)) {
+    errors.interval = "Must be a whole number of years.";
+  }
+
   // Cross-field: phases must have positive length.
   if (!errors.retirementAge && !errors.startAge && input.retirementAge <= input.startAge) {
     errors.retirementAge = "Retirement age must be after your start age.";
   }
   if (!errors.planningAge && !errors.retirementAge && input.planningAge <= input.retirementAge) {
     errors.planningAge = "Plan-until age must be after retirement.";
+  }
+  if (
+    !errors.retirementMaxEquityPct &&
+    !errors.maxEquityPct &&
+    input.retirementMaxEquityPct > input.maxEquityPct
+  ) {
+    errors.retirementMaxEquityPct = "Must not exceed max equity.";
   }
 
   return errors;

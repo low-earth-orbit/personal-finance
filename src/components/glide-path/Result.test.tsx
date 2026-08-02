@@ -14,6 +14,7 @@ function makeResult(o: ResultOverrides = {}): GlidePathResult {
     retireYears: 30,
     guaranteed: 20000,
     maxLeverage: 1,
+    retirementMaxLeverage: 1,
     borrowCost: 2,
     gamma: 3,
     interval: 5,

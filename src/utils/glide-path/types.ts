@@ -66,6 +66,7 @@ export interface ResolvedParams {
   retireYears: number;
   guaranteed: number;
   maxLeverage: number;
+  retirementMaxLeverage: number;
   borrowCost: number;
   gamma: number;
   interval: number;

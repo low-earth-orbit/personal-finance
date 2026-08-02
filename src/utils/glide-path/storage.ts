@@ -4,7 +4,6 @@ import type { GlidePathInput, GlidePathInputKey, GlidePathReturnMode } from "./t
 const KEY = "glide_input";
 
 interface LegacyGlidePathInput extends Partial<GlidePathInput> {
-  interval?: number;
   pensionPct?: number;
   preRetirementIncome?: number;
 }

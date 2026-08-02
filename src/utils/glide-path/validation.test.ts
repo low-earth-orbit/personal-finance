@@ -37,4 +37,11 @@ describe("validateGlidePathInput", () => {
     const errors = validateGlidePathInput(base({ guaranteedIncome: -1 }));
     expect(errors.guaranteedIncome).toBeTruthy();
   });
+
+  it("limits the glide-step interval to one through ten years", () => {
+    expect(validateGlidePathInput(base({ interval: 1 }))).toEqual({});
+    expect(validateGlidePathInput(base({ interval: 10 }))).toEqual({});
+    expect(validateGlidePathInput(base({ interval: 11 })).interval).toBeTruthy();
+    expect(validateGlidePathInput(base({ interval: 2.5 })).interval).toMatch(/whole number/i);
+  });
 });

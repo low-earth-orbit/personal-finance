@@ -33,9 +33,9 @@ describe("glide-path storage", () => {
     expect(input).not.toHaveProperty("preRetirementIncome");
   });
 
-  it("drops a legacy web interval instead of silently changing the engine cadence", () => {
+  it("loads a saved glide-step interval", () => {
     window.localStorage.setItem("glide_input", JSON.stringify({ ...DEFAULTS, interval: 10 }));
 
-    expect(loadInput()).not.toHaveProperty("interval");
+    expect(loadInput().interval).toBe(10);
   });
 });

@@ -230,6 +230,12 @@ export default function InputForm({
                   labelHelperText="The most equity the optimizer may use. Above 100% means borrowing to invest."
                   suffix="%"
                 />
+                <UserInputFormItem
+                  {...num("retirementMaxEquityPct")}
+                  label="Retirement max equity"
+                  labelHelperText="The equity ceiling in retirement. It cannot exceed max equity."
+                  suffix="%"
+                />
                 {leveraged && (
                   <UserInputFormItem
                     {...num("borrowCost")}
@@ -243,6 +249,12 @@ export default function InputForm({
                   label="Monte Carlo paths"
                   labelHelperText="The number of simulated market histories. More paths give steadier results but take longer."
                   thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("interval")}
+                  label="Glide-step interval"
+                  labelHelperText="Years each recommended allocation is held before the next step. Shorter intervals make a more detailed path."
+                  suffix=" yrs"
                 />
               </SimpleGrid>
             </Stack>

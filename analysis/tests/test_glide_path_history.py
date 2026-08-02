@@ -218,6 +218,14 @@ class GlidePathMarketTests(unittest.TestCase):
         self.assertEqual(recommend.call_args.kwargs["beta"], 0.97)
         self.assertEqual(recommend.call_args.kwargs["n_paths"], 1234)
 
+    def test_cli_forwards_retirement_equity_ceiling(self):
+        with patch(
+            "analysis.glide_path.cli.recommend_glide_path", return_value={}
+        ) as recommend, patch("analysis.glide_path.cli.print_rec"):
+            cli_main(["--max-leverage", "1.5", "--retirement-max-equity", "0.6"])
+
+        self.assertEqual(recommend.call_args.kwargs["retirement_max_equity"], 0.6)
+
     def test_cli_uses_shared_baseline_model_defaults(self):
         with patch(
             "analysis.glide_path.cli.recommend_glide_path", return_value={}
@@ -445,6 +453,20 @@ class GlidePathMarketTests(unittest.TestCase):
         with redirect_stderr(stderr), self.assertRaises(SystemExit):
             cli_main(["--mode", "historical-iid", "--curve", "curve.csv"])
         self.assertIn("--curve is only supported", stderr.getvalue())
+
+    def test_retirement_equity_ceiling_does_not_limit_accumulation(self):
+        rec = self._recommend(
+            accum_years=3,
+            retire_years=3,
+            interval=2,
+            gamma=1.0,
+            max_leverage=1.5,
+            retirement_max_equity=0.5,
+            borrow_cost=0.0,
+        )
+        self.assertLessEqual(max(rec["equity_by_year"][3:]), 0.5)
+        self.assertEqual(rec["schedule"][1]["year_end"], 2)
+        self.assertEqual(rec["schedule"][2]["year_start"], 3)
 
     @staticmethod
     def _recommend(**overrides):

@@ -29,7 +29,7 @@ export const DEFAULT_ALLOC_CURVE: AllocAnchor[] = [
 
 /**
  * Default inputs. Rates are percentages; dollars are today's (real) dollars.
- * `numPaths` is exposed because this is a nerds tool; the web glide interval is fixed below.
+ * `numPaths` and `interval` are exposed because this is a nerds tool.
  */
 export const DEFAULTS = {
   // ── About you ─────────────────────────────────────────────
@@ -62,6 +62,8 @@ export const DEFAULTS = {
   // ── Leverage ──────────────────────────────────────────────
   /** Max equity weight as a % (100 = no leverage; 150 = up to 1.5×). */
   maxEquityPct: 100,
+  /** Max equity weight during retirement only (may be lower than the all-years cap). */
+  retirementMaxEquityPct: 100,
   /** Real annual cost of borrowing (used only when maxEquityPct > 100). */
   borrowCost: 2,
 
@@ -70,10 +72,9 @@ export const DEFAULTS = {
   numPaths: 5000,
   /** Inflation used to deflate the curve to real. */
   inflation: 2.1,
+  /** Years each recommended equity allocation is held before the next glide step. */
+  interval: 5,
 } as const;
-
-/** Fixed browser cadence; Python exposes this as the configurable `interval` input. */
-export const WEB_GLIDE_INTERVAL = 5;
 
 /** Discrete grid step for the equity-weight search (fraction of equity). */
 export const GRID_STEP = 0.05;

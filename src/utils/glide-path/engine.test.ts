@@ -3,7 +3,7 @@ import { DEFAULTS, DEFAULT_ALLOC_CURVE } from "./presets";
 import { buildEquityGrid, recommendGlidePath } from "./engine";
 import type { GlidePathInput } from "./types";
 
-// Fast settings for tests: few paths; the browser interval is fixed at 5 years.
+// Fast settings for tests: few paths; the default glide-step interval is 5 years.
 const base = (overrides: Partial<GlidePathInput> = {}): GlidePathInput => ({
   ...DEFAULTS,
   numPaths: 200,
@@ -35,6 +35,13 @@ describe("recommendGlidePath", () => {
       expect(w).toBeGreaterThanOrEqual(0);
       expect(w).toBeLessThanOrEqual(r.params.maxLeverage + 1e-9);
     }
+  });
+
+  it("uses the requested whole-year glide-step interval", () => {
+    const r = recommendGlidePath(base({ interval: 2 }));
+
+    expect(r.params.interval).toBe(2);
+    expect(r.schedule[0]).toMatchObject({ yearStart: 0, yearEnd: 1 });
   });
 
   it("reports sane outcome stats", () => {
@@ -165,5 +172,22 @@ describe("recommendGlidePath", () => {
   it("keeps equity at/below 100% with no leverage", () => {
     const r = recommendGlidePath(base({ maxEquityPct: 100 }));
     expect(Math.max(...r.equityByYear)).toBeLessThanOrEqual(1.0 + 1e-9);
+  });
+
+  it("applies the retirement ceiling without limiting working years", () => {
+    const input = base({
+      retirementAge: 62, // intentionally splits the normal five-year cadence
+      planningAge: 82,
+      gamma: 1.5,
+      maxEquityPct: 150,
+      retirementMaxEquityPct: 50,
+      borrowCost: 0.5,
+    });
+    const r = recommendGlidePath(input);
+    const retireStart = input.retirementAge - input.startAge;
+    expect(Math.max(...r.equityByYear.slice(retireStart))).toBeLessThanOrEqual(0.5 + 1e-9);
+    expect(Math.max(...r.equityByYear.slice(0, retireStart))).toBeGreaterThan(0.5);
+    expect(r.schedule.find((block) => block.yearStart === retireStart)?.phase).toBe("retire");
+    expect(r.params.retirementMaxLeverage).toBe(0.5);
   });
 });

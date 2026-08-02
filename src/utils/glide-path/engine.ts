@@ -18,7 +18,7 @@
 
 import { fillNormals } from "./rng";
 import { sampleBlockPaths } from "./blockBootstrap";
-import { DEFAULT_ALLOC_CURVE, GRID_STEP, WEB_GLIDE_INTERVAL, type AllocAnchor } from "./presets";
+import { DEFAULT_ALLOC_CURVE, GRID_STEP, type AllocAnchor } from "./presets";
 import type {
   GlidePathInput,
   GlidePathResult,
@@ -421,10 +421,10 @@ function optimize(
   ctx: SimCtx,
   Z: Float64Array,
   n: number,
-  G: number,
   blockStart: Int32Array,
   blockEnd: Int32Array,
   blockOfYear: Int32Array,
+  maxGridByBlock: Int32Array,
   maxPasses: number,
 ): Int32Array {
   const nYears = ctx.accumYears + ctx.retireYears;
@@ -434,7 +434,8 @@ function optimize(
   // Flat init: the best single weight applied to every year (shape-neutral start).
   let bestFlat = -Infinity;
   let bestFlatG = 0;
-  for (let g = 0; g < G; g++) {
+  const maxFlatG = Math.min(...Array.from(maxGridByBlock));
+  for (let g = 0; g <= maxFlatG; g++) {
     yearIdx.fill(g);
     const u = meanUtility(yearIdx, ctx, Z, n);
     if (u > bestFlat) {
@@ -454,7 +455,7 @@ function optimize(
       const e = blockEnd[b];
       let bestU = -Infinity;
       let bestG = blockIdx[b];
-      for (let g = 0; g < G; g++) {
+      for (let g = 0; g <= maxGridByBlock[b]; g++) {
         for (let i = s; i < e; i++) yearIdx[i] = g;
         const u = meanUtility(yearIdx, ctx, Z, n);
         if (u > bestU) {
@@ -523,9 +524,14 @@ export function recommendGlidePath(
   const accumYears = Math.max(1, Math.round(input.retirementAge - input.startAge));
   const retireYears = Math.max(1, Math.round(input.planningAge - input.retirementAge));
   const nYears = accumYears + retireYears;
-  const interval = WEB_GLIDE_INTERVAL;
+  // The UI accepts whole years; normalize defensively for callers that bypass form validation.
+  const interval = Math.min(10, Math.max(1, Math.round(input.interval)));
   const gamma = input.gamma;
   const maxLeverage = Math.max(GRID_STEP, input.maxEquityPct / 100);
+  const retirementMaxLeverage = Math.min(
+    maxLeverage,
+    Math.max(0, (input.retirementMaxEquityPct ?? input.maxEquityPct) / 100),
+  );
 
   // Grid of candidate equity weights 0..maxLeverage (weights > 1 are leveraged).
   const grid = buildEquityGrid(maxLeverage);
@@ -546,14 +552,26 @@ export function recommendGlidePath(
   for (let t = 0; t < retireYears; t++) disc[t] = Math.pow(input.beta, t);
 
   // Block layout: equity is constant within each interval block; the last absorbs the remainder.
-  const nBlocks = Math.ceil(nYears / interval);
+  // Do not let a 5-year block straddle retirement: the retirement ceiling applies to
+  // every retirement year, without unnecessarily limiting the preceding working years.
+  const starts: number[] = [];
+  const ends: number[] = [];
+  for (let start = 0; start < nYears; ) {
+    const phaseEnd = start < accumYears ? accumYears : nYears;
+    const end = Math.min(start + interval, phaseEnd);
+    starts.push(start);
+    ends.push(end);
+    start = end;
+  }
+  const nBlocks = starts.length;
   const blockOfYear = new Int32Array(nYears);
-  const blockStart = new Int32Array(nBlocks);
-  const blockEnd = new Int32Array(nBlocks);
-  for (let i = 0; i < nYears; i++) blockOfYear[i] = Math.min(Math.floor(i / interval), nBlocks - 1);
+  const blockStart = Int32Array.from(starts);
+  const blockEnd = Int32Array.from(ends);
+  const retirementMaxGrid = Math.floor((retirementMaxLeverage + 1e-9) / GRID_STEP);
+  const maxGridByBlock = new Int32Array(nBlocks);
   for (let b = 0; b < nBlocks; b++) {
-    blockStart[b] = b * interval;
-    blockEnd[b] = b < nBlocks - 1 ? (b + 1) * interval : nYears;
+    maxGridByBlock[b] = blockStart[b] < accumYears ? G - 1 : retirementMaxGrid;
+    for (let year = blockStart[b]; year < blockEnd[b]; year++) blockOfYear[year] = b;
   }
 
   const nOpt = clampPathCount(input.numPaths, MIN_OPT_PATHS, MAX_OPT_PATHS);
@@ -649,7 +667,16 @@ export function recommendGlidePath(
   };
 
   // ── optimization + out-of-sample stats ───────────────────────────────────────
-  const blockIdx = optimize(ctx, Z, nOpt, G, blockStart, blockEnd, blockOfYear, passes);
+  const blockIdx = optimize(
+    ctx,
+    Z,
+    nOpt,
+    blockStart,
+    blockEnd,
+    blockOfYear,
+    maxGridByBlock,
+    passes,
+  );
   const yearIdx = expand(blockIdx, blockOfYear, nYears);
   const weights: number[] = [];
   for (let i = 0; i < nYears; i++) weights.push(grid[yearIdx[i]]);
@@ -670,7 +697,7 @@ export function recommendGlidePath(
   const flatIdx = new Int32Array(nYears);
   let bestFlatG = 0;
   let bestFlatCe = computeStats(flatIdx, ctxSelect, Zs, nStats, gamma).ceIncome;
-  for (let g = 1; g < G; g++) {
+  for (let g = 1; g <= retirementMaxGrid; g++) {
     flatIdx.fill(g);
     const candidate = computeStats(flatIdx, ctxSelect, Zs, nStats, gamma);
     if (candidate.ceIncome > bestFlatCe) {
@@ -685,8 +712,8 @@ export function recommendGlidePath(
   // ── schedule + shape descriptors ─────────────────────────────────────────────
   const schedule: ScheduleBlock[] = [];
   for (let b = 0; b < nBlocks; b++) {
-    const yearStart = b * interval;
-    const yearEnd = Math.min((b + 1) * interval, nYears) - 1;
+    const yearStart = blockStart[b];
+    const yearEnd = blockEnd[b] - 1;
     schedule.push({
       step: b,
       yearStart,
@@ -733,6 +760,7 @@ export function recommendGlidePath(
       retireYears,
       guaranteed,
       maxLeverage,
+      retirementMaxLeverage,
       borrowCost: input.borrowCost,
       gamma,
       interval,
