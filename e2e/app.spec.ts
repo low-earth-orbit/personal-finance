@@ -15,7 +15,7 @@ test("hub landing page lists the available tools", async ({ page }) => {
 
   // The rent-vs-buy tool is linked from the hub.
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();
-  await expect(page.getByRole("link", { name: /where to invest/i })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /where to invest/i })).toBeVisible();
   await expect(page.getByText("Coming soon")).toBeVisible();
 });
 
