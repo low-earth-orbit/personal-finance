@@ -947,7 +947,7 @@ describe("applyAdjustments", () => {
     expect(adjusted.acbPerShare).toBeCloseTo(500 / 15);
   });
 
-  it("adds a positive T3 net (box 21 capital gains distributions)", () => {
+  it("adds a positive T3 net (phantom reinvested distributions)", () => {
     // 10 shares @ $40 = $400. Net T3 +$100 → $500, ACB/share = $50.
     const holding = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }])[0];
     const adjusted = applyAdjustments(holding, 0, 100);
@@ -967,17 +967,17 @@ describe("t3NetAdjustment", () => {
     expect(t3NetAdjustment([])).toBe(0);
   });
 
-  it("sums box 21 minus box 42 across years", () => {
+  it("sums phantom minus box 42 across years", () => {
     expect(
       t3NetAdjustment([
-        { year: 2023, box21: 120, box42: 30 },
-        { year: 2024, box21: 0, box42: 50 },
+        { year: 2023, phantom: 120, box42: 30 },
+        { year: 2024, phantom: 0, box42: 50 },
       ]),
     ).toBe(40);
   });
 
   it("can be negative when ROC dominates", () => {
-    expect(t3NetAdjustment([{ year: 2024, box21: 10, box42: 60 }])).toBe(-50);
+    expect(t3NetAdjustment([{ year: 2024, phantom: 10, box42: 60 }])).toBe(-50);
   });
 });
 

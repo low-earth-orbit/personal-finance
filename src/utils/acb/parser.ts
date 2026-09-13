@@ -45,12 +45,21 @@ export type AcbTransaction = {
   broker?: "wealthsimple" | "questrade" | "ibkr";
 };
 
-/** One T3 slip's ACB-relevant boxes for a single tax year. */
+/** One T3 slip's ACB-relevant amounts for a single tax year. */
 export type T3Entry = {
   /** Tax year, e.g. 2024. */
   year: number;
-  /** Box 21 — Capital Gains Distributions. Adds to ACB. */
-  box21: number;
+  /**
+   * Phantom / reinvested (non-cash) distributions. Adds to ACB.
+   *
+   * This is NOT the full T3 Box 21 amount: Box 21 lumps cash and
+   * reinvested capital gains together, while only the reinvested
+   * (phantom) portion — non-cash units you were taxed on but never
+   * received — increases ACB. Get it from the fund's year-end
+   * breakdown as reinvested $/unit × units held on record date.
+   * For many equity ETFs Box 21 happens to equal phantom, but verify.
+   */
+  phantom: number;
   /** Box 42 — Amount Resulting in Cost Base Adjustment (ROC). Subtracts from ACB. */
   box42: number;
 };
@@ -107,9 +116,9 @@ export function resolveRegistered(
   return /tfsa|rrsp|fhsa|registered retirement savings plan/i.test(accountType);
 }
 
-/** Net ACB adjustment across all years: sum(box21) − sum(box42). */
+/** Net ACB adjustment across all years: sum(phantom) − sum(box42). */
 export function t3NetAdjustment(entries: T3Entry[]): number {
-  return entries.reduce((sum, entry) => sum + entry.box21 - entry.box42, 0);
+  return entries.reduce((sum, entry) => sum + entry.phantom - entry.box42, 0);
 }
 
 export type Holding = {
@@ -551,7 +560,7 @@ export function applyT3Adjustment(holding: Holding, roc: number): Holding {
 /**
  * Apply UI-layer cost basis adjustments to a holding:
  * - `openingLot`: total cost basis for transferred-in shares (added first)
- * - `t3Net`: net T3 adjustment, `sum(box 21) − sum(box 42)` — positive adds
+ * - `t3Net`: net T3 adjustment, `sum(phantom) − sum(box 42)` — positive adds
  *   to the pool, negative subtracts (combined result clamped at zero)
  */
 export function applyAdjustments(holding: Holding, openingLot: number, t3Net: number): Holding {

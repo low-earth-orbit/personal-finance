@@ -266,10 +266,10 @@ const Main = () => {
             Pooled across all non-registered accounts (CRA rule). ACB per share = total cost basis ÷
             shares held. Sells reduce both shares and the cost basis pool pro-rata, so ACB/share
             stays constant after a sale. Expand a row for its year-by-year ACB history. Click{" "}
-            <strong>Edit T3</strong> to enter capital gains distributions (box 21, adds to ACB) and
-            return of capital (box 42, reduces ACB) from your T3 slips, per tax year. For holdings
-            with transferred-in shares, click <strong>Edit transfers</strong> to enter the opening
-            lot ACB (total cost basis) for each transferred lot, so the ACB is complete.
+            <strong>Edit T3</strong> to enter phantom/reinvested distributions (non-cash only, adds
+            to ACB — not the full Box 21) and return of capital (box 42, reduces ACB) per tax year.
+            For holdings with transferred-in shares, click <strong>Edit transfers</strong> to enter
+            the opening lot ACB (total cost basis) for each transferred lot, so the ACB is complete.
           </Text>
           {visibleHoldings.length > 0 ? (
             <HoldingsTable
@@ -353,8 +353,8 @@ const Main = () => {
                   is uploaded.
                 </List.Item>
                 <List.Item>
-                  Review your pooled ACB. Enter T3 amounts (box 21 / box 42) and the opening-lot ACB
-                  for any transferred-in shares.
+                  Review your pooled ACB. Enter phantom/reinvested amounts (non-cash only, not full
+                  Box 21) plus Box 42, and the opening-lot ACB for any transferred-in shares.
                 </List.Item>
               </List>
             </Stack>

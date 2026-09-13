@@ -74,7 +74,7 @@ describe("HoldingsTable", () => {
       <HoldingsTable
         holdings={HOLDINGS}
         adjustments={emptyAdjustments({
-          t3Slips: { VEQT: [{ year: 2024, box21: 0, box42: 100 }] },
+          t3Slips: { VEQT: [{ year: 2024, phantom: 0, box42: 100 }] },
         })}
       />,
     );
@@ -85,15 +85,15 @@ describe("HoldingsTable", () => {
     expect(within(veqtRow).getByText("$30.00")).toBeInTheDocument();
   });
 
-  it("nets box 21 against box 42 across years", () => {
+  it("nets phantom against box 42 across years", () => {
     renderWithMantine(
       <HoldingsTable
         holdings={HOLDINGS}
         adjustments={emptyAdjustments({
           t3Slips: {
             VEQT: [
-              { year: 2023, box21: 150, box42: 0 },
-              { year: 2024, box21: 0, box42: 50 },
+              { year: 2023, phantom: 150, box42: 0 },
+              { year: 2024, phantom: 0, box42: 50 },
             ],
           },
         })}
@@ -112,8 +112,8 @@ describe("HoldingsTable", () => {
         holdings={HOLDINGS_WITH_TRANSFER}
         adjustments={emptyAdjustments({
           t3Slips: {
-            VEQT: [{ year: 2024, box21: 0, box42: 50 }],
-            XEQT: [{ year: 2024, box21: 120, box42: 0 }],
+            VEQT: [{ year: 2024, phantom: 0, box42: 50 }],
+            XEQT: [{ year: 2024, phantom: 120, box42: 0 }],
           },
         })}
       />,
@@ -130,7 +130,7 @@ describe("HoldingsTable", () => {
       <HoldingsTable
         holdings={HOLDINGS}
         adjustments={emptyAdjustments({
-          t3Slips: { VEQT: [{ year: 2024, box21: 25, box42: 25 }] },
+          t3Slips: { VEQT: [{ year: 2024, phantom: 25, box42: 25 }] },
         })}
       />,
     );
@@ -177,7 +177,7 @@ describe("HoldingsTable", () => {
       <HoldingsTable
         holdings={HOLDINGS_WITH_TRANSFER}
         adjustments={emptyAdjustments({
-          t3Slips: { XEQT: [{ year: 2024, box21: 0, box42: 50 }] },
+          t3Slips: { XEQT: [{ year: 2024, phantom: 0, box42: 50 }] },
           openingLots: { XEQT: 200 },
         })}
       />,

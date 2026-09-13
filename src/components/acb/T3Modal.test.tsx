@@ -7,8 +7,8 @@ import type { T3Entry } from "@/utils/acb/parser";
 const noop = () => {};
 
 const ENTRIES: T3Entry[] = [
-  { year: 2023, box21: 120, box42: 0 },
-  { year: 2024, box21: 0, box42: 50 },
+  { year: 2023, phantom: 120, box42: 0 },
+  { year: 2024, phantom: 0, box42: 50 },
 ];
 
 describe("T3Modal", () => {
@@ -20,7 +20,7 @@ describe("T3Modal", () => {
   it("shows the symbol in the title and one row per entry", () => {
     renderWithMantine(<T3Modal symbol="VEQT" entries={ENTRIES} onChange={noop} onClose={noop} />);
     expect(screen.getByText("T3 Slips — VEQT")).toBeInTheDocument();
-    expect(screen.getByLabelText("Box 21 for row 1")).toHaveValue("$120");
+    expect(screen.getByLabelText("Phantom for row 1")).toHaveValue("$120");
     expect(screen.getByLabelText("Box 42 for row 2")).toHaveValue("$50");
   });
 
@@ -39,7 +39,7 @@ describe("T3Modal", () => {
     await user.click(screen.getByRole("button", { name: "+ Add year" }));
     expect(onChange).toHaveBeenCalledWith([
       ...ENTRIES,
-      { year: new Date().getFullYear() - 1, box21: 0, box42: 0 },
+      { year: new Date().getFullYear() - 1, phantom: 0, box42: 0 },
     ]);
   });
 
@@ -59,13 +59,13 @@ describe("T3Modal", () => {
     renderWithMantine(
       <T3Modal
         symbol="VEQT"
-        entries={[{ year: 2024, box21: 0, box42: 0 }]}
+        entries={[{ year: 2024, phantom: 0, box42: 0 }]}
         onChange={onChange}
         onClose={noop}
       />,
     );
-    await user.type(screen.getByLabelText("Box 21 for row 1"), "5");
-    expect(onChange).toHaveBeenLastCalledWith([{ year: 2024, box21: 5, box42: 0 }]);
+    await user.type(screen.getByLabelText("Phantom for row 1"), "5");
+    expect(onChange).toHaveBeenLastCalledWith([{ year: 2024, phantom: 5, box42: 0 }]);
   });
 
   it("calls onClose from the Close button", async () => {

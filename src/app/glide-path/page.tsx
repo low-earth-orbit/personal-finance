@@ -5,7 +5,7 @@ import GlidePathApp from "@/components/glide-path/GlidePathApp";
 import Methodology from "@/components/glide-path/Methodology";
 
 export const metadata: Metadata = {
-  title: "Lifetime Allocation (Glide Path)",
+  title: "Lifetime Allocation",
   description: "Find your optimal stock allocation across your lifetime.",
 };
 
@@ -13,7 +13,7 @@ export default function GlidePathPage() {
   return (
     <>
       <Header
-        title="Lifetime Allocation (Glide Path)"
+        title="Lifetime Allocation"
         subtitle="Find your optimal stock allocation across your lifetime."
         showHomeLink
       />
