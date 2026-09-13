@@ -1875,3 +1875,47 @@ describe("computeYearlyACB with dated adjustments", () => {
     expect(snapshots.at(-1)).toMatchObject({ endShares: 10, costBasis: 0 });
   });
 });
+
+describe("broker-scoped overrides end-to-end (Main wiring)", () => {
+  // Mirrors Main.tsx: group → mark via overrideKey → regroup → filter.
+  const txs: AcbTransaction[] = [
+    {
+      symbol: "VCN",
+      quantity: 10,
+      price: 69.78,
+      type: "buy",
+      date: "2026-04-17",
+      broker: "ibkr",
+      accountId: "U1",
+      accountType: "",
+    },
+    {
+      symbol: "VEQT",
+      quantity: 10,
+      price: 57.71,
+      type: "buy",
+      date: "2026-04-17",
+      broker: "ibkr",
+      accountId: "U2",
+      accountType: "",
+    },
+  ];
+  const isReg = (tx: AcbTransaction, overrides?: AccountRegistrationOverrides): boolean =>
+    resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", overrides, tx.broker);
+
+  it("marking one sub-account excludes only its transactions", () => {
+    expect(
+      txs
+        .filter((tx) => !isReg(tx, {}))
+        .map((tx) => tx.symbol)
+        .sort(),
+    ).toEqual(["VCN", "VEQT"]);
+    const overrides: AccountRegistrationOverrides = {
+      [overrideKey("ibkr", "U1")]: "registered",
+    };
+    const groups = groupByAccount(txs, overrides);
+    expect(groups.find((g) => g.accountId === "U1")?.isRegistered).toBe(true);
+    expect(groups.find((g) => g.accountId === "U2")?.isRegistered).toBe(false);
+    expect(txs.filter((tx) => !isReg(tx, overrides)).map((tx) => tx.symbol)).toEqual(["VEQT"]);
+  });
+});

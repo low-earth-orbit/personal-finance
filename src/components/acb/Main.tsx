@@ -158,7 +158,7 @@ const Main = () => {
   const showBroker = new Set(loadedFiles.map(fileBroker)).size > 1;
 
   function isRegisteredTransaction(tx: AcbTransaction): boolean {
-    return resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", accountOverrides);
+    return resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", accountOverrides, tx.broker);
   }
 
   // Pool across ALL uploaded brokerages and accounts: the CRA identical-property
