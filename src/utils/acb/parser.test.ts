@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  adjustedMeta,
   applyAdjustments,
   applyT3Adjustment,
+  buildAllDatedAdjustments,
+  buildDatedAdjustments,
+  computeAdjustedHoldings,
   computeHoldings,
   computeMarginInterest,
   computeYearlyACB,
@@ -15,8 +19,11 @@ import {
   parseWealthsimpleCsv,
   resolveRegistered,
   sumOpeningLot,
+  symbolsWithMixedCurrencies,
   t3NetAdjustment,
   transferLotsForSymbol,
+  overrideKey,
+  type AccountRegistrationOverrides,
   type AcbTransaction,
 } from "./parser";
 import { readSheetRows } from "./xlsx";
@@ -900,6 +907,67 @@ describe("computeHoldings", () => {
       },
     ]);
   });
+
+  it("sorts out-of-order input by date before accumulating", () => {
+    // Sorted: buy Jan 10 @ $20 → sell Mar 10 (all gone) → buy Jun 10 @ $10.
+    // Without the internal sort the March sell would allocate over June's buy.
+    const holdings = computeHoldings([
+      { ...tx("VEQT", 10, 10, "buy"), date: "2024-06-01" },
+      { ...tx("VEQT", 10, 20, "buy"), date: "2024-01-01" },
+      { ...tx("VEQT", 10, 0, "sell"), date: "2024-03-01" },
+    ]);
+    expect(holdings).toEqual([
+      {
+        symbol: "VEQT",
+        shares: 10,
+        costBasis: 100,
+        acbPerShare: 10,
+        transferredShares: 0,
+      },
+    ]);
+  });
+
+  it("returns null ACB for transfer-only shares (opening ACB not yet entered)", () => {
+    const holdings = computeHoldings([tx("VEQT", 5, 0, "transfer")]);
+    expect(holdings).toEqual([
+      {
+        symbol: "VEQT",
+        shares: 5,
+        costBasis: 0,
+        acbPerShare: null,
+        transferredShares: 5,
+      },
+    ]);
+  });
+
+  it("clamps sales exceeding recorded purchases at zero instead of going negative", () => {
+    const holdings = computeHoldings([tx("VEQT", 10, 40, "buy"), tx("VEQT", 15, 60, "sell")]);
+    expect(holdings).toEqual([
+      {
+        symbol: "VEQT",
+        shares: 0,
+        costBasis: 0,
+        acbPerShare: null,
+        transferredShares: 0,
+      },
+    ]);
+  });
+
+  it("clamps transfer-out legs at zero shares without touching the pool", () => {
+    // The out-leg's cost treatment is unknowable here (internal move vs an
+    // account outside the uploads), so shares floor at zero and the pool —
+    // stranded on a hidden row — is left for the user to reconcile.
+    const holdings = computeHoldings([tx("VEQT", 10, 40, "buy"), tx("VEQT", -15, 0, "transfer")]);
+    expect(holdings).toEqual([
+      {
+        symbol: "VEQT",
+        shares: 0,
+        costBasis: 400,
+        acbPerShare: null,
+        transferredShares: -15,
+      },
+    ]);
+  });
 });
 
 describe("applyT3Adjustment", () => {
@@ -1141,6 +1209,36 @@ describe("groupByAccount", () => {
     expect(registeredById.get("U123")).toBe(true);
     expect(registeredById.get("U456")).toBe(false);
   });
+
+  it("keeps the same account in different brokerages separate", () => {
+    const ws: AcbTransaction = { ...tx("acc1", "non-registered"), broker: "wealthsimple" };
+    const qt: AcbTransaction = { ...tx("acc1", "non-registered"), broker: "questrade" };
+    const groups = groupByAccount([ws, qt]);
+    expect(groups).toHaveLength(2);
+    expect(groups.map((g) => g.broker).sort()).toEqual(["questrade", "wealthsimple"]);
+  });
+
+  it("records the source brokerage on each group", () => {
+    const groups = groupByAccount([{ ...tx("acc1", "non-registered"), broker: "ibkr" }]);
+    expect(groups[0].broker).toBe("ibkr");
+  });
+
+  it("keeps apart accounts whose IDs contain spaces", () => {
+    // Space-joined keys would collide as "a b c d"; NUL-joined keys do not.
+    const groups = groupByAccount([tx("a b", "c d"), tx("a", "b c d")]);
+    expect(groups).toHaveLength(2);
+  });
+
+  it("scopes overrides by brokerage for identical account IDs", () => {
+    const ws = { ...tx("acc1", ""), broker: "wealthsimple" } as AcbTransaction;
+    const qt = { ...tx("acc1", ""), broker: "questrade" } as AcbTransaction;
+    const groups = groupByAccount([ws, qt], {
+      [overrideKey("wealthsimple", "acc1")]: "registered",
+    });
+    const byBroker = new Map(groups.map((g) => [g.broker, g.isRegistered]));
+    expect(byBroker.get("wealthsimple")).toBe(true);
+    expect(byBroker.get("questrade")).toBe(false);
+  });
 });
 
 describe("resolveRegistered", () => {
@@ -1155,6 +1253,45 @@ describe("resolveRegistered", () => {
   it("falls back to account type regex without an override", () => {
     expect(resolveRegistered("acc1", "Registered Retirement Savings Plan")).toBe(true);
     expect(resolveRegistered("acc2", "")).toBe(false);
+  });
+
+  it("excludes RESP/RRIF/RDSP/LIRA-family/PRPP accounts", () => {
+    for (const accountType of [
+      "RESP",
+      "RRIF",
+      "RDSP",
+      "LIRA",
+      "LIF",
+      "LRSP",
+      "Locked-In Retirement Account",
+      "PRPP",
+      "Group RRSP",
+    ]) {
+      expect(resolveRegistered("acc1", accountType)).toBe(true);
+    }
+  });
+
+  it("still pools taxable Cash/Margin/Individual/Trust accounts", () => {
+    for (const accountType of [
+      "Cash",
+      "Margin",
+      "Individual",
+      "Joint",
+      "Trust",
+      "non-registered",
+      "",
+    ]) {
+      expect(resolveRegistered("acc1", accountType)).toBe(false);
+    }
+  });
+
+  it("scopes overrides by brokerage", () => {
+    const overrides: AccountRegistrationOverrides = {
+      [overrideKey("ibkr", "U123")]: "registered",
+    };
+    expect(resolveRegistered("U123", "", overrides, "ibkr")).toBe(true);
+    expect(resolveRegistered("U123", "", overrides, "questrade")).toBe(false);
+    expect(resolveRegistered("U123", "", overrides)).toBe(false);
   });
 });
 
@@ -1272,6 +1409,14 @@ describe("computeYearlyACB", () => {
       costBasis: 400,
       acbPerShare: 400 / 15,
     });
+  });
+
+  it("clamps transfer-out legs at zero shares", () => {
+    const snapshots = computeYearlyACB(
+      [tx("2024-01-02", 10, 40, "buy"), tx("2024-06-01", -15, 0, "transfer")],
+      "VEQT",
+    );
+    expect(snapshots[0]).toMatchObject({ endShares: 0, costBasis: 400 });
   });
 
   it("groups rows without a parseable date under year 0 (Unknown)", () => {
@@ -1411,6 +1556,18 @@ describe("transferLotsForSymbol", () => {
       { date: "", quantity: 7 },
     ]);
   });
+
+  it("skips non-positive legs (transfer-outs of internal moves carry no opening cost)", () => {
+    const lots = transferLotsForSymbol(
+      [
+        tx("XEQT", 10, "transfer", "2024-01-01"),
+        tx("XEQT", -10, "transfer", "2024-01-02"),
+        tx("XEQT", 0, "transfer", "2024-01-03"),
+      ],
+      "XEQT",
+    );
+    expect(lots).toEqual([{ date: "2024-01-01", quantity: 10 }]);
+  });
 });
 
 describe("sumOpeningLot", () => {
@@ -1421,5 +1578,300 @@ describe("sumOpeningLot", () => {
   it("treats undefined and sparse entries as zero", () => {
     expect(sumOpeningLot(undefined)).toBe(0);
     expect(sumOpeningLot([1000, 0, 500])).toBe(1500);
+  });
+});
+
+describe("symbolsWithMixedCurrencies", () => {
+  const tx = (symbol: string, currency?: string): AcbTransaction => ({
+    symbol,
+    quantity: 1,
+    price: 10,
+    type: "buy",
+    ...(currency !== undefined ? { currency } : {}),
+  });
+
+  it("returns an empty list when every symbol is single-currency", () => {
+    expect(symbolsWithMixedCurrencies([])).toEqual([]);
+    expect(symbolsWithMixedCurrencies([tx("VEQT", "CAD"), tx("VEQT"), tx("VTI", "USD")])).toEqual(
+      [],
+    );
+  });
+
+  it("names only the symbols spanning more than one currency", () => {
+    expect(
+      symbolsWithMixedCurrencies([
+        tx("VEQT", "CAD"),
+        tx("AAPL", "USD"),
+        tx("AAPL", "CAD"),
+        tx("XEQT", "CAD"),
+      ]),
+    ).toEqual(["AAPL"]);
+  });
+});
+
+describe("buildDatedAdjustments", () => {
+  it("pairs lots with opening ACBs by position and folds T3 nets to Dec 31", () => {
+    expect(
+      buildDatedAdjustments(
+        [
+          { date: "2023-01-15", quantity: 100 },
+          { date: "2024-03-02", quantity: 50 },
+        ],
+        [9000, 0],
+        [
+          { year: 2023, phantom: 150, box42: 0 },
+          { year: 2024, phantom: 0, box42: 0 },
+        ],
+      ),
+    ).toEqual([
+      { date: "2023-01-15", amount: 9000 },
+      { date: "2023-12-31", amount: 150 },
+    ]);
+  });
+
+  it("treats missing entries as zero and skips zero amounts", () => {
+    expect(buildDatedAdjustments([{ date: "", quantity: 7 }], undefined, [])).toEqual([]);
+  });
+});
+
+describe("buildAllDatedAdjustments", () => {
+  it("builds per-symbol adjustments from lots, opening ACBs, and T3 slips", () => {
+    const txs: AcbTransaction[] = [
+      { symbol: "XEQT", quantity: 10, price: 30, type: "transfer", date: "2023-01-01" },
+      { symbol: "VEQT", quantity: 10, price: 40, type: "buy", date: "2023-01-01" },
+    ];
+    expect(
+      buildAllDatedAdjustments(
+        txs,
+        { XEQT: [200] },
+        { VEQT: [{ year: 2023, phantom: 50, box42: 10 }] },
+      ),
+    ).toEqual({
+      XEQT: [{ date: "2023-01-01", amount: 200 }],
+      VEQT: [{ date: "2023-12-31", amount: 40 }],
+    });
+  });
+});
+
+describe("computeAdjustedHoldings", () => {
+  const buy = (
+    symbol: string,
+    quantity: number,
+    price: number,
+    date: string,
+    extra?: Partial<AcbTransaction>,
+  ): AcbTransaction => ({ symbol, quantity, price, type: "buy", date, ...extra });
+
+  it("pools the same ticker across accounts and brokerages", () => {
+    const holdings = computeAdjustedHoldings([
+      buy("VEQT", 10, 40, "2023-01-01", { accountId: "A", broker: "wealthsimple" }),
+      buy("VEQT", 10, 50, "2023-02-01", { accountId: "B", broker: "questrade" }),
+    ]);
+    expect(holdings).toHaveLength(1);
+    expect(holdings[0]).toMatchObject({
+      symbol: "VEQT",
+      shares: 20,
+      costBasis: 900,
+      acbPerShare: 45,
+      oversold: false,
+      deemedGain: 0,
+    });
+  });
+
+  it("applies transfer opening costs on the lot date, before later sells", () => {
+    // Transfer 10 + buy 10 @ $40, then sell half. Opening $100 belongs to the
+    // pre-sale pool: (100 + 400) / 20 × 10 = $250. An end lump sum would give $300.
+    const txs: AcbTransaction[] = [
+      { symbol: "X", quantity: 10, price: 0, type: "transfer", date: "2023-01-01" },
+      buy("X", 10, 40, "2023-02-01"),
+      { symbol: "X", quantity: 10, price: 60, type: "sell", date: "2023-03-01" },
+    ];
+    const holdings = computeAdjustedHoldings(txs, {
+      X: [{ date: "2023-01-01", amount: 100 }],
+    });
+    expect(holdings[0]).toMatchObject({ shares: 10, costBasis: 250, acbPerShare: 25 });
+  });
+
+  it("applies T3 nets on Dec 31 so later sells allocate over the adjusted pool", () => {
+    // Buy 10 @ $40, +$20 phantom in 2023, sell 5 in 2024: (400 + 20) / 2 = $210.
+    // An end lump sum would give $200 + $20 = $220.
+    const txs: AcbTransaction[] = [
+      buy("Y", 10, 40, "2023-01-01"),
+      { symbol: "Y", quantity: 5, price: 60, type: "sell", date: "2024-06-01" },
+    ];
+    const holdings = computeAdjustedHoldings(txs, {
+      Y: [{ date: "2023-12-31", amount: 20 }],
+    });
+    expect(holdings[0]).toMatchObject({ shares: 5, costBasis: 210, acbPerShare: 42 });
+  });
+
+  it("settles same-day transactions before adjustments", () => {
+    const txs: AcbTransaction[] = [buy("Y", 10, 40, "2023-01-01")];
+    const holdings = computeAdjustedHoldings(txs, {
+      Y: [{ date: "2023-01-01", amount: 20 }],
+    });
+    expect(holdings[0]).toMatchObject({ shares: 10, costBasis: 420 });
+  });
+
+  it("deems ROC below zero a capital gain attributed to that year", () => {
+    const holdings = computeAdjustedHoldings([buy("Z", 10, 40, "2023-01-01")], {
+      Z: [{ date: "2024-12-31", amount: -500 }],
+    });
+    expect(holdings[0]).toMatchObject({
+      shares: 10,
+      costBasis: 0,
+      acbPerShare: 0,
+      oversold: false,
+      deemedGain: 100,
+      deemedGainByYear: { 2024: 100 },
+    });
+  });
+
+  it("flags sales exceeding recorded purchases and resets the pool", () => {
+    const holdings = computeAdjustedHoldings([
+      buy("W", 10, 40, "2023-01-01"),
+      { symbol: "W", quantity: 15, price: 50, type: "sell", date: "2023-02-01" },
+    ]);
+    expect(holdings[0]).toMatchObject({
+      shares: 0,
+      costBasis: 0,
+      acbPerShare: null,
+      oversold: true,
+      deemedGain: 0,
+    });
+  });
+
+  it("keeps the oversold flag when shares are rebuilt by later buys", () => {
+    const holdings = computeAdjustedHoldings([
+      buy("W", 10, 40, "2023-01-01"),
+      { symbol: "W", quantity: 15, price: 50, type: "sell", date: "2023-02-01" },
+      buy("W", 10, 40, "2023-03-01"),
+    ]);
+    expect(holdings[0]).toMatchObject({ shares: 10, costBasis: 400, oversold: true });
+  });
+
+  it("returns null ACB for transfer-only shares with no opening cost yet", () => {
+    const holdings = computeAdjustedHoldings([
+      { symbol: "V", quantity: 5, price: 0, type: "transfer", date: "2023-01-01" },
+    ]);
+    expect(holdings[0]).toMatchObject({ shares: 5, costBasis: 0, acbPerShare: null });
+  });
+
+  it("settles same-day transactions before adjustments", () => {
+    // A Dec-31 sale and a Dec-31 phantom: the sale allocates over the
+    // pre-phantom pool, then the phantom joins the survivors.
+    const txs: AcbTransaction[] = [
+      buy("Y", 10, 40, "2023-01-01"),
+      { symbol: "Y", quantity: 5, price: 60, type: "sell", date: "2024-12-31" },
+    ];
+    const holdings = computeAdjustedHoldings(txs, {
+      Y: [{ date: "2024-12-31", amount: 20 }],
+    });
+    expect(holdings[0]).toMatchObject({ shares: 5, costBasis: 220, acbPerShare: 44 });
+  });
+
+  it("clamps transfer-out legs at zero shares and flags missing history", () => {
+    const holdings = computeAdjustedHoldings([
+      buy("W", 10, 40, "2023-01-01"),
+      { symbol: "W", quantity: -15, price: 0, type: "transfer", date: "2023-02-01" },
+    ]);
+    expect(holdings[0]).toMatchObject({ shares: 0, oversold: true });
+  });
+
+  it("withholds deemed gains while transfer opening costs are unentered", () => {
+    const txs: AcbTransaction[] = [
+      { symbol: "X", quantity: 10, price: 0, type: "transfer", date: "2023-01-01" },
+      buy("X", 10, 40, "2023-02-01"),
+    ];
+    const dated = { X: [{ date: "2024-12-31", amount: -500 }] };
+    // Full basis known: $400 pool − $500 ROC → $100 deemed gain.
+    expect(computeAdjustedHoldings(txs, dated)[0]).toMatchObject({ costBasis: 0, deemedGain: 100 });
+    // Opening ACB still missing: clamp, but assert no gain the basis may erase.
+    expect(
+      computeAdjustedHoldings(txs, dated, { incompleteSymbols: new Set(["X"]) })[0],
+    ).toMatchObject({ costBasis: 0, deemedGain: 0, deemedGainByYear: {} });
+  });
+
+  it("withholds deemed gains on zero-share (stale-entry) positions", () => {
+    const txs: AcbTransaction[] = [
+      buy("Z", 10, 40, "2023-01-01"),
+      { symbol: "Z", quantity: 10, price: 60, type: "sell", date: "2024-06-01" },
+    ];
+    const holdings = computeAdjustedHoldings(txs, {
+      Z: [{ date: "2024-12-31", amount: -50 }],
+    });
+    expect(holdings[0]).toMatchObject({ shares: 0, costBasis: 0, deemedGain: 0 });
+  });
+});
+
+describe("adjustedMeta", () => {
+  it("returns zeros for raw computeHoldings rows", () => {
+    const [holding] = computeHoldings([{ symbol: "VEQT", quantity: 10, price: 40, type: "buy" }]);
+    expect(adjustedMeta(holding)).toEqual({ oversold: false, deemedGain: 0, deemedGainByYear: {} });
+  });
+
+  it("passes through computeAdjustedHoldings flags", () => {
+    const [holding] = computeAdjustedHoldings(
+      [{ symbol: "VEQT", quantity: 10, price: 40, type: "buy", date: "2023-01-01" }],
+      { VEQT: [{ date: "2024-12-31", amount: -500 }] },
+    );
+    expect(adjustedMeta(holding)).toEqual({
+      oversold: false,
+      deemedGain: 100,
+      deemedGainByYear: { 2024: 100 },
+    });
+  });
+});
+
+describe("computeYearlyACB with dated adjustments", () => {
+  const tx = (
+    date: string,
+    quantity: number,
+    price: number,
+    type: AcbTransaction["type"],
+  ): AcbTransaction => ({ symbol: "VEQT", quantity, price, type, date });
+
+  it("folds adjustments into their year's snapshot so the end ties to holdings", () => {
+    const txs = [tx("2023-01-01", 10, 40, "buy"), tx("2024-06-01", 5, 60, "sell")];
+    const dated = [{ date: "2023-12-31", amount: 20 }];
+    const snapshots = computeYearlyACB(txs, "VEQT", dated);
+    expect(snapshots).toEqual([
+      {
+        year: 2023,
+        buyQty: 10,
+        sellQty: 0,
+        endShares: 10,
+        costBasis: 420,
+        acbPerShare: 42,
+      },
+      {
+        year: 2024,
+        buyQty: 0,
+        sellQty: 5,
+        endShares: 5,
+        costBasis: 210,
+        acbPerShare: 42,
+      },
+    ]);
+    const [holding] = computeAdjustedHoldings(txs, { VEQT: dated });
+    expect(snapshots.at(-1)).toMatchObject({
+      endShares: holding.shares,
+      costBasis: holding.costBasis,
+    });
+  });
+
+  it("emits an adjustment-only year with no buy/sell quantities", () => {
+    const snapshots = computeYearlyACB([tx("2023-01-01", 10, 40, "buy")], "VEQT", [
+      { date: "2025-12-31", amount: -50 },
+    ]);
+    expect(snapshots.map((s) => s.year)).toEqual([2023, 2025]);
+    expect(snapshots[1]).toMatchObject({ buyQty: 0, sellQty: 0, endShares: 10, costBasis: 350 });
+  });
+
+  it("clamps ROC below zero at zero like the holdings view", () => {
+    const snapshots = computeYearlyACB([tx("2023-01-01", 10, 40, "buy")], "VEQT", [
+      { date: "2024-12-31", amount: -500 },
+    ]);
+    expect(snapshots.at(-1)).toMatchObject({ endShares: 10, costBasis: 0 });
   });
 });

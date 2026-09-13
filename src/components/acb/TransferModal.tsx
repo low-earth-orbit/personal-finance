@@ -1,4 +1,4 @@
-import { Button, Group, Modal, NumberInput, Stack, Table, Text } from "@mantine/core";
+import { Alert, Button, Group, Modal, NumberInput, Stack, Table, Text } from "@mantine/core";
 import { sumOpeningLot, type TransferLot } from "@/utils/acb/parser";
 import { formatCADDecimal } from "@/utils/format";
 
@@ -45,6 +45,13 @@ const TransferModal = ({ symbol, lots, acbs, onChange, onClose }: TransferModalP
           transferred lot — the share count and date are shown to help you match each lot to your
           records.
         </Text>
+        <Alert color="yellow" title="Only outside transfers need an ACB">
+          <Text size="sm">
+            Enter a cost only for shares transferred in from outside these uploads. For moves
+            between your own uploaded accounts, leave $0 — their cost is already in the pool, and
+            entering it again would double-count.
+          </Text>
+        </Alert>
         {lots.length > 0 ? (
           <Table>
             <Table.Thead>

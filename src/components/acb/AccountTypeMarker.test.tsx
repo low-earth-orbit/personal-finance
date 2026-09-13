@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { renderWithMantine, screen } from "@/test-utils";
+import { overrideKey } from "@/utils/acb/parser";
 import AccountTypeMarker from "./AccountTypeMarker";
 
 describe("AccountTypeMarker", () => {
@@ -33,5 +34,27 @@ describe("AccountTypeMarker", () => {
     expect(screen.getByText("RSP1")).toBeInTheDocument();
     expect(screen.getByText("Registered (detected)")).toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: "Registered" })).toBeNull();
+  });
+
+  it("scopes override markings by brokerage and labels the broker", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    renderWithMantine(
+      <AccountTypeMarker
+        accounts={[
+          { accountId: "U123", accountType: "", broker: "ibkr", detectedRegistered: false },
+        ]}
+        overrides={{}}
+        onChange={onChange}
+        showBroker
+        brokerLabels={{ ibkr: "IBKR" }}
+      />,
+    );
+
+    expect(screen.getByText("IBKR · U123")).toBeInTheDocument();
+    await user.click(screen.getByText("Registered"));
+
+    expect(onChange).toHaveBeenCalledWith(overrideKey("ibkr", "U123"), "registered");
   });
 });
