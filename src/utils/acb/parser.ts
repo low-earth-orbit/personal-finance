@@ -45,12 +45,21 @@ export type AcbTransaction = {
   broker?: "wealthsimple" | "questrade" | "ibkr";
 };
 
-/** One T3 slip's ACB-relevant boxes for a single tax year. */
+/** One T3 slip's ACB-relevant amounts for a single tax year. */
 export type T3Entry = {
   /** Tax year, e.g. 2024. */
   year: number;
-  /** Box 21 — Capital Gains Distributions. Adds to ACB. */
-  box21: number;
+  /**
+   * Phantom / reinvested (non-cash) distributions. Adds to ACB.
+   *
+   * This is NOT the full T3 Box 21 amount: Box 21 lumps cash and
+   * reinvested capital gains together, while only the reinvested
+   * (phantom) portion — non-cash units you were taxed on but never
+   * received — increases ACB. Get it from the fund's year-end
+   * breakdown as reinvested $/unit × units held on record date.
+   * For many equity ETFs Box 21 happens to equal phantom, but verify.
+   */
+  phantom: number;
   /** Box 42 — Amount Resulting in Cost Base Adjustment (ROC). Subtracts from ACB. */
   box42: number;
 };
@@ -70,13 +79,17 @@ export type TransferLot = {
  * The transfer lots for one symbol, in chronological (CSV) order. Each lot is a
  * single `transfer` row the user must supply an opening ACB for. The user can't
  * aggregate multiple transfers themselves, so the UI shows one row per lot.
+ *
+ * Only positive-quantity (transfer-in) legs are lots: transfer-out legs from an
+ * internal account-to-account move carry no opening cost of their own, and
+ * prompting for one would double-count the cost entered against the in-leg.
  */
 export function transferLotsForSymbol(
   transactions: AcbTransaction[],
   symbol: string,
 ): TransferLot[] {
   return transactions
-    .filter((tx) => tx.symbol === symbol && tx.type === "transfer")
+    .filter((tx) => tx.symbol === symbol && tx.type === "transfer" && tx.quantity > 0)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))
     .map((tx) => ({ date: tx.date ?? "", quantity: tx.quantity }));
 }
@@ -95,21 +108,43 @@ export function sumOpeningLot(acbs: number[] | undefined): number {
 
 export type AccountRegistrationOverrides = Record<string, "registered" | "nonRegistered">;
 
-/** Resolve registered-account status from user override first, then parser account type. */
+/** Collision-proof composite key (ids/types may contain spaces). */
+function keyParts(...parts: (string | undefined)[]): string {
+  return parts.map((part) => part ?? "").join("");
+}
+
+/**
+ * Override-map key for one account: broker-scoped when the brokerage is known
+ * so identical account IDs at different brokerages never share a marking,
+ * plain `accountId` for brokerless (hand-built) rows.
+ */
+export function overrideKey(broker: AcbTransaction["broker"], accountId: string): string {
+  return broker === undefined ? accountId : keyParts(broker, accountId);
+}
+
+/**
+ * Resolve registered-account status from user override first, then parser
+ * account type. Covers TFSA/RRSP/FHSA/RESP/RRIF/RDSP/LIRA-family/PRPP (and the
+ * IBKR RRSP long name). Taxable labels such as Cash, Margin, Individual, or
+ * Trust must not match — keep additions specific.
+ */
 export function resolveRegistered(
   accountId: string,
   accountType: string,
   overrides?: AccountRegistrationOverrides,
+  broker?: AcbTransaction["broker"],
 ): boolean {
-  if (overrides && accountId in overrides) {
-    return overrides[accountId] === "registered";
+  if (overrides && overrideKey(broker, accountId) in overrides) {
+    return overrides[overrideKey(broker, accountId)] === "registered";
   }
-  return /tfsa|rrsp|fhsa|registered retirement savings plan/i.test(accountType);
+  return /tfsa|rrsp|fhsa|rrif|resp|rdsp|lira|lif|lrsp|rlsp|locked[ -]?in|prpp|registered retirement savings plan/i.test(
+    accountType,
+  );
 }
 
-/** Net ACB adjustment across all years: sum(box21) − sum(box42). */
+/** Net ACB adjustment across all years: sum(phantom) − sum(box42). */
 export function t3NetAdjustment(entries: T3Entry[]): number {
-  return entries.reduce((sum, entry) => sum + entry.box21 - entry.box42, 0);
+  return entries.reduce((sum, entry) => sum + entry.phantom - entry.box42, 0);
 }
 
 export type Holding = {
@@ -446,6 +481,41 @@ export function hasMixedCurrencies(transactions: AcbTransaction[]): boolean {
 }
 
 /**
+ * Symbols whose transactions span more than one currency (missing = CAD),
+ * sorted alphabetically. Pooling those holdings without per-transaction FX
+ * conversion is wrong, so callers should warn per symbol. Empty when every
+ * symbol is single-currency (even if different symbols use different
+ * currencies — that is fine, each pool is single-currency).
+ */
+export function symbolsWithMixedCurrencies(transactions: AcbTransaction[]): string[] {
+  const bySymbol = new Map<string, Set<string>>();
+  for (const tx of transactions) {
+    if (!tx.symbol) continue;
+    let currencies = bySymbol.get(tx.symbol);
+    if (!currencies) {
+      currencies = new Set<string>();
+      bySymbol.set(tx.symbol, currencies);
+    }
+    currencies.add(tx.currency ?? "CAD");
+  }
+  return [...bySymbol.entries()]
+    .filter(([, currencies]) => currencies.size > 1)
+    .map(([symbol]) => symbol)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+/** Calendar year parsed from an ISO date string; 0 when absent or unparseable. */
+function parseYear(date: string | undefined): number {
+  const year = Number((date ?? "").slice(0, 4));
+  return Number.isInteger(year) && year > 0 ? year : 0;
+}
+
+/** Stable chronological sort by ISO date; "" (unknown) sorts first. */
+function sortByDate<T extends { date?: string }>(items: readonly T[]): T[] {
+  return [...items].sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+}
+
+/**
  * True when any two files have overlapping transaction date ranges for the
  * same `(accountId, accountType)` account — a sign the same transactions may
  * appear in more than one upload. Files covering different accounts never
@@ -460,7 +530,7 @@ export function detectOverlappingFiles(fileTransactions: AcbTransaction[][]): bo
     for (const tx of transactions) {
       const date = tx.date ?? "";
       if (date === "") continue;
-      const key = `${tx.accountId ?? ""} ${tx.accountType ?? ""}`;
+      const key = keyParts(tx.accountId ?? "", tx.accountType ?? "");
       const range = ranges.get(key);
       if (!range) {
         ranges.set(key, { min: date, max: date });
@@ -499,7 +569,9 @@ export function computeHoldings(transactions: AcbTransaction[]): Holding[] {
     string,
     { shares: number; costBasis: number; transferredShares: number }
   >();
-  for (const tx of transactions) {
+  // Order matters (interim sells lock in the average of earlier buys), so sort
+  // here rather than relying on callers.
+  for (const tx of sortByDate(transactions)) {
     // Dividends never touch ACB; interest charges never touch holdings.
     if (tx.type === "dividend" || tx.type === "interest") continue;
     const entry = bySymbol.get(tx.symbol) ?? {
@@ -513,14 +585,22 @@ export function computeHoldings(transactions: AcbTransaction[]): Holding[] {
     } else if (tx.type === "transfer") {
       // Transferred-in shares carry no purchase history: count the shares but
       // leave the cost basis pool unchanged. The user supplies an opening lot
-      // ACB in the UI.
-      entry.shares += tx.quantity;
+      // ACB in the UI. Transfer-out legs (negative qty) only reduce shares;
+      // the pool is left alone — see the time-ordered ledger for why
+      // pro-rata removal is not inferred — and clamped at zero.
+      entry.shares = Math.max(0, entry.shares + tx.quantity);
       entry.transferredShares += tx.quantity;
+    } else if (entry.shares <= 0 || tx.quantity >= entry.shares) {
+      // Selling everything empties the pool; selling more than recorded means
+      // purchase history is missing. Clamp at zero instead of letting shares
+      // or the pool go negative.
+      entry.shares = Math.max(0, entry.shares - tx.quantity);
+      entry.costBasis = 0;
     } else {
       // CRA rule: sell reduces pool pro-rata so ACB/share is unchanged.
       // remaining_pool = pool × (shares_before - sold) / shares_before
       const sharesAfter = entry.shares - tx.quantity;
-      entry.costBasis = entry.shares > 0 ? entry.costBasis * (sharesAfter / entry.shares) : 0;
+      entry.costBasis = entry.costBasis * (sharesAfter / entry.shares);
       entry.shares = sharesAfter;
     }
     bySymbol.set(tx.symbol, entry);
@@ -532,11 +612,23 @@ export function computeHoldings(transactions: AcbTransaction[]): Holding[] {
         symbol,
         shares,
         costBasis,
-        acbPerShare: shares > 0 ? costBasis / shares : null,
+        acbPerShare: acbPerShare(shares, costBasis, transferredShares),
         transferredShares,
       }),
     )
     .sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+/**
+ * ACB per share for a finished pool: null when no shares remain. A pool at
+ * zero with uncosted transferred shares is unknown (null), not $0 — the user
+ * hasn't entered the opening-lot ACB yet. A zero pool with no transfers (ROC
+ * exactly offsetting cost) is genuinely $0/share.
+ */
+function acbPerShare(shares: number, costBasis: number, transferredShares: number): number | null {
+  if (shares <= 0) return null;
+  if (costBasis > 0) return costBasis / shares;
+  return transferredShares > 0 ? null : 0;
 }
 
 /**
@@ -551,7 +643,7 @@ export function applyT3Adjustment(holding: Holding, roc: number): Holding {
 /**
  * Apply UI-layer cost basis adjustments to a holding:
  * - `openingLot`: total cost basis for transferred-in shares (added first)
- * - `t3Net`: net T3 adjustment, `sum(box 21) − sum(box 42)` — positive adds
+ * - `t3Net`: net T3 adjustment, `sum(phantom) − sum(box 42)` — positive adds
  *   to the pool, negative subtracts (combined result clamped at zero)
  */
 export function applyAdjustments(holding: Holding, openingLot: number, t3Net: number): Holding {
@@ -559,7 +651,217 @@ export function applyAdjustments(holding: Holding, openingLot: number, t3Net: nu
   return {
     ...holding,
     costBasis,
-    acbPerShare: holding.shares > 0 ? costBasis / holding.shares : null,
+    acbPerShare: acbPerShare(holding.shares, costBasis, holding.transferredShares),
+  };
+}
+
+/** One dated ACB adjustment: an opening-lot cost or a T3 net amount. */
+export type DatedAdjustment = {
+  /** ISO date the adjustment takes effect (T3 entries: Dec 31 of the tax year). */
+  date: string;
+  /** Signed amount: positive adds to the pool (phantom/opening), negative subtracts (ROC). */
+  amount: number;
+};
+
+/** Dated adjustments keyed by symbol, for `computeAdjustedHoldings`. */
+export type SymbolAdjustments = Record<string, DatedAdjustment[]>;
+
+/** A holding with time-ordered adjustments applied, plus data-quality flags. */
+export type AdjustedHolding = Holding & {
+  /** True when sales exceeded recorded purchases (missing history); pool reset to zero. */
+  oversold: boolean;
+  /** Total deemed capital gains from ROC driving the pool below zero (CRA rule). */
+  deemedGain: number;
+  /** Deemed gains attributed by calendar year. */
+  deemedGainByYear: Record<number, number>;
+};
+
+/** Sub-cent tolerance: smaller negative pools are float dust, not deemed gains. */
+const DEEMED_GAIN_EPSILON = 1e-6;
+
+/**
+ * Pair transfer lots with their per-lot opening ACBs and fold T3 nets in as
+ * Dec-31 adjustments of `phantom − box42`, sorted chronologically. Lots pair
+ * positionally with `openingAcbs` (same order as `transferLotsForSymbol`);
+ * missing entries count as zero and zero amounts emit no event.
+ */
+export function buildDatedAdjustments(
+  lots: TransferLot[],
+  openingAcbs: number[] | undefined,
+  t3Entries: T3Entry[] | undefined,
+): DatedAdjustment[] {
+  const dated: DatedAdjustment[] = [];
+  lots.forEach((lot, index) => {
+    const amount = openingAcbs?.[index] ?? 0;
+    if (amount !== 0) dated.push({ date: lot.date, amount });
+  });
+  for (const entry of t3Entries ?? []) {
+    const net = entry.phantom - entry.box42;
+    if (net !== 0) dated.push({ date: `${entry.year}-12-31`, amount: net });
+  }
+  return dated.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Dated adjustments for every symbol touched by `transactions`,
+ * `openingLotEntries`, or `t3Slips`. Pure helper so the UI builds the exact
+ * same inputs it passes to `computeAdjustedHoldings`.
+ */
+export function buildAllDatedAdjustments(
+  transactions: AcbTransaction[],
+  openingLotEntries: OpeningLotEntries,
+  t3Slips: T3Slips,
+): SymbolAdjustments {
+  const symbols = new Set<string>();
+  for (const tx of transactions) {
+    if (tx.symbol) symbols.add(tx.symbol);
+  }
+  for (const symbol of Object.keys(openingLotEntries)) symbols.add(symbol);
+  for (const symbol of Object.keys(t3Slips)) symbols.add(symbol);
+  const bySymbol: SymbolAdjustments = {};
+  for (const symbol of symbols) {
+    const dated = buildDatedAdjustments(
+      transferLotsForSymbol(transactions, symbol),
+      openingLotEntries[symbol],
+      t3Slips[symbol],
+    );
+    if (dated.length > 0) bySymbol[symbol] = dated;
+  }
+  return bySymbol;
+}
+
+/**
+ * Per-symbol holdings with dated adjustments interleaved chronologically:
+ * transfer opening costs join the pool on the lot date, T3 nets on Dec 31 of
+ * their year — so later sells allocate pro-rata over the adjusted pool (CRA
+ * Chart 1 order). Without this, adding adjustments as an end lump sum
+ * overstates the pool whenever shares were sold after the adjustment year.
+ *
+ * Two CRA edge rules live here, not in `computeHoldings`:
+ * - ROC driving the pool below zero deems the shortfall a capital gain that
+ *   year (pool reset to zero); totals surface via `deemedGainByYear`. No gain
+ *   is recorded when shares are zero (nothing held) or when transfer opening
+ *   costs are still unentered — the pool simply clamps, since a negative ACB
+ *   cannot be determined yet.
+ * - Sales exceeding recorded purchases flag `oversold` (missing history) and
+ *   reset the pool to zero instead of going negative. Transfer-out legs that
+ *   would drive shares negative flag `oversold` the same way.
+ */
+export function computeAdjustedHoldings(
+  transactions: AcbTransaction[],
+  adjustmentsBySymbol?: SymbolAdjustments,
+  options?: { incompleteSymbols?: ReadonlySet<string> },
+): AdjustedHolding[] {
+  const txsBySymbol = new Map<string, AcbTransaction[]>();
+  for (const tx of transactions) {
+    if (tx.type === "dividend" || tx.type === "interest") continue;
+    if (!tx.symbol) continue;
+    const list = txsBySymbol.get(tx.symbol) ?? [];
+    list.push(tx);
+    txsBySymbol.set(tx.symbol, list);
+  }
+
+  const holdings: AdjustedHolding[] = [];
+  for (const [symbol, txs] of txsBySymbol) {
+    type LedgerEvent = {
+      date: string;
+      txFirst: boolean;
+      tx?: AcbTransaction;
+      adj?: DatedAdjustment;
+    };
+    const events: LedgerEvent[] = [
+      ...txs.map((tx): LedgerEvent => ({ date: tx.date ?? "", txFirst: true, tx })),
+      ...(adjustmentsBySymbol?.[symbol] ?? []).map(
+        (adj): LedgerEvent => ({
+          date: adj.date,
+          txFirst: false,
+          adj,
+        }),
+      ),
+    ];
+    // Transactions settle before same-day adjustments (year-end T3 lands after
+    // any Dec-31 sale), matching CRA Chart 1 ordering.
+    events.sort((a, b) => a.date.localeCompare(b.date) || Number(!a.txFirst) - Number(!b.txFirst));
+
+    let shares = 0;
+    let costBasis = 0;
+    let transferredShares = 0;
+    let oversold = false;
+    let deemedGain = 0;
+    const deemedGainByYear: Record<number, number> = {};
+    const incomplete = options?.incompleteSymbols?.has(symbol) ?? false;
+    for (const event of events) {
+      if (event.tx) {
+        const tx = event.tx;
+        if (tx.type === "buy") {
+          shares += tx.quantity;
+          costBasis += buyCost(tx);
+        } else if (tx.type === "transfer") {
+          // No pool change (opening costs arrive as dated adjustments), but a
+          // leg that would drive shares negative signals missing history.
+          shares += tx.quantity;
+          transferredShares += tx.quantity;
+          if (shares < 0) {
+            oversold = true;
+            shares = 0;
+          }
+        } else if (shares <= 0 || tx.quantity > shares) {
+          oversold = true;
+          shares = 0;
+          costBasis = 0;
+        } else {
+          // CRA rule: sell reduces pool pro-rata so ACB/share is unchanged.
+          const sharesAfter = shares - tx.quantity;
+          costBasis = sharesAfter === 0 ? 0 : costBasis * (sharesAfter / shares);
+          shares = sharesAfter;
+        }
+      } else if (event.adj) {
+        costBasis += event.adj.amount;
+        if (costBasis < -DEEMED_GAIN_EPSILON) {
+          // A negative ACB is deemed a capital gain that year — but only when
+          // something is actually held and the basis is fully known. With zero
+          // shares (stale entry on a sold-out position) or unentered transfer
+          // costs, the shortfall proves nothing, so clamp without recording.
+          if (shares > 0 && !incomplete) {
+            const year = parseYear(event.adj.date);
+            deemedGain += -costBasis;
+            deemedGainByYear[year] = (deemedGainByYear[year] ?? 0) + -costBasis;
+          }
+          costBasis = 0;
+        } else if (costBasis < 0) {
+          costBasis = 0;
+        }
+      }
+    }
+    holdings.push({
+      symbol,
+      shares,
+      costBasis,
+      acbPerShare: acbPerShare(shares, costBasis, transferredShares),
+      transferredShares,
+      oversold,
+      deemedGain,
+      deemedGainByYear,
+    });
+  }
+  return holdings.sort((a, b) => a.symbol.localeCompare(b.symbol));
+}
+
+/**
+ * Read time-ordered metadata off a holding: full values when it came from
+ * `computeAdjustedHoldings`, zeros when it came from `computeHoldings` (raw
+ * per-account view). Isolates the cast so components stay clean.
+ */
+export function adjustedMeta(holding: Holding): {
+  oversold: boolean;
+  deemedGain: number;
+  deemedGainByYear: Record<number, number>;
+} {
+  const meta = holding as Partial<AdjustedHolding>;
+  return {
+    oversold: meta.oversold ?? false,
+    deemedGain: meta.deemedGain ?? 0,
+    deemedGainByYear: meta.deemedGainByYear ?? {},
   };
 }
 
@@ -591,21 +893,28 @@ export function computeMarginInterest(transactions: AcbTransaction[]): MarginInt
   return byYear;
 }
 
-/** Transactions belonging to one `(accountId, accountType)` pair. */
+/** Transactions belonging to one `(broker, accountId, accountType)` group. */
 export type AccountGroup = {
   /** From the `account_id` column; "" for the legacy format. */
   accountId: string;
   /** From the `account_type` column; "" for the legacy format. */
   accountType: string;
-  /** True when accountType contains "TFSA", "RRSP", "FHSA", or the IBKR RRSP long name. */
+  /** Source brokerage of the group's transactions; undefined for hand-built rows. */
+  broker?: AcbTransaction["broker"];
+  /**
+   * True for registered plan types (TFSA/RRSP/FHSA/RESP/RRIF/RDSP/LIRA-family/
+   * PRPP). See `resolveRegistered`.
+   */
   isRegistered: boolean;
   transactions: AcbTransaction[];
 };
 
 /**
- * Group transactions by `(accountId, accountType)` composite key, preserving
- * each group's transaction order. Non-registered accounts sort before
- * registered ones (TFSA / RRSP / FHSA, case-insensitive).
+ * Group transactions by `(broker, accountId, accountType)` composite key,
+ * preserving each group's transaction order. Broker is part of the key so two
+ * brokerages' same-numbered (or legacy unknown) accounts never merge.
+ * Non-registered accounts sort before registered ones (TFSA / RRSP / FHSA,
+ * case-insensitive).
  */
 export function groupByAccount(
   transactions: AcbTransaction[],
@@ -615,13 +924,14 @@ export function groupByAccount(
   for (const tx of transactions) {
     const accountId = tx.accountId ?? "";
     const accountType = tx.accountType ?? "";
-    const key = `${accountId} ${accountType}`;
+    const key = keyParts(tx.broker, accountId, accountType);
     let group = groups.get(key);
     if (!group) {
       group = {
         accountId,
         accountType,
-        isRegistered: resolveRegistered(accountId, accountType, overrides),
+        ...(tx.broker !== undefined ? { broker: tx.broker } : {}),
+        isRegistered: resolveRegistered(accountId, accountType, overrides, tx.broker),
         transactions: [],
       };
       groups.set(key, group);
@@ -652,25 +962,46 @@ export type YearlySnapshot = {
 /**
  * Year-by-year ACB for one symbol. Applies the same buy / sell / transfer
  * rules as `computeHoldings` in date order and emits one snapshot per
- * calendar year with activity (years without transactions are skipped).
- * Rows without a parseable date are grouped under year 0 ("Unknown").
+ * calendar year with activity (years without transactions are skipped, unless
+ * a dated adjustment lands in them). Rows without a parseable date are
+ * grouped under year 0 ("Unknown").
+ *
+ * Dated adjustments (transfer opening costs, T3 nets) are folded in on their
+ * dates — same time-ordered math as `computeAdjustedHoldings` — so the final
+ * snapshot ties to the Holdings total. Deemed gains are not tracked here;
+ * like the holdings view, the pool simply clamps at zero.
  */
-export function computeYearlyACB(transactions: AcbTransaction[], symbol: string): YearlySnapshot[] {
-  const relevant = transactions
-    .filter(
-      (tx) =>
-        tx.symbol === symbol && (tx.type === "buy" || tx.type === "sell" || tx.type === "transfer"),
-    )
-    .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
+export function computeYearlyACB(
+  transactions: AcbTransaction[],
+  symbol: string,
+  datedAdjustments: DatedAdjustment[] = [],
+): YearlySnapshot[] {
+  type YearEvent = {
+    date: string;
+    txFirst: boolean;
+    tx?: AcbTransaction;
+    adj?: DatedAdjustment;
+  };
+  const events: YearEvent[] = [
+    ...transactions
+      .filter(
+        (tx) =>
+          tx.symbol === symbol &&
+          (tx.type === "buy" || tx.type === "sell" || tx.type === "transfer"),
+      )
+      .map((tx): YearEvent => ({ date: tx.date ?? "", txFirst: true, tx })),
+    ...datedAdjustments.map((adj): YearEvent => ({ date: adj.date, txFirst: false, adj })),
+  ];
+  events.sort((a, b) => a.date.localeCompare(b.date) || Number(!a.txFirst) - Number(!b.txFirst));
 
   const snapshots: YearlySnapshot[] = [];
   let shares = 0;
   let costBasis = 0;
+  let transferredShares = 0;
   let current: YearlySnapshot | null = null;
 
-  for (const tx of relevant) {
-    const parsedYear = Number((tx.date ?? "").slice(0, 4));
-    const year = Number.isInteger(parsedYear) && parsedYear > 0 ? parsedYear : 0;
+  for (const event of events) {
+    const year = parseYear(event.date);
     if (current === null || current.year !== year) {
       if (current !== null) snapshots.push(current);
       current = {
@@ -679,29 +1010,39 @@ export function computeYearlyACB(transactions: AcbTransaction[], symbol: string)
         sellQty: 0,
         endShares: shares,
         costBasis,
-        acbPerShare: shares > 0 ? costBasis / shares : null,
+        acbPerShare: acbPerShare(shares, costBasis, transferredShares),
       };
     }
-    if (tx.type === "buy") {
-      shares += tx.quantity;
-      costBasis += buyCost(tx);
-      current.buyQty += tx.quantity;
-    } else if (tx.type === "transfer") {
-      // Same as computeHoldings: shares with no cost basis.
-      shares += tx.quantity;
-      current.buyQty += tx.quantity;
-    } else {
-      // CRA rule: sell reduces the pool pro-rata so ACB/share is unchanged.
-      const sharesAfter = shares - tx.quantity;
-      costBasis = shares > 0 ? costBasis * (sharesAfter / shares) : 0;
-      shares = sharesAfter;
-      current.sellQty += tx.quantity;
+    if (event.tx) {
+      const tx = event.tx;
+      if (tx.type === "buy") {
+        shares += tx.quantity;
+        costBasis += buyCost(tx);
+        current.buyQty += tx.quantity;
+      } else if (tx.type === "transfer") {
+        // Same as computeHoldings: shares with no cost basis, clamped at zero.
+        shares = Math.max(0, shares + tx.quantity);
+        transferredShares += tx.quantity;
+        current.buyQty += tx.quantity;
+      } else if (shares <= 0 || tx.quantity >= shares) {
+        // Sold everything (or more than recorded): pool empties, clamped.
+        shares = Math.max(0, shares - tx.quantity);
+        costBasis = 0;
+        current.sellQty += tx.quantity;
+      } else {
+        // CRA rule: sell reduces the pool pro-rata so ACB/share is unchanged.
+        const sharesAfter = shares - tx.quantity;
+        costBasis = costBasis * (sharesAfter / shares);
+        shares = sharesAfter;
+        current.sellQty += tx.quantity;
+      }
+    } else if (event.adj) {
+      costBasis += event.adj.amount;
+      if (costBasis < 0) costBasis = 0;
     }
     current.endShares = shares;
     current.costBasis = costBasis;
-    // A transfer-only history leaves shares with no cost basis: ACB is
-    // unknown (null), not $0.
-    current.acbPerShare = shares > 0 && costBasis > 0 ? costBasis / shares : null;
+    current.acbPerShare = acbPerShare(shares, costBasis, transferredShares);
   }
   if (current !== null) snapshots.push(current);
 

@@ -1,16 +1,5 @@
 import { useState } from "react";
-import {
-  Alert,
-  Container,
-  List,
-  Paper,
-  SegmentedControl,
-  Stack,
-  Table,
-  Tabs,
-  Text,
-  Title,
-} from "@mantine/core";
+import { Alert, Container, List, Paper, Stack, Table, Tabs, Text, Title } from "@mantine/core";
 import AccountTypeMarker from "./AccountTypeMarker";
 import AccountView from "./AccountView";
 import FilePreviewModal from "./FilePreviewModal";
@@ -21,16 +10,16 @@ import T3Modal from "./T3Modal";
 import TransferModal from "./TransferModal";
 import { formatCADDecimal } from "@/utils/format";
 import {
-  applyAdjustments,
-  computeHoldings,
+  buildAllDatedAdjustments,
+  computeAdjustedHoldings,
   computeMarginInterest,
   detectOverlappingFiles,
   groupByAccount,
-  hasMixedCurrencies,
   parseFiles,
+  overrideKey,
   resolveRegistered,
   sumOpeningLot,
-  t3NetAdjustment,
+  symbolsWithMixedCurrencies,
   transferLotsForSymbol,
   type AccountRegistrationOverrides,
   type AcbTransaction,
@@ -41,24 +30,24 @@ import {
   type T3Slips,
 } from "@/utils/acb/parser";
 
-type BrokerKey = NonNullable<AcbTransaction["broker"]>;
-type FileBroker = BrokerKey | "unknown";
-
-const BROKER_ORDER: BrokerKey[] = ["wealthsimple", "questrade", "ibkr"];
-
-const BROKER_LABELS: Record<BrokerKey, string> = {
+const BROKER_LABELS: Record<string, string> = {
   wealthsimple: "Wealthsimple",
   questrade: "Questrade",
   ibkr: "IBKR",
 };
 
-function fileBroker(file: ParsedFile): FileBroker {
+function fileBroker(file: ParsedFile): string {
   return file.transactions[0]?.broker ?? "unknown";
 }
 
 /** "TYPE · ID" label for an account group, or "Unknown account". */
-function accountLabel(group: AccountGroup): string {
-  return [group.accountType, group.accountId].filter(Boolean).join(" · ") || "Unknown account";
+function accountLabel(group: AccountGroup, showBroker: boolean): string {
+  const base =
+    [group.accountType, group.accountId].filter(Boolean).join(" · ") || "Unknown account";
+  if (!showBroker) return base;
+  const brokerLabel =
+    group.broker !== undefined ? (BROKER_LABELS[group.broker] ?? group.broker) : "Unknown broker";
+  return `${brokerLabel} · ${base}`;
 }
 
 /** `{ min, max }` over dated transactions; null when none carry a date. */
@@ -91,7 +80,6 @@ const Main = () => {
   const [transferModalSymbol, setTransferModalSymbol] = useState<string | null>(null);
   const [previewFileIndex, setPreviewFileIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>("holdings");
-  const [activeBroker, setActiveBroker] = useState<string | null>(null);
   const [accountOverrides, setAccountOverrides] = useState<AccountRegistrationOverrides>({});
 
   async function handleFilesAdded(newFiles: File[]) {
@@ -167,33 +155,60 @@ const Main = () => {
   }
 
   const hasFiles = loadedFiles.length > 0;
-  const presentBrokers = new Set(loadedFiles.map(fileBroker));
-  const availableBrokers = BROKER_ORDER.filter((broker) => presentBrokers.has(broker));
-  const effectiveBroker =
-    activeBroker !== null && availableBrokers.includes(activeBroker as BrokerKey)
-      ? activeBroker
-      : (availableBrokers[0] ?? null);
-  const activeFiles =
-    effectiveBroker === null
-      ? []
-      : loadedFiles.filter((file) => fileBroker(file) === effectiveBroker);
+  const showBroker = new Set(loadedFiles.map(fileBroker)).size > 1;
 
   function isRegisteredTransaction(tx: AcbTransaction): boolean {
-    return resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", accountOverrides);
+    return resolveRegistered(tx.accountId ?? "", tx.accountType ?? "", accountOverrides, tx.broker);
   }
 
-  // Merge active brokerage files into one chronologically sorted transaction list.
-  const transactions = activeFiles
+  // Pool across ALL uploaded brokerages and accounts: the CRA identical-property
+  // rule averages each symbol over every non-registered account the taxpayer
+  // holds, wherever it is. Per-broker figures would each be wrong when a ticker
+  // is held in more than one place.
+  const transactions = loadedFiles
     .flatMap((file) => file.transactions)
     .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
-  // ACB pools across all of a taxpayer's non-registered accounts (CRA rule),
-  // so the Holdings tab combines them and excludes TFSA/RRSP/FHSA. The By
-  // account tab still receives every account for reconciliation.
+  // The Holdings tab combines non-registered accounts and excludes
+  // TFSA/RRSP/FHSA. The By account tab still receives every account for
+  // reconciliation.
   const nonRegisteredTransactions = transactions.filter((tx) => !isRegisteredTransaction(tx));
-  const holdings = computeHoldings(nonRegisteredTransactions);
+  // Time-ordered ledger: transfer opening costs and T3 nets join the pool on
+  // their dates so later sells allocate over the adjusted pool.
+  const datedBySymbol = buildAllDatedAdjustments(
+    nonRegisteredTransactions,
+    openingLotEntries,
+    t3Slips,
+  );
+  // Symbols with transfer lots whose opening ACB is still unentered ($0 or
+  // missing): the pool is incomplete, so ROC shortfalls clamp without
+  // reporting a deemed gain that full basis might erase.
+  const incompleteSymbols = new Set<string>();
+  for (const symbol of new Set(nonRegisteredTransactions.map((tx) => tx.symbol))) {
+    if (!symbol) continue;
+    const lots = transferLotsForSymbol(nonRegisteredTransactions, symbol);
+    if (lots.length === 0) continue;
+    const acbs = openingLotEntries[symbol] ?? [];
+    if (lots.some((_, index) => !(acbs[index] > 0))) incompleteSymbols.add(symbol);
+  }
+  const holdings = computeAdjustedHoldings(nonRegisteredTransactions, datedBySymbol, {
+    incompleteSymbols,
+  });
   const visibleHoldings = holdings.filter((h) => h.shares > 0);
-  const mixedCurrencies = hasMixedCurrencies(transactions);
-  const overlappingFiles = detectOverlappingFiles(activeFiles.map((file) => file.transactions));
+  const mixedCurrencySymbols = symbolsWithMixedCurrencies(nonRegisteredTransactions);
+  // Overlap is checked within each brokerage: identical account keys across
+  // brokerages are different accounts, not duplicate uploads.
+  const overlappingFiles = (() => {
+    const byBroker = new Map<string, AcbTransaction[][]>();
+    for (const file of loadedFiles) {
+      const key = fileBroker(file);
+      const list = byBroker.get(key) ?? [];
+      list.push(file.transactions);
+      byBroker.set(key, list);
+    }
+    return [...byBroker.values()].some(
+      (fileTransactions) => fileTransactions.length > 1 && detectOverlappingFiles(fileTransactions),
+    );
+  })();
   const marginInterest = computeMarginInterest(nonRegisteredTransactions);
   const marginYears = Object.keys(marginInterest)
     .map(Number)
@@ -202,38 +217,42 @@ const Main = () => {
   const accountTypeMarkerAccounts = accountGroups.map((group) => ({
     accountId: group.accountId,
     accountType: group.accountType,
+    broker: group.broker,
     detectedRegistered: group.isRegistered,
   }));
   const hasUnknownAccountTypes = accountTypeMarkerAccounts.some(
     (account) => account.accountType === "",
   );
-  const showAccountTypeMarker = effectiveBroker === "ibkr" && hasUnknownAccountTypes;
+  const showAccountTypeMarker = hasUnknownAccountTypes;
   const hasDefaultedUnknownAccountTypes = accountTypeMarkerAccounts.some(
-    (account) => account.accountType === "" && accountOverrides[account.accountId] === undefined,
+    (account) =>
+      account.accountType === "" &&
+      accountOverrides[overrideKey(account.broker, account.accountId)] === undefined,
   );
-  // Total opening-lot ACB per symbol, summed across its transfer lots — the
-  // single number `applyAdjustments` and HoldingsTable consume.
+  // Total opening-lot ACB per symbol, summed across its transfer lots — shown
+  // as badges next to the transfer controls (the pool itself already includes
+  // each lot on its date via the time-ordered ledger).
   const openingLotTotals: Record<string, number> = {};
   for (const symbol of Object.keys(openingLotEntries)) {
     openingLotTotals[symbol] = sumOpeningLot(openingLotEntries[symbol]);
   }
-  const totalCostBasis = visibleHoldings.reduce(
-    (sum, holding) =>
-      sum +
-      applyAdjustments(
-        holding,
-        openingLotTotals[holding.symbol] ?? 0,
-        t3NetAdjustment(t3Slips[holding.symbol] ?? []),
-      ).costBasis,
-    0,
-  );
+  const totalCostBasis = visibleHoldings.reduce((sum, holding) => sum + holding.costBasis, 0);
+  // Deemed gains (ROC exceeding ACB) are current-year income on top of the pool.
+  const deemedGains: { symbol: string; year: number; amount: number }[] = [];
+  for (const holding of holdings) {
+    for (const [year, amount] of Object.entries(holding.deemedGainByYear)) {
+      deemedGains.push({ symbol: holding.symbol, year: Number(year), amount });
+    }
+  }
+  deemedGains.sort((a, b) => a.year - b.year || a.symbol.localeCompare(b.symbol));
+  const oversoldSymbols = holdings.filter((h) => h.oversold).map((h) => h.symbol);
   const fileSummaries: UploadedFileSummary[] = loadedFiles.map((file) => {
     const fileRegisteredAccounts = groupByAccount(file.transactions, accountOverrides).filter(
       (g) => g.isRegistered,
     );
     const excludedLabels = fileRegisteredAccounts
-      .map(accountLabel)
-      .filter((label) => label !== "Unknown account");
+      .filter((group) => group.accountId !== "" || group.accountType !== "")
+      .map((group) => accountLabel(group, showBroker));
     const excludedTxCount = fileRegisteredAccounts.reduce(
       (sum, group) => sum + group.transactions.length,
       0,
@@ -263,13 +282,12 @@ const Main = () => {
             Holdings
           </Title>
           <Text c="dimmed" size="sm">
-            Pooled across all non-registered accounts (CRA rule). ACB per share = total cost basis ÷
-            shares held. Sells reduce both shares and the cost basis pool pro-rata, so ACB/share
-            stays constant after a sale. Expand a row for its year-by-year ACB history. Click{" "}
-            <strong>Edit T3</strong> to enter capital gains distributions (box 21, adds to ACB) and
-            return of capital (box 42, reduces ACB) from your T3 slips, per tax year. For holdings
-            with transferred-in shares, click <strong>Edit transfers</strong> to enter the opening
-            lot ACB (total cost basis) for each transferred lot, so the ACB is complete.
+            Pooled across all non-registered accounts and brokerages (CRA identical-property rule).
+            ACB per share = total cost basis ÷ shares held. Sells reduce both shares and the cost
+            basis pool pro-rata, so ACB/share stays constant after a sale. Phantom/reinvested
+            distributions (Edit T3) and transfer opening costs (Edit transfers) join the pool on
+            their dates, so later sells allocate over the adjusted pool — the year-by-year breakdown
+            includes them too.
           </Text>
           {visibleHoldings.length > 0 ? (
             <HoldingsTable
@@ -280,6 +298,7 @@ const Main = () => {
                 onEditT3: handleEditT3,
                 openingLots: openingLotTotals,
                 onEditTransfers: handleEditTransfers,
+                dated: datedBySymbol,
               }}
             />
           ) : (
@@ -347,14 +366,18 @@ const Main = () => {
                 How it works
               </Title>
               <List type="ordered" size="sm" spacing="xs">
-                <List.Item>Export your account activity as a CSV from Wealthsimple.</List.Item>
+                <List.Item>
+                  Export your account activity (Wealthsimple CSV, Questrade spreadsheet, or IBKR
+                  activity statement). You can combine brokerages — holdings pool across all of
+                  them.
+                </List.Item>
                 <List.Item>
                   Upload one or more files. Everything is parsed locally in your browser — nothing
                   is uploaded.
                 </List.Item>
                 <List.Item>
-                  Review your pooled ACB. Enter T3 amounts (box 21 / box 42) and the opening-lot ACB
-                  for any transferred-in shares.
+                  Review your pooled ACB. Enter phantom/reinvested amounts (non-cash only, not full
+                  Box 21) plus Box 42, and the opening-lot ACB for any transferred-in shares.
                 </List.Item>
               </List>
             </Stack>
@@ -368,25 +391,36 @@ const Main = () => {
             </Text>
           </Alert>
         )}
-        {mixedCurrencies && (
+        {mixedCurrencySymbols.length > 0 && (
           <Alert color="yellow" title="Mixed currencies detected">
             <Text size="sm">
-              This export contains both CAD and USD holdings. ACB calculations assume a single
-              currency. USD holdings will need separate ACB tracking in CAD using the exchange rate
-              at the time of each transaction.
+              {mixedCurrencySymbols.join(", ")}: transactions span more than one currency. ACB
+              assumes a single currency per holding — convert each transaction to CAD using the
+              exchange rate at the time before relying on these figures. The pooled total below also
+              mixes currencies.
             </Text>
           </Alert>
         )}
-        {hasFiles && effectiveBroker !== null && availableBrokers.length > 1 && (
-          <SegmentedControl
-            aria-label="Brokerage"
-            data={availableBrokers.map((broker) => ({
-              value: broker,
-              label: BROKER_LABELS[broker],
-            }))}
-            value={effectiveBroker}
-            onChange={setActiveBroker}
-          />
+        {oversoldSymbols.length > 0 && (
+          <Alert color="yellow" title="Sales exceed recorded purchases">
+            <Text size="sm">
+              {oversoldSymbols.join(", ")}: more shares were sold than the uploads account for —
+              purchase history is missing (an older file, or a transfer whose opening ACB was never
+              entered). The pool was reset to $0, so ACB is understated until the history is added.
+            </Text>
+          </Alert>
+        )}
+        {deemedGains.length > 0 && (
+          <Alert color="red" title="Deemed capital gains (ROC exceeded ACB)">
+            <Text size="sm">
+              Return of capital drove the pool below zero, which the CRA deems a capital gain in
+              that year (pool reset to $0):{" "}
+              {deemedGains
+                .map((g) => `${g.symbol} ${g.year}: ${formatCADDecimal(g.amount)}`)
+                .join("; ")}
+              . Report these on Schedule 3 — they are not included in the cost basis total.
+            </Text>
+          </Alert>
         )}
         {hasFiles && (
           <SummaryBar
@@ -402,17 +436,19 @@ const Main = () => {
               {hasDefaultedUnknownAccountTypes && (
                 <Alert color="yellow" title="Mark account types">
                   <Text size="sm">
-                    IBKR consolidated statements do not say which sub-account is registered. Mark
-                    each account so RRSP/TFSA/FHSA accounts are excluded from ACB.
+                    Some uploaded accounts do not say whether they are registered. Mark each unknown
+                    account so registered accounts are excluded from ACB.
                   </Text>
                 </Alert>
               )}
               <AccountTypeMarker
                 accounts={accountTypeMarkerAccounts}
                 overrides={accountOverrides}
-                onChange={(accountId, value) =>
-                  setAccountOverrides((prev) => ({ ...prev, [accountId]: value }))
+                onChange={(overrideId, value) =>
+                  setAccountOverrides((prev) => ({ ...prev, [overrideId]: value }))
                 }
+                showBroker={showBroker}
+                brokerLabels={BROKER_LABELS}
               />
             </Stack>
           </Paper>
@@ -432,10 +468,14 @@ const Main = () => {
                   <Text size="sm">
                     Book costs below are per account and unadjusted — no T3 or opening-lot
                     adjustments — matching what your account statements show. The CRA requires ACB
-                    pooled across all non-registered accounts; use the Holdings tab for tax figures.
+                    pooled across all non-registered accounts and brokerages; use the Holdings tab
+                    for tax figures.
                   </Text>
                 </Alert>
-                <AccountView groups={accountGroups} />
+                <AccountView
+                  groups={accountGroups}
+                  accountLabel={(group) => accountLabel(group, showBroker)}
+                />
               </Stack>
             </Tabs.Panel>
           </Tabs>

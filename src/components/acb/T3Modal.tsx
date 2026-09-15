@@ -1,4 +1,14 @@
-import { Button, CloseButton, Group, Modal, NumberInput, Stack, Table, Text } from "@mantine/core";
+import {
+  Alert,
+  Button,
+  CloseButton,
+  Group,
+  Modal,
+  NumberInput,
+  Stack,
+  Table,
+  Text,
+} from "@mantine/core";
 import { t3NetAdjustment, type T3Entry } from "@/utils/acb/parser";
 
 type T3ModalProps = {
@@ -17,9 +27,9 @@ const netFormatter = new Intl.NumberFormat("en-CA", {
 });
 
 /**
- * Per-symbol T3 slip editor. One row per tax year with box 21 (capital gains
- * distributions, adds to ACB) and box 42 (return of capital, subtracts from
- * ACB). Edits apply immediately; Close just dismisses.
+ * Per-symbol T3 slip editor. One row per tax year with phantom/reinvested
+ * (non-cash) distributions (adds to ACB) and box 42 (return of capital,
+ * subtracts from ACB). Edits apply immediately; Close just dismisses.
  */
 const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
   const net = t3NetAdjustment(entries);
@@ -33,7 +43,7 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
   }
 
   function addEntry() {
-    onChange([...entries, { year: new Date().getFullYear() - 1, box21: 0, box42: 0 }]);
+    onChange([...entries, { year: new Date().getFullYear() - 1, phantom: 0, box42: 0 }]);
   }
 
   return (
@@ -44,12 +54,20 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
       size="lg"
     >
       <Stack gap="sm">
+        <Alert color="yellow" title="Don't enter full Box 21">
+          <Text size="sm">
+            Box 21 mixes cash gains with phantom (reinvested) gains — only the phantom, non-cash
+            portion increases ACB. Use the fund&apos;s year-end breakdown: reinvested $/unit × units
+            held on record date. Entering the full Box 21 overstates ACB when any gain was paid in
+            cash.
+          </Text>
+        </Alert>
         {entries.length > 0 && (
           <Table>
             <Table.Thead>
               <Table.Tr>
                 <Table.Th>Tax Year</Table.Th>
-                <Table.Th>Box 21 – Capital Gains Distributions</Table.Th>
+                <Table.Th>Phantom – Reinvested (non-cash only)</Table.Th>
                 <Table.Th>Box 42 – Amount Resulting in Cost Base Adjustment</Table.Th>
                 <Table.Th aria-hidden />
               </Table.Tr>
@@ -73,9 +91,9 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
                   </Table.Td>
                   <Table.Td>
                     <NumberInput
-                      aria-label={`Box 21 for row ${index + 1}`}
-                      value={entry.box21 === 0 ? "" : entry.box21}
-                      onChange={(value) => updateEntry(index, { box21: +value || 0 })}
+                      aria-label={`Phantom for row ${index + 1}`}
+                      value={entry.phantom === 0 ? "" : entry.phantom}
+                      onChange={(value) => updateEntry(index, { phantom: +value || 0 })}
                       prefix="$"
                       min={0}
                       step={10}

@@ -3,10 +3,11 @@ import { ActionIcon, Badge, Button, Group, Table, Text, Tooltip } from "@mantine
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import YearlyACBTable from "./YearlyACBTable";
 import {
-  applyAdjustments,
+  adjustedMeta,
   computeYearlyACB,
   t3NetAdjustment,
   type AcbTransaction,
+  type DatedAdjustment,
   type Holding,
   type T3Slips,
 } from "@/utils/acb/parser";
@@ -19,6 +20,8 @@ export type AcbAdjustments = {
   /** Total opening-lot ACB per symbol, summed across its transfer lots. */
   openingLots: Record<string, number>;
   onEditTransfers: (symbol: string) => void;
+  /** Time-ordered adjustments per symbol, for the year-by-year breakdown. */
+  dated: Record<string, DatedAdjustment[]>;
 };
 
 type HoldingsTableProps = {
@@ -29,11 +32,12 @@ type HoldingsTableProps = {
    */
   transactions?: AcbTransaction[];
   /**
-   * When provided, cost basis figures include T3 and opening-lot adjustments
-   * and the table shows their edit controls. Omit for raw transaction-derived
-   * book cost (the By account reconciliation view) — per-symbol adjustments
-   * can't be allocated to a single account, so applying them per account
-   * would double-count.
+   * When provided, `holdings` are already time-ordered adjusted (T3 +
+   * opening lots applied on their dates) and the table shows edit controls
+   * with adjustment badges. Omit for raw transaction-derived book cost (the
+   * By account reconciliation view) — per-symbol adjustments can't be
+   * allocated to a single account, so applying them per account would
+   * double-count.
    */
   adjustments?: AcbAdjustments;
 };
@@ -82,7 +86,7 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
             ? t3NetAdjustment(adjustments.t3Slips[holding.symbol] ?? [])
             : 0;
           const openingLot = adjustments ? (adjustments.openingLots[holding.symbol] ?? 0) : 0;
-          const shown = adjustments ? applyAdjustments(holding, openingLot, t3Net) : holding;
+          const { deemedGain, oversold } = adjustedMeta(holding);
           const hasTransfers = holding.transferredShares > 0;
           const expanded = expandedSymbols.has(holding.symbol);
           return (
@@ -113,19 +117,26 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                         </Badge>
                       </Tooltip>
                     )}
+                    {oversold && (
+                      <Tooltip label="Sales exceed recorded purchases — missing buys or unentered transfers; pool reset to $0, so ACB is understated">
+                        <Badge color="red" size="sm" variant="light">
+                          missing history
+                        </Badge>
+                      </Tooltip>
+                    )}
                   </Group>
                 </Table.Td>
-                <Table.Td ta="right">{sharesFormatter.format(shown.shares)}</Table.Td>
+                <Table.Td ta="right">{sharesFormatter.format(holding.shares)}</Table.Td>
                 <Table.Td ta="right">
-                  {shown.acbPerShare === null ? (
+                  {holding.acbPerShare === null ? (
                     <Text component="span" c="dimmed">
                       —
                     </Text>
                   ) : (
-                    formatCADDecimal(shown.acbPerShare)
+                    formatCADDecimal(holding.acbPerShare)
                   )}
                 </Table.Td>
-                <Table.Td ta="right">{formatCADDecimal(shown.costBasis)}</Table.Td>
+                <Table.Td ta="right">{formatCADDecimal(holding.costBasis)}</Table.Td>
                 {adjustments && anyTransferred && (
                   <Table.Td>
                     {hasTransfers ? (
@@ -165,6 +176,13 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                           {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
                         </Badge>
                       )}
+                      {deemedGain > 0 && (
+                        <Tooltip label="ROC exceeded ACB — deemed capital gain to report on Schedule 3; pool reset to $0">
+                          <Badge size="sm" variant="light" color="red">
+                            {`+${formatCADDecimal(deemedGain)} deemed gain`}
+                          </Badge>
+                        </Tooltip>
+                      )}
                     </Group>
                   </Table.Td>
                 )}
@@ -172,7 +190,13 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
               {expandable && expanded && (
                 <Table.Tr>
                   <Table.Td colSpan={columnCount} p="sm">
-                    <YearlyACBTable snapshots={computeYearlyACB(transactions, holding.symbol)} />
+                    <YearlyACBTable
+                      snapshots={computeYearlyACB(
+                        transactions,
+                        holding.symbol,
+                        adjustments?.dated?.[holding.symbol] ?? [],
+                      )}
+                    />
                   </Table.Td>
                 </Table.Tr>
               )}

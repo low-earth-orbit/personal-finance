@@ -5,15 +5,16 @@ import { computeHoldings, computeMarginInterest, type AccountGroup } from "@/uti
 
 type AccountSectionProps = {
   group: AccountGroup;
+  /** Display label for the account header (broker-aware when pooling brokerages). */
+  accountLabel: (group: AccountGroup) => string;
 };
 
-const AccountSection = ({ group }: AccountSectionProps) => {
+const AccountSection = ({ group, accountLabel }: AccountSectionProps) => {
   if (group.isRegistered) {
     return null;
   }
 
-  const header =
-    [group.accountType, group.accountId].filter(Boolean).join(" · ") || "Unknown account";
+  const header = accountLabel(group);
   const holdings = computeHoldings(group.transactions);
   const marginInterest = computeMarginInterest(group.transactions);
   const marginYears = Object.keys(marginInterest)
@@ -57,20 +58,26 @@ const AccountSection = ({ group }: AccountSectionProps) => {
 
 type AccountViewProps = {
   groups: AccountGroup[];
+  /** Display label for each account header (broker-aware when pooling brokerages). */
+  accountLabel: (group: AccountGroup) => string;
 };
 
 /**
- * By-account breakdown: one section per non-registered (accountId, accountType)
- * group. Registered accounts (TFSA / RRSP / FHSA) are filtered out and not
- * shown. Book costs are raw transaction-derived figures with NO T3 or
- * opening-lot adjustments — per-symbol adjustments can't be allocated to a
+ * By-account breakdown: one section per non-registered (broker, accountId,
+ * accountType) group. Registered accounts (TFSA / RRSP / FHSA) are filtered
+ * out and not shown. Book costs are raw transaction-derived figures with NO T3
+ * or opening-lot adjustments — per-symbol adjustments can't be allocated to a
  * single account, and the unadjusted number is what broker statements show,
  * which is the point of this reconciliation view.
  */
-const AccountView = ({ groups }: AccountViewProps) => (
+const AccountView = ({ groups, accountLabel }: AccountViewProps) => (
   <Stack gap="lg">
     {groups.map((group) => (
-      <AccountSection key={`${group.accountId}|${group.accountType}`} group={group} />
+      <AccountSection
+        key={`${group.broker ?? ""}|${group.accountId}|${group.accountType}`}
+        group={group}
+        accountLabel={accountLabel}
+      />
     ))}
   </Stack>
 );
