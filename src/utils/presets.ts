@@ -19,6 +19,7 @@ export const DEFAULTS = {
   sellerClosingCostsPct: 5.5,
   propertyTaxRate: 1,
   maintPct: 1.5,
+  maintAgingPct: 1,
   condoFeesPerMonth: 0,
   downPaymentPercentage: 20,
   annualMortgageInterestRate: 4.5,

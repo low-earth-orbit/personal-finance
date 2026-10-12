@@ -174,9 +174,12 @@ function simulatePath(
   let bookValue = initialPortfolio;
   let annualRent = userInput.monthlyRent * 12;
   // Year-0 anchored operating costs. Each grows with realized owner cost growth,
-  // independent of rent growth and home price appreciation.
+  // independent of rent growth and home price appreciation. Maintenance and
+  // condo fees grow an extra deterministic `maintAgingPct` per year as the
+  // building ages (envelope aging lands in fees for apartments).
   let annualPropertyTax = (userInput.initialHomePrice * scenario.propertyTaxMean) / 100;
   let annualMaintenance = (userInput.initialHomePrice * scenario.maintenanceMean) / 100;
+  const maintAgingFactor = 1 + (userInput.maintAgingPct ?? 0) / 100;
   let monthlyCondoFees = userInput.condoFeesPerMonth ?? 0;
   let remainingYears = userInput.amortization;
   let currentMortgageRate = mortgageRates[0];
@@ -230,11 +233,11 @@ function simulatePath(
 
     homePrice = homePrice * (1 + yr.homePriceGrowth / 100);
     const rentGrowth = 1 + yr.rentIncrease / 100;
-    const ownerCostGrowth = Math.max(0, 1 + yr.ownerCostGrowth / 100);
+    const ownerCostGrowth = 1 + yr.ownerCostGrowth / 100;
     annualRent = annualRent * rentGrowth;
     annualPropertyTax = annualPropertyTax * ownerCostGrowth;
-    annualMaintenance = annualMaintenance * ownerCostGrowth;
-    monthlyCondoFees = monthlyCondoFees * ownerCostGrowth;
+    annualMaintenance = annualMaintenance * ownerCostGrowth * maintAgingFactor;
+    monthlyCondoFees = monthlyCondoFees * ownerCostGrowth * maintAgingFactor;
 
     const taxableGain = portfolioValue - Math.max(bookValue, 0);
     const renterNetWorth =
