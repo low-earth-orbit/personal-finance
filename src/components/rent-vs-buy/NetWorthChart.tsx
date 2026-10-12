@@ -28,7 +28,7 @@ import {
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import type { MonteCarloResponse, MonteCarloYear, UserInput, UserInputKey } from "@/types";
 
-const NUM_SIMULATIONS = 1000;
+const NUM_SIMULATIONS = 10000;
 
 interface ChartPoint {
   year: number;
@@ -54,13 +54,14 @@ const INPUT_LABELS = {
   holdingPeriod: "Holding period (years)",
   rentIncreaseRate: "Rent increase rate (%/yr)",
   homePriceGrowthRate: "Home price growth (%/yr)",
-  ownerCostGrowthRate: "Owner cost growth (%/yr)",
+  ownerCostGrowthRate: "Cost inflation (%/yr)",
   investmentReturnRate: "Investment return (%/yr)",
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",
   propertyTaxRate: "Property tax rate (%)",
   maintPct: "Maintenance (%/yr)",
+  maintAgingPct: "Building aging (%/yr)",
   condoFeesPerMonth: "Condo fees ($/month)",
   buyerClosingCostsPct: "Buyer closing costs (%)",
   sellerClosingCostsPct: "Seller closing costs (%)",
