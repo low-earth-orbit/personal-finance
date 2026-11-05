@@ -1,7 +1,7 @@
 import type { IncomeBreakdown, ProjectionPoint, RetirementInput } from "./types";
 
 /**
- * Real (inflation-adjusted) arithmetic mean return for a given nominal return.
+ * Real (inflation-adjusted) geometric/compound return for a given nominal return.
  * Working in real dollars lets us keep income and benefits constant over time,
  * which makes the projection easy to verify by hand.
  */
@@ -51,7 +51,7 @@ interface PathResult {
 
 /**
  * Deterministic year-by-year portfolio path (today's dollars) for a given
- * retirement age, using each phase's mean real return. Contributions and
+ * retirement age, using each phase's real geometric/compound return. Contributions
  * withdrawals happen mid-year, earning a half-year of return — matching the
  * rent-vs-buy convention.
  */
@@ -81,8 +81,9 @@ export function projectPath(input: RetirementInput, retirementAge: number): Path
 
 /**
  * Deterministic accumulation balances (today's dollars) for every age from
- * currentAge to planningAge, contributing each year and growing at the
- * accumulation return. Pre-retirement growth doesn't depend on when you retire,
+ * currentAge to planningAge, contributing each year and growing at the real
+ * geometric/compound accumulation return. Pre-retirement growth doesn't depend on when you
+ * retire,
  * so this is computed once and indexed by age for any candidate retirement age
  * (the value at age A is the portfolio you'd retire on at age A).
  */

@@ -35,6 +35,12 @@ describe("glide-path InputForm guidance", () => {
     expect(screen.getByRole("textbox", { name: "Time preference (β)" })).toHaveValue("0.985");
   });
 
+  it("explains that gamma is nearly inert for constant-dollar spending", () => {
+    renderForm({ flexibility: 0 });
+
+    expect(screen.getByText(/γ barely changes the allocation/i)).toBeInTheDocument();
+  });
+
   it("keeps optional and advanced detail in helper popovers", async () => {
     renderForm();
 

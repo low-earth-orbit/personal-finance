@@ -1,0 +1,145 @@
+"""Lifecycle simulator: accumulation → retirement cash flows, CRRA utility, outcome statistics.
+
+Conventions (shared with the web engine, src/utils/glide-path/engine.ts):
+  * real (today's) dollars; mid-year contributions/withdrawals earn half a year's return;
+  * a balance that would go negative is floored at 0 (absorbing; a leveraged wipeout is ruin);
+  * each retirement year targets  (1−flex)·gap + flex·withdrawal_rate·start-of-year balance,
+    capped at what the portfolio can afford; consumption = guaranteed income + withdrawal;
+  * welfare = expected Σ βᵗ·u(consumptionₜ) over retirement years only (CRRA u);
+  * "depletion" = income shortfall: at least one year where the withdrawal fell short of target.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+
+# Numerical floor on consumption inside u(c): prevents log(0)/division blow-ups. Not a modelled
+# spending floor — guaranteed income keeps consumption well above it.
+CONSUMPTION_FLOOR = 1.0
+
+
+@dataclass(frozen=True)
+class Lifecycle:
+    """Household + preference inputs that stay fixed while allocations vary."""
+
+    accum_years: int
+    retire_years: int
+    start_savings: float
+    contribution: float
+    guaranteed: np.ndarray       # guaranteed income per retirement year
+    gap: np.ndarray              # target − guaranteed (≥ 0) per retirement year
+    flexibility: float           # 0 = constant real $, 1 = withdrawal_rate × balance
+    withdrawal_rate: float
+    gamma: float                 # CRRA risk aversion on retirement consumption
+    beta: float                  # annual discount factor within retirement
+
+    @classmethod
+    def build(cls, *, accum_years, retire_years, current_savings, annual_contribution,
+              target_income, guaranteed_income, flexibility, withdrawal_rate, gamma, beta):
+        guaranteed = np.full(retire_years, float(guaranteed_income))
+        return cls(accum_years, retire_years, current_savings, annual_contribution, guaranteed,
+                   np.maximum(target_income - guaranteed, 0.0), flexibility, withdrawal_rate,
+                   gamma, beta)
+
+    @property
+    def n_years(self):
+        return self.accum_years + self.retire_years
+
+    @property
+    def discount(self):
+        return self.beta ** np.arange(self.retire_years)
+
+
+def crra(c, gamma):
+    c = np.maximum(c, CONSUMPTION_FLOOR)
+    if abs(gamma - 1.0) < 1e-9:
+        return np.log(c)
+    return c ** (1.0 - gamma) / (1.0 - gamma)
+
+
+def ce_from_util(util_per_period, gamma):
+    """Certainty-equivalent consumption for a per-period average utility."""
+    if abs(gamma - 1.0) < 1e-9:
+        return float(np.exp(util_per_period))
+    return float(((1.0 - gamma) * util_per_period) ** (1.0 / (1.0 - gamma)))
+
+
+def _accumulate(bal, weights_by_year, sample, market, life):
+    """Grow balances through the working years (weights_by_year[i] may be scalar or (G,))."""
+    for i in range(life.accum_years):
+        r = market.annual_returns(weights_by_year[i], sample, i)
+        bal = np.maximum(bal * (1 + r), 0.0) + life.contribution * (1 + r / 2)
+    return bal
+
+
+def _retirement_year(bal, r, t, life):
+    """One retirement year → (new balance, withdrawal, target)."""
+    grown = np.maximum(bal * (1 + r), 0.0)
+    target = (1 - life.flexibility) * life.gap[t] + life.flexibility * (life.withdrawal_rate * bal)
+    withdrawal = np.minimum(target, grown / (1 + r / 2))
+    return grown - withdrawal * (1 + r / 2), withdrawal, target
+
+
+def expected_utility(W, sample, market, life):
+    """Mean discounted retirement utility for each of G candidate paths.
+
+    W is (n_years, G): one column per candidate allocation path, all evaluated on the same
+    ``sample`` (common random numbers). Returns a (G,) array."""
+    n = market.path_count(sample)
+    bal = _accumulate(np.full((W.shape[1], n), life.start_savings), W, sample, market, life)
+    disc = life.discount
+    eu = np.zeros_like(bal)
+    for t in range(life.retire_years):
+        r = market.annual_returns(W[life.accum_years + t], sample, life.accum_years + t)
+        bal, withdrawal, _ = _retirement_year(bal, r, t, life)
+        eu += disc[t] * crra(life.guaranteed[t] + withdrawal, life.gamma)
+    return eu.mean(axis=1)
+
+
+def _retirement_outcomes(bal, weights, sample, market, life):
+    disc = life.discount
+    consumption = np.empty((life.retire_years, bal.shape[0]))
+    util = np.zeros(bal.shape[0])
+    shortfall = np.zeros(bal.shape[0], bool)
+    for t in range(life.retire_years):
+        i = life.accum_years + t
+        r = market.annual_returns(weights[i], sample, i)
+        bal, withdrawal, target = _retirement_year(bal, r, t, life)
+        consumption[t] = life.guaranteed[t] + withdrawal
+        util += disc[t] * crra(consumption[t], life.gamma)
+        # At flex=1 the target is a fraction of the live balance and always affordable, so
+        # shortfall is ~0 by construction; read CE / income CV for tail risk there.
+        shortfall |= withdrawal < target
+    return {
+        "ce_income": ce_from_util(util.mean() / disc.sum(), life.gamma),
+        "depletion": float(shortfall.mean()),
+        # Mean over paths of each path's coefficient of variation of spending over time.
+        "income_cv": float(np.mean(consumption.std(axis=0) / consumption.mean(axis=0))),
+    }
+
+
+def path_outcomes(weights, sample, market, life):
+    """CE income, shortfall rate, income CV for one per-year path, simulated from today."""
+    n = market.path_count(sample)
+    bal = _accumulate(np.full(n, life.start_savings), weights, sample, market, life)
+    return _retirement_outcomes(bal, weights, sample, market, life)
+
+
+def median_retirement_balance(weights, market, life):
+    """Balance at retirement compounding each year's geometric (median-path) return."""
+    growth = market.geometric_returns(weights)
+    bal = float(life.start_savings)
+    for i in range(life.accum_years):
+        r = float(growth[i])
+        bal = max(bal * (1 + r), 0.0) + life.contribution * (1 + r / 2)
+    return bal
+
+
+def drawdown_outcomes(weights, sample, market, life):
+    """Retirement-only outcomes starting from the deterministic median retirement balance."""
+    start = median_retirement_balance(weights, market, life)
+    outcomes = _retirement_outcomes(np.full(market.path_count(sample), start), weights, sample,
+                                    market, life)
+    return {**outcomes, "start_balance": start}

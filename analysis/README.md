@@ -4,16 +4,16 @@ Python research and validation code is grouped by calculator domain:
 
 | Folder | Purpose |
 | --- | --- |
-| [`glide_path/`](./glide_path/) | Reusable glide-path recommender, CLI implementation, and iid research sweep |
+| [`glide_path/`](./glide_path/) | Glide-path engine (markets, simulator, recommender), CLI, and research sweeps |
 | [`retirement/`](./retirement/) | Retirement-model validation and JST safe-withdrawal-rate analysis |
-| [`shared/`](./shared/) | Shared JST loading, CPI deflation, aggregation, and bootstrap utilities |
+| [`shared/`](./shared/) | Shared JST loading, CPI deflation, bootstrap utilities, and geometric↔arithmetic return conversion |
 | [`tests/`](./tests/) | Network-free unit tests for the Python analysis tools |
 
 Downloaded JST data is cached in gitignored `analysis/.data/`. Generated figures are written to gitignored `analysis/artifacts/`.
 
 ## Ownership
 
-- `glide_path/recommender.py` owns the reusable recommendation model and historical-market adapter.
+- `glide_path/` — see its [README](./glide_path/README.md): `markets.py` (return models), `simulate.py` (lifecycle + utility), `recommender.py` (public API + optimizer), `report.py` / `interactive.py`.
 - `glide_path/cli.py` owns flag parsing and terminal output; `recommend_glide.py` is only a stable launcher.
 - `glide_path/research.py` is the larger iid-only research sweep used by the methodology note.
 - `glide_path/research_history.py` is the historical-vs-iid sweep (factorial × world/pooled dataset, block-length and γ sweeps, CE-vs-constant curves, variance-ratio diagnostic); it reports the raw optimized glide (no simplicity bias).

@@ -50,6 +50,10 @@ export interface GlidePathResult {
   drawdownDepletion: number;
   /** Deterministic expected balance at retirement under the optimized glide path. */
   expectedRetirementBalance: number;
+  /** First-year portfolio draw implied by the spending rule. */
+  initialTargetDraw: number;
+  /** Initial portfolio draw as a fraction of the expected retirement balance, or null if nonpositive. */
+  fundingRatio: number | null;
   /** Full-path depletion for the best constant allocation. */
   flatDepletion: number;
   /** Drawdown-only depletion for the best constant allocation. */

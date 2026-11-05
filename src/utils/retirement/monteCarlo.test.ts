@@ -224,6 +224,8 @@ describe("safeWithdrawalRate", () => {
     const swr50 = safeWithdrawalRate(5.67, 8.79, 2.1, 50, 0.9);
     expect(swr30).toBeGreaterThan(0.025);
     expect(swr30).toBeLessThan(0.05);
+    // The old engine treated the nominal geometric return as arithmetic, giving ~3.64–3.68%.
+    expect(swr30).toBeGreaterThan(0.0368);
     expect(swr50).toBeLessThan(swr30);
   });
 
@@ -231,5 +233,28 @@ describe("safeWithdrawalRate", () => {
     const swr80 = safeWithdrawalRate(5.67, 8.79, 2.1, 30, 0.8);
     const swr95 = safeWithdrawalRate(5.67, 8.79, 2.1, 30, 0.95);
     expect(swr95).toBeLessThan(swr80);
+  });
+
+  it("keeps long-run zero-withdrawal median growth near the real geometric return", () => {
+    const input = base({
+      currentAge: 35,
+      planningAge: 95,
+      currentSavings: 1_000_000,
+      contributionPct: 0,
+      targetIncomePct: 0,
+      guaranteedIncomePct: 0,
+      retireReturn: 5.67,
+    });
+    const { bands } = simulateRetirementPhase(
+      input,
+      input.currentAge,
+      input.currentSavings,
+      10_000,
+    );
+    const years = input.planningAge - input.currentAge;
+    const medianGrowth = Math.pow(bands.at(-1)!.p50 / input.currentSavings, 1 / years) - 1;
+    const realGeometric = 1.0567 / 1.021 - 1;
+
+    expect(medianGrowth).toBeCloseTo(realGeometric, 3);
   });
 });

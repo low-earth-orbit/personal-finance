@@ -12,11 +12,13 @@ Sections (choose with --sections; default all):
   blocks  : block-length sweep (sequencing strength) on the pooled dataset
   channels: which ingredient flips the answer — corr, marginal shapes, equity-only or
             bond-only sequencing, vs the full joint sequence structure
-  menu    : replace the nominal-bond leg with a synthetic VR=1 real asset (idealized
-            short-TIPS/RRB ladder) — how much of flat-100% is the bond menu?
+  menu    : replace the nominal-bond leg with synthetic real assets (buyable ETF proxy and
+            idealized short-TIPS/RRB ladder) — how much of flat-100% is the bond menu?
   gamma   : risk-aversion sweep across the key modes
   curves  : CE vs constant equity weight (how peaked is "100% equity"?)
   vr      : variance-ratio diagnostic (mean reversion) for world vs pooled
+  regret  : CE regret of constant weights and the iid recommended glide across historical cuts
+  funding : funding-ratio and matched-spending flexibility sweeps
 
   python3 -m analysis.glide_path.research_history --sections matrix vr
   python3 -m analysis.glide_path.research_history --quick          # faster, lower fidelity
@@ -28,7 +30,10 @@ import argparse
 
 import numpy as np
 
-from .recommender import recommend_glide_path
+from analysis.shared import jst_history as J
+
+from .markets import PWL_CURVE, build_alloc, forward_anchors
+from .recommender import evaluate_path, recommend_glide_path
 
 # Disasters whose inclusion most stresses the equity case under single-country sequencing.
 DISASTER_COUNTRIES = ["Germany", "Japan"]
@@ -36,6 +41,22 @@ DISASTER_YEARS = ["1914-1923", "1939-1948"]  # WWI + hyperinflation; WWII + afte
 
 # Stable six: long, usable series with no hyperinflation, occupation, or market closure.
 STABLE_SIX = ["USA", "UK", "Canada", "Australia", "Switzerland", "Sweden"]
+
+
+def split_sampler(block_asset):
+    """Sampler that block-samples one asset's rows and iid-shuffles the other's.
+
+    Removes cross-asset sequencing (and the contemporaneous correlation) while keeping one leg's
+    own sequence structure. Pass as ``recommend_glide_path(..., sampler=...)``."""
+    def sample(history, n_years, n_paths, *, mode, block_years, seed):
+        blk = J.sample_indices(history.observations, n_years, n_paths, mode="historical-block",
+                               block_years=block_years, seed=seed, segment_ids=history.segment_ids)
+        iid = J.sample_indices(history.observations, n_years, n_paths, mode="historical-iid",
+                               block_years=block_years, seed=seed + 1)
+        if block_asset == "equity":
+            return history.equity[blk], history.fixed_income[iid]
+        return history.equity[iid], history.fixed_income[blk]
+    return sample
 
 
 def _parse_windows(tokens):
@@ -74,6 +95,10 @@ def glide_string(rec):
 
 
 def summary_row(label, rec):
+    if "(world)" in label:
+        assert rec["params"].get("dataset") == "world", (label, rec["params"].get("dataset"))
+    if "(pooled" in label:
+        assert rec["params"].get("dataset") == "pooled", (label, rec["params"].get("dataset"))
     edge = rec["ce_income"] - rec["flat_ce_income"]
     return (
         f"  {label:<34} glide[{glide_string(rec):<29}] "
@@ -87,9 +112,9 @@ def summary_row(label, rec):
 def matrix_cells(args):
     cells = [
         ("iid-mc", dict(return_mode="iid-mc")),
-        ("historical-iid (world)", dict(return_mode="historical-iid")),
-        ("historical-block (world)", dict(return_mode="historical-block", block_years=args.block_years)),
-        ("forward-block (world)", dict(return_mode="forward-block", block_years=args.block_years)),
+        ("historical-iid (world)", dict(return_mode="historical-iid", dataset="world")),
+        ("historical-block (world)", dict(return_mode="historical-block", dataset="world", block_years=args.block_years)),
+        ("forward-block (world)", dict(return_mode="forward-block", dataset="world", block_years=args.block_years)),
         ("historical-iid (pooled)", dict(return_mode="historical-iid", dataset="pooled")),
         ("historical-block (pooled)",
          dict(return_mode="historical-block", dataset="pooled", block_years=args.block_years)),
@@ -108,8 +133,8 @@ def run_matrix(args):
           f"{args.accum}y accum + {args.retire}y retire, ${args.savings:,.0f}, "
           f"target ${args.target_income:,.0f}, guaranteed ${args.guaranteed_income:,.0f})")
     print("=" * 100)
-    print("  Reads: world block→all-equity is SEQUENCING (forward-block barely moves it); pooling")
-    print("  single-country sequences is the biggest lever (it restores the diversified-away risk).")
+    print("  Rows compare return modes and world/pooled historical datasets under the same household inputs.")
+    print("  Interpret the optimized glide, constant-weight comparator, and depletion columns together.")
     for label, overrides in matrix_cells(args):
         rec = recommend_glide_path(**base_kwargs(args, **overrides))
         print(summary_row(label, rec))
@@ -133,8 +158,9 @@ def run_channels(args):
     """Factorial ladder isolating which ingredient of forward-block flips the optimum.
 
     a) iid-mc                : normal draws, curve-interpolated intermediate vols (baseline)
-    b) synth-iid (hist corr) : iid bivariate NORMAL at the forward anchors with the historical
-                               stock/bond correlation — the correlation channel alone
+    b1) synth-iid (curve corr): iid bivariate NORMAL at the forward arithmetic anchors with the
+                                correlation implied by the curve's 60/40 volatility
+    b2) synth-iid (hist corr) : same synthetic marginals with historical pooled correlation
     c) rescaled-hist iid     : forward-rescaled real history sampled iid — correlation +
                                non-normal marginal shapes, still no sequencing
     d) equity-block/bond-iid : block-sample equity only, iid-shuffle bonds — equity sequencing
@@ -142,67 +168,59 @@ def run_channels(args):
     e) equity-iid/bond-block : the reverse — bond persistence without equity sequencing
     f) forward-block         : the full joint sequence structure (the scenario mode)
 
-    The one-asset cells (d, e) necessarily drop the cross-correlation; cell b shows that
-    channel is immaterial on its own.
+    The one-asset cells (d, e) necessarily drop the cross-correlation. b1/b2 isolate only the
+    correlation choice; c adds historical marginal shapes.
     """
-    from unittest.mock import patch
-
-    from analysis.glide_path import recommender as R
-    from analysis.shared import jst_history as J
-
-    eq_m, eq_v, bd_m, bd_v = R._forward_anchors(R.PWL_CURVE, 2.1, True)
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
     raw = J.load_pooled_country_returns()
-    corr = float(np.corrcoef(raw.equity, raw.fixed_income)[0, 1])
+    historical_corr = float(np.corrcoef(raw.equity, raw.fixed_income)[0, 1])
+    w6040 = 0.60
+    _, curve_6040_vol = build_alloc(PWL_CURVE, 2.1, True)(np.array(w6040))
+    curve_corr = float(
+        (curve_6040_vol**2 - w6040**2 * eq_v**2 - (1 - w6040)**2 * bd_v**2)
+        / (2 * w6040 * (1 - w6040) * eq_v * bd_v)
+    )
+    curve_corr = float(np.clip(curve_corr, -1.0, 1.0))
     rescaled = J.rescale_to_targets(
         raw, equity_mean=eq_m, equity_vol=eq_v,
         fixed_income_mean=bd_m, fixed_income_vol=bd_v,
         label_suffix="forward-CMA rescaled",
     )
 
-    rng = np.random.default_rng(7)
-    n_obs = 50_000
-    z = rng.standard_normal((n_obs, 2))
-    z[:, 1] = corr * z[:, 0] + np.sqrt(1.0 - corr**2) * z[:, 1]
-    synth = J.ReturnHistory(
-        years=np.arange(n_obs), equity=eq_m + eq_v * z[:, 0],
-        fixed_income=bd_m + bd_v * z[:, 1],
-        label=f"synthetic normal (corr {corr:.2f})", country_count=0,
-    )
+    def synthetic_corr(corr, label, seed=7):
+        rng = np.random.default_rng(seed)
+        n_obs = raw.observations
+        z = rng.standard_normal((n_obs, 2))
+        z[:, 1] = corr * z[:, 0] + np.sqrt(1.0 - corr**2) * z[:, 1]
+        return J.ReturnHistory(
+            years=np.arange(n_obs),
+            equity=J._affine_to_target(eq_m + eq_v * z[:, 0], eq_m, eq_v),
+            fixed_income=J._affine_to_target(bd_m + bd_v * z[:, 1], bd_m, bd_v),
+            label=label, country_count=0,
+        )
 
-    def split_sampler(block_asset):
-        """Block-sample one asset's rows, iid-shuffle the other's."""
-        def sample(history, n_years, n_paths, *, mode, block_years, seed):
-            blk = J.sample_indices(history.observations, n_years, n_paths,
-                                   mode="historical-block", block_years=block_years,
-                                   seed=seed, segment_ids=history.segment_ids)
-            iid = J.sample_indices(history.observations, n_years, n_paths,
-                                   mode="historical-iid", block_years=block_years,
-                                   seed=seed + 1)
-            if block_asset == "equity":
-                return history.equity[blk], history.fixed_income[iid]
-            return history.equity[iid], history.fixed_income[blk]
-        return sample
+    synth_curve = synthetic_corr(curve_corr, f"synthetic normal (curve corr {curve_corr:.2f})")
+    synth_history = synthetic_corr(historical_corr, f"synthetic normal (historical corr {historical_corr:.2f})")
 
     print("\n" + "=" * 100)
-    print(f"CHANNEL FACTORIAL  (what flips the optimum to flat ~100%? hist stock/bond corr = {corr:.3f})")
-    print("  Reads: corr (b) and marginal shapes (c) barely move the iid answer; one-asset sequencing")
+    print(f"CHANNEL FACTORIAL  (curve-implied corr={curve_corr:.3f}; historical pooled corr={historical_corr:.3f})")
+    print("  b1/b2 change only correlation at forward arithmetic anchors; c adds marginal shapes;")
     print("  (d, e) does not flip it either — only the full joint sequence structure (f) does.")
     print("=" * 100)
 
     print(summary_row("a) iid-mc",
                       recommend_glide_path(**base_kwargs(args, return_mode="iid-mc"))))
-    with patch.object(R, "_load_history", return_value=synth):
-        print(summary_row("b) synth-iid (hist corr)",
-                          recommend_glide_path(**base_kwargs(args, return_mode="historical-iid"))))
-    with patch.object(R, "_load_history", return_value=rescaled):
-        print(summary_row("c) rescaled-hist iid",
-                          recommend_glide_path(**base_kwargs(args, return_mode="historical-iid"))))
+    for label, history in (("b1) synth-iid (curve corr)", synth_curve),
+                           ("b2) synth-iid (historical corr)", synth_history),
+                           ("c) rescaled-hist iid", rescaled)):
+        print(summary_row(label, recommend_glide_path(
+            **base_kwargs(args, return_mode="historical-iid", history=history))))
     fwd = base_kwargs(args, return_mode="forward-block", dataset="pooled",
                       block_years=args.block_years)
-    with patch.object(J, "sample_return_paths", split_sampler("equity")):
-        print(summary_row("d) equity-block/bond-iid", recommend_glide_path(**fwd)))
-    with patch.object(J, "sample_return_paths", split_sampler("fixed_income")):
-        print(summary_row("e) equity-iid/bond-block", recommend_glide_path(**fwd)))
+    print(summary_row("d) equity-block/bond-iid",
+                      recommend_glide_path(**fwd, sampler=split_sampler("equity"))))
+    print(summary_row("e) equity-iid/bond-block",
+                      recommend_glide_path(**fwd, sampler=split_sampler("fixed_income"))))
     print(summary_row("f) forward-block (joint)", recommend_glide_path(**fwd)))
 
 
@@ -211,26 +229,16 @@ def run_menu(args):
 
     Equity keeps its forward-block sequencing throughout; only the non-equity asset changes:
       a) forward-block              : rescaled historical long nominal bonds (joint structure)
-      b) synth bond, same marginals : iid normal at the SAME bond mean/vol — isolates the
-                                      bond-side sequencing+correlation, holding risk constant
-      c) short-TIPS ladder          : iid normal, bond mean, 2% vol (idealized real ladder)
-      d) short-TIPS ladder @2% real : c) with a 2.0% real yield
-      e) XSTH ETF proxy             : iid normal, bond mean, FULL short-bond vol — a real,
-                                      short-duration ETF (CAD-hedged short-term US TIPS) that has
-                                      the persistence fix but NOT the ladder's vol suppression.
-                                      Numerically identical to (b); the buyable Canadian figure.
+      b) synthetic short-TIPS ETF proxy: VR=1 at the bond mean/vol, zero equity correlation
+      c) idealized short-TIPS ladder   : iid normal, bond mean, 2% vol
+      d) idealized ladder @2% real     : c) with a 2.0% real yield
 
     Cells (c)/(d) are idealized: no real-rate duration risk, no equity correlation, no
     liquidity/issuance constraints (Canada stopped RRB issuance in 2022). The 2% vol in (c) is the
-    LADDER property (hold-to-maturity pull-to-par), not a property of being short or real — an ETF
-    (e) cannot deliver it. Read c/d as upper bounds; (e) is what a Canadian can actually buy.
+    LADDER property (hold-to-maturity pull-to-par), not a property of being short or real. Read c/d
+    as upper bounds; b is the buyable short-TIPS-ETF proxy.
     """
-    from unittest.mock import patch
-
-    from analysis.glide_path import recommender as R
-    from analysis.shared import jst_history as J
-
-    eq_m, eq_v, bd_m, bd_v = R._forward_anchors(R.PWL_CURVE, 2.1, True)
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
     rescaled = J.rescale_to_targets(
         J.load_pooled_country_returns(),
         equity_mean=eq_m, equity_vol=eq_v,
@@ -240,22 +248,14 @@ def run_menu(args):
 
     def with_synth_bond(mean, vol, seed=11):
         rng = np.random.default_rng(seed)
-        synth = mean + vol * rng.standard_normal(rescaled.observations)
+        synth = J._affine_to_target(
+            mean + vol * rng.standard_normal(rescaled.observations), mean, vol
+        )
         return J.ReturnHistory(
             years=rescaled.years, equity=rescaled.equity, fixed_income=synth,
             label="synth-bond", country_count=rescaled.country_count,
             segment_ids=rescaled.segment_ids,
         )
-
-    def split_sample(history, n_years, n_paths, *, mode, block_years, seed):
-        """Equity rows in stationary blocks; bond rows iid (kills persistence and corr)."""
-        blk = J.sample_indices(history.observations, n_years, n_paths,
-                               mode="historical-block", block_years=block_years,
-                               seed=seed, segment_ids=history.segment_ids)
-        iid = J.sample_indices(history.observations, n_years, n_paths,
-                               mode="historical-iid", block_years=block_years,
-                               seed=seed + 1)
-        return history.equity[blk], history.fixed_income[iid]
 
     print("\n" + "=" * 100)
     print("BOND-MENU EXPERIMENT  (equity keeps forward-block sequencing; only the safe asset changes)")
@@ -267,18 +267,14 @@ def run_menu(args):
         **base_kwargs(args, return_mode="forward-block", dataset="pooled",
                       block_years=args.block_years))))
     cells = [
-        ("b) synth bond, same marginals", bd_m, bd_v),
-        ("c) short-TIPS ladder (2% vol)", bd_m, 0.02),
-        ("d) short-TIPS ladder @2% real", 0.02, 0.02),
-        ("e) XSTH ETF proxy (VR=1, full vol)", bd_m, bd_v),
+        ("b) buyable short-TIPS ETF proxy (VR=1, 0 corr)", bd_m, bd_v),
+        ("c) idealized short-TIPS ladder (2% vol)", bd_m, 0.02),
+        ("d) idealized ladder @2% real", 0.02, 0.02),
     ]
     for label, mean, vol in cells:
-        history = with_synth_bond(mean, vol)
-        with patch.object(R, "_load_history", return_value=history), \
-             patch.object(J, "sample_return_paths", split_sample):
-            rec = recommend_glide_path(
-                **base_kwargs(args, return_mode="historical-block", dataset="pooled",
-                              block_years=args.block_years))
+        rec = recommend_glide_path(**base_kwargs(
+            args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
+            history=with_synth_bond(mean, vol), sampler=split_sampler("equity")))
         print(summary_row(label, rec))
 
 
@@ -288,7 +284,7 @@ def run_gamma_sweep(args):
     print("=" * 100)
     modes = [
         ("iid-mc", dict(return_mode="iid-mc")),
-        ("historical-block (world)", dict(return_mode="historical-block", block_years=args.block_years)),
+        ("historical-block (world)", dict(return_mode="historical-block", dataset="world", block_years=args.block_years)),
         ("historical-block (pooled)",
          dict(return_mode="historical-block", dataset="pooled", block_years=args.block_years)),
         ("forward-block (pooled)",
@@ -307,7 +303,7 @@ def run_flat_curves(args):
     print("=" * 100)
     cells = [
         ("iid-mc", dict(return_mode="iid-mc")),
-        ("historical-block (world)", dict(return_mode="historical-block", block_years=args.block_years)),
+        ("historical-block (world)", dict(return_mode="historical-block", dataset="world", block_years=args.block_years)),
         ("historical-block (pooled)",
          dict(return_mode="historical-block", dataset="pooled", block_years=args.block_years)),
         ("forward-block (pooled)",
@@ -341,7 +337,7 @@ def run_variance_ratios(args):
     )
 
     print("\n" + "=" * 100)
-    print("VARIANCE RATIO  (VR<1 = mean reversion; the mechanism behind block→equity)")
+    print("VARIANCE RATIO  (arithmetic-return basis; VR<1 = mean reversion)")
     print("  bills = empirical short asset: real return on rolling gov bills (nominal,")
     print("          bill_rate deflated by CPI) — the menu's synthetic VR=1 leg made real")
     print("=" * 100)
@@ -367,7 +363,7 @@ def run_variance_ratios(args):
         )
         for asset, series, segments in rows:
             vols = "  ".join(
-                f"{variance_ratio(series, q, segments):>4.2f}" for q in horizons
+                f"{variance_ratio(series, q, segments, basis='arithmetic'):>4.2f}" for q in horizons
             )
             vol = f"{series.std() * 100:>5.1f}%"
             print(f"  {name:<22} {asset:<7} {vol}  {vols}")
@@ -386,34 +382,51 @@ def run_variance_ratios(args):
         ("stable six", {"exclude_countries": not_stable}),
         ("1990-2020 infl-target", {"exclude_years": [(1871, 1989)]}),
     ]
-    print("\n  Era / country cuts — VR(10y), pooled basis (bond reversion vs bill persistence)")
-    print(f"  {'cut':<24} {'eqVR':>5} {'bondVR':>6} {'billVR':>6}   {'billVol':>7}  {'n':>5}")
-    for cut_name, kw in cuts:
+    def iid_null(series, segments, reps=300, seed=20260604):
+        """Mean and 5th-95th percentile under within-segment permutation."""
+        series = np.asarray(series, dtype=float)
+        rng = np.random.default_rng(seed)
+        values = []
+        if segments is None:
+            groups = [np.arange(len(series))]
+        else:
+            segments = np.asarray(segments)
+            changes = np.flatnonzero(np.diff(segments) != 0) + 1
+            groups = np.split(np.arange(len(series)), changes)
+        for _ in range(reps):
+            shuffled = series.copy()
+            for indices in groups:
+                shuffled[indices] = rng.permutation(shuffled[indices])
+            values.append(variance_ratio(shuffled, 10, segments, basis="arithmetic"))
+        return float(np.mean(values)), tuple(float(x) for x in np.percentile(values, [5, 95]))
+
+    print("\n  Era / country cuts — arithmetic VR(10), plus within-segment iid null (300 permutations)")
+    print(f"  {'cut':<24} {'eqVR':>5} {'bondVR':>6} {'billVR':>6} {'eq null':>17} {'bond null':>19} {'billVol':>7} {'n':>5}")
+    for cut_i, (cut_name, kw) in enumerate(cuts):
         history = load_pooled_country_returns(**kw)
         bill_series, bill_segments = load_pooled_bills(**kw)
-        eq_vr = variance_ratio(history.equity, 10, history.segment_ids)
-        bond_vr = variance_ratio(history.fixed_income, 10, history.segment_ids)
-        bill_vr = variance_ratio(bill_series, 10, bill_segments)
+        eq_vr = variance_ratio(history.equity, 10, history.segment_ids, basis="arithmetic")
+        bond_vr = variance_ratio(history.fixed_income, 10, history.segment_ids, basis="arithmetic")
+        bill_vr = variance_ratio(bill_series, 10, bill_segments, basis="arithmetic")
+        eq_null = iid_null(history.equity, history.segment_ids, seed=20260604 + cut_i * 2)
+        bond_null = iid_null(history.fixed_income, history.segment_ids, seed=20260605 + cut_i * 2)
         bill_vol = bill_series.std() * 100
-        print(f"  {cut_name:<24} {eq_vr:>5.2f} {bond_vr:>6.2f} {bill_vr:>6.2f}   "
-              f"{bill_vol:>6.1f}%  {history.observations:>5}")
+        print(f"  {cut_name:<24} {eq_vr:>5.2f} {bond_vr:>6.2f} {bill_vr:>6.2f} "
+              f"{eq_null[0]:>5.2f}[{eq_null[1][0]:.2f},{eq_null[1][1]:.2f}] "
+              f"{bond_null[0]:>5.2f}[{bond_null[1][0]:.2f},{bond_null[1][1]:.2f}] "
+              f"{bill_vol:>6.1f}% {history.observations:>5}")
 
 
 def run_bills_block(args):
-    """Forward-block with a real **bills** leg carrying its OWN historical persistence.
+    """Block bootstrap with a real **bills** leg carrying its OWN historical persistence.
 
     Unlike the menu cells (which force the safe asset iid, VR=1), this replaces the long-bond leg
     with JST's empirical real short-bill series — rescaled to the given bills marginals (default
     0.75% real / 2% vol) — and block-bootstraps it jointly with equity. So the bills leg keeps its
-    real-world VR(10y)≈2.4 inflation persistence: the honest "real-world GIC/bill ladder" answer,
+    real-world inflation persistence (arithmetic VR(10y) printed below): the honest "real-world GIC/bill ladder" answer,
     vs the menu's idealized VR=1 short asset.
     """
-    from unittest.mock import patch
-
-    from analysis.glide_path import recommender as R
-    from analysis.shared import jst_history as J
-
-    eq_m, eq_v, _, _ = R._forward_anchors(R.PWL_CURVE, 2.1, True)
+    eq_m, eq_v, _, _ = forward_anchors(PWL_CURVE, 2.1, True)
     bill_m, bill_v = args.bills_mean / 100.0, args.bills_vol / 100.0
 
     # Joint per-country equity+bills panel: inner-join on year so both legs are present and paired,
@@ -444,16 +457,19 @@ def run_bills_block(args):
         label_suffix="forward-CMA rescaled (bills)")
 
     print("\n" + "=" * 100)
-    print("FORWARD-BLOCK with a REAL BILLS leg (bills keep their own historical persistence)")
+    print("BLOCK BOOTSTRAP with a REAL BILLS leg (bills keep their own historical persistence)")
     print(f"  bills marginals: {args.bills_mean:.2f}% real / {args.bills_vol:.2f}% vol; "
           f"equity keeps full forward-block sequencing. Compare to menu cell (a) nominal bonds.")
     print(f"  bills VR(10y) = {J.variance_ratio(joint.fixed_income, 10, joint.segment_ids):.2f} "
           f"(iid null = 1.0; >1 = persistent inflation bleed)")
     print("=" * 100)
-    with patch.object(R, "_load_history", return_value=joint):
-        rec = recommend_glide_path(**base_kwargs(args, return_mode="forward-block",
-                                                 dataset="pooled", block_years=args.block_years))
-    print(summary_row("bills (forward-block, own persistence)", rec))
+    # `joint` is already rescaled (equity to the forward anchors, bills to the bills marginals),
+    # so block-sample it as-is. (Running it as forward-block would rescale the bills leg again,
+    # to the BOND anchors — an earlier version of this section did exactly that.)
+    rec = recommend_glide_path(**base_kwargs(
+        args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
+        history=joint))
+    print(summary_row("bills (block, own persistence)", rec))
 
     rng = np.random.default_rng(11)
     iid_bills = bill_m + bill_v * rng.standard_normal(joint.observations)
@@ -461,24 +477,16 @@ def run_bills_block(args):
                                label="bills-iid", country_count=joint.country_count,
                                segment_ids=joint.segment_ids)
 
-    def split_sample(history, n_years, n_paths, *, mode, block_years, seed):
-        blk = J.sample_indices(history.observations, n_years, n_paths, mode="historical-block",
-                               block_years=block_years, seed=seed, segment_ids=history.segment_ids)
-        iid = J.sample_indices(history.observations, n_years, n_paths, mode="historical-iid",
-                               block_years=block_years, seed=seed + 1)
-        return history.equity[blk], history.fixed_income[iid]
-
-    with patch.object(R, "_load_history", return_value=iid_hist), \
-         patch.object(J, "sample_return_paths", split_sample):
-        rec_iid = recommend_glide_path(**base_kwargs(args, return_mode="historical-block",
-                                                     dataset="pooled", block_years=args.block_years))
+    rec_iid = recommend_glide_path(**base_kwargs(
+        args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
+        history=iid_hist, sampler=split_sampler("equity")))
     print(summary_row("bills (iid, VR=1 — for contrast)", rec_iid))
 
 
 def run_tips_etf(args):
     """Data-anchored realistic short-TIPS-ETF leg (e.g. XSTH/VTIP), not the idealized VR=1 cell.
 
-    Menu cell (e) assumes the buyable real asset is VR=1. Live ETF data (VTIP/STIP 2012-, deflated
+    Menu cell (b) assumes the buyable real asset is VR=1. Live ETF data (VTIP/STIP 2012-, deflated
     by US CPI) says short-TIPS real returns are only *mildly* persistent — annual AR(1) phi ~= 0.13,
     i.e. VR(2y) ~= 1.13 — because the inflation-accretion leg (VR~=1) dominates but the real-yield
     repricing leg adds a little persistence and ~0.6 correlation to short Treasuries. Still far below
@@ -486,15 +494,24 @@ def run_tips_etf(args):
     an AR(1) at VTIP's measured phi/marginals (--tips-mean/--tips-vol/--tips-phi), block-sampled
     jointly so it carries that mild persistence while equity keeps its JST forward-block sequencing.
     """
-    from unittest.mock import patch
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
+    # Default the TIPS marginals to the forward bond anchors so phi=0 reproduces menu cell (b).
+    tips_m = bd_m if args.tips_mean is None else args.tips_mean / 100.0
+    tips_v = bd_v if args.tips_vol is None else args.tips_vol / 100.0
+    phi = args.tips_phi
 
-    from analysis.glide_path import recommender as R
-    from analysis.shared import jst_history as J
-
-    eq_m, eq_v, _, _ = R._forward_anchors(R.PWL_CURVE, 2.1, True)
-    tips_m, tips_v, phi = args.tips_mean / 100.0, args.tips_vol / 100.0, args.tips_phi
-
-    hist = J.load_pooled_country_returns()
+    raw_hist = J.load_pooled_country_returns()
+    # Match menu cell (b): equity uses the forward-CMA arithmetic mean/vol while retaining
+    # pooled historical sequencing. The old version accidentally used raw 6.94% real / 22.3%
+    # equity, making this comparison incomparable.
+    hist = J.rescale_to_targets(
+        raw_hist,
+        equity_mean=eq_m,
+        equity_vol=eq_v,
+        fixed_income_mean=tips_m,
+        fixed_income_vol=tips_v,
+        label_suffix="forward-CMA equity rescaled",
+    )
     n = hist.observations
     seg = hist.segment_ids if hist.segment_ids is not None else np.zeros(n, dtype=int)
 
@@ -518,25 +535,162 @@ def run_tips_etf(args):
                                label=label, country_count=hist.country_count,
                                segment_ids=hist.segment_ids)
 
-    def split_sample(history, n_years, n_paths, *, mode, block_years, seed):
-        blk = J.sample_indices(history.observations, n_years, n_paths, mode="historical-block",
-                               block_years=block_years, seed=seed, segment_ids=history.segment_ids)
-        return history.equity[blk], history.fixed_income[blk]
-
     print("\n" + "=" * 100)
     print("REALISTIC short-TIPS-ETF leg (data-anchored AR(1), not idealized VR=1)")
-    print(f"  marginals {args.tips_mean:.2f}% real / {args.tips_vol:.2f}% vol, AR(1) phi={phi:.2f} "
+    print(f"  marginals {tips_m * 100:.2f}% real / {tips_v * 100:.2f}% vol, AR(1) phi={phi:.2f} "
           f"(VTIP-measured); equity keeps JST forward-block sequencing.")
     print("=" * 100)
     for label, ph, seed in [(f"realistic XSTH (phi={phi:.2f}, VR(2y)~{1 + phi:.2f})", phi, 7),
-                            ("idealized VR=1 (phi=0, = cell e)", 0.0, 7)]:
+                            ("idealized VR=1 (phi=0, = menu cell b)", 0.0, 7)]:
         series = ar1(seed) if ph == phi else (
             tips_m + tips_v * np.random.default_rng(seed).standard_normal(n))
-        with patch.object(R, "_load_history", return_value=make_hist(series, label)), \
-             patch.object(J, "sample_return_paths", split_sample):
-            rec = recommend_glide_path(**base_kwargs(args, return_mode="historical-block",
-                                                     dataset="pooled", block_years=args.block_years))
+        # Both legs share the same block indices (the default historical-block sampler).
+        rec = recommend_glide_path(**base_kwargs(
+            args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
+            history=make_hist(series, label)))
         print(summary_row(label, rec))
+
+
+def _regret_regimes(args):
+    return [
+        ("full 1871-2020", dict(return_mode="forward-block", dataset="pooled")),
+        ("post-1950", dict(return_mode="forward-block", dataset="pooled",
+                            exclude_years=[(1871, 1949)])),
+        ("ex Germany+Japan", dict(return_mode="forward-block", dataset="pooled",
+                                   exclude_countries=DISASTER_COUNTRIES)),
+        ("stable six", dict(return_mode="forward-block", dataset="pooled",
+                            exclude_countries=None)),
+        ("1990-2020", dict(return_mode="forward-block", dataset="pooled",
+                            exclude_years=[(1871, 1989)])),
+        ("iid-mc", dict(return_mode="iid-mc", dataset="pooled")),
+    ]
+
+
+def run_regret(args):
+    """Compare constant-weight CE regret across historical cuts and the iid regime."""
+    from analysis.shared.jst_history import load_jst_frame
+
+    all_countries = [c for c in load_jst_frame()["country"].dropna().unique()]
+    not_stable = [c for c in all_countries if c not in STABLE_SIX]
+    regimes = _regret_regimes(args)
+    regimes[3] = ("stable six", dict(return_mode="forward-block", dataset="pooled",
+                                      exclude_countries=not_stable))
+    weights = [40, 50, 60, 70, 80, 90, 100]
+    recs = {}
+    for label, overrides in regimes:
+        recs[label] = recommend_glide_path(
+            **base_kwargs(args, flexibility=0.0, return_flat_curve=True, **overrides)
+        )
+
+    print("\n" + "=" * 100)
+    print("CE REGRET — constant-$ lifecycle, forward-block pooled cuts + iid-mc")
+    print("  regret = regime best constant CE minus CE at the listed constant weight; lower is better")
+    print("=" * 100)
+    print(f"  {'regime':<22} " + " ".join(f"{w:>7}%" for w in weights) + "   best")
+    regrets = {}
+    for label, _ in regimes:
+        by_weight = {round(p["equity_pct"]): p["ce_income"] for p in recs[label]["flat_curve"]}
+        best_weight, best_ce = max(by_weight.items(), key=lambda item: item[1])
+        regrets[label] = {w: best_ce - by_weight[w] for w in weights}
+        cells = " ".join(f"{regrets[label][w]:>6.0f}" for w in weights)
+        print(f"  {label:<22} {cells}   {best_weight:>3.0f}% (${best_ce:,.0f})")
+
+    forward_labels = [label for label, overrides in regimes if overrides["return_mode"] == "forward-block"]
+    for title, labels in (("max forward-block cut", forward_labels), ("max all six regimes", list(recs))):
+        maxima = {w: max(regrets[label][w] for label in labels) for w in weights}
+        minimax = min(maxima, key=maxima.get)
+        print(f"\n  {title}: " + " ".join(
+            f"{w:>3}%{('*' if w == minimax else '')} {maxima[w]:>5.0f}" for w in weights
+        ) + f"  (* minimax={minimax}%)")
+
+    iid_path = np.asarray(recs["iid-mc"]["equity_by_year"], dtype=float)
+    print("\n  iid-mc recommended glide scored in each regime (regime best constant CE - path CE)")
+    print(f"  {'regime':<22} {'path CE':>10} {'regret':>10}")
+    for label, overrides in regimes:
+        eval_kwargs = base_kwargs(
+            args,
+            flexibility=0.0,
+            n_paths=max(args.paths, 40_000),
+            **overrides,
+        )
+        score = evaluate_path(iid_path, **eval_kwargs)
+        best_ce = max(p["ce_income"] for p in recs[label]["flat_curve"])
+        print(f"  {label:<22} ${score['ce_income']:>9,.0f} ${best_ce - score['ce_income']:>9,.0f}")
+
+
+def _funding_kwargs(args, **overrides):
+    """Funding section's default 30y+30y household scenario."""
+    defaults = dict(
+        accum_years=30,
+        retire_years=30,
+        current_savings=200_000.0,
+        annual_contribution=20_000.0,
+        guaranteed_income=20_000.0,
+        target_income=60_000.0,
+        return_mode="iid-mc",
+        dataset="pooled",
+    )
+    defaults.update(overrides)
+    return base_kwargs(args, **defaults)
+
+
+def run_funding(args):
+    """Funding-ratio and matched-spending comparisons under iid-mc."""
+    pairs = [(300_000, 30_000), (200_000, 20_000), (150_000, 15_000),
+             (120_000, 12_000), (100_000, 10_000)]
+    print("\n" + "=" * 100)
+    print("FUNDING AND SPENDING FLEXIBILITY (iid-mc; default 30y accumulation + 30y retirement household)")
+    print("=" * 100)
+    print("\n  Funding-ratio sweep (flex=0)")
+    print(f"  {'savings':>9} {'contrib':>9} {'funding':>8} {'tent':>7} {'best const':>11} {'CE':>10} {'full depl':>10}")
+    for savings, contrib in pairs:
+        rec = recommend_glide_path(**_funding_kwargs(
+            args, flexibility=0.0, current_savings=savings, annual_contribution=contrib
+        ))
+        print(f"  ${savings:>8,.0f} ${contrib:>8,.0f} {rec['funding_ratio'] * 100:>7.1f}% "
+              f"{rec['tent_pct']:>6.1f}% {rec['flat_equity_pct']:>10.1f}% ${rec['ce_income']:>9,.0f} "
+              f"{rec['depletion'] * 100:>9.1f}%")
+
+    constant = recommend_glide_path(**_funding_kwargs(args, flexibility=0.0, withdrawal_rate=0.04))
+    flex4 = recommend_glide_path(**_funding_kwargs(args, flexibility=1.0, withdrawal_rate=0.04))
+    gap = constant["initial_target_draw"]
+    matched_wr = 0.04
+    matched = None
+    for _ in range(2):
+        matched = recommend_glide_path(**_funding_kwargs(
+            args, flexibility=1.0, withdrawal_rate=matched_wr
+        ))
+        matched_wr = gap / matched["expected_retirement_balance"]
+    matched = recommend_glide_path(**_funding_kwargs(
+        args, flexibility=1.0, withdrawal_rate=matched_wr
+    ))
+    semi = recommend_glide_path(**_funding_kwargs(
+        args, flexibility=0.5, withdrawal_rate=matched_wr
+    ))
+    print("\n  Matched-spending flexibility")
+    print(f"  {'rule':<32} {'wr':>7} {'initial draw':>14} {'CE':>10} {'full depl':>10}")
+    for label, rec, wr in (
+        ("constant-$ default", constant, 0.04),
+        ("flex=1 at 4%", flex4, 0.04),
+        ("flex=1 matched to constant gap", matched, matched_wr),
+        ("semi-flex=0.5 at matched wr", semi, matched_wr),
+    ):
+        print(f"  {label:<32} {wr * 100:>6.2f}% ${rec['initial_target_draw']:>13,.0f} "
+              f"${rec['ce_income']:>9,.0f} {rec['depletion'] * 100:>9.1f}%")
+
+    constant_sweep = []
+    for target in (50_000, 55_000, 60_000, 62_500, 65_000, 70_000):
+        rec = recommend_glide_path(**_funding_kwargs(args, flexibility=0.0, target_income=target))
+        constant_sweep.append((rec["ce_income"], target, rec))
+    flex_sweep = []
+    for wr_pct in (2, 3, 4, 5, 5.5, 6, 7):
+        rec = recommend_glide_path(**_funding_kwargs(args, flexibility=1.0, withdrawal_rate=wr_pct / 100))
+        flex_sweep.append((rec["ce_income"], wr_pct, rec))
+    best_constant = max(constant_sweep, key=lambda item: item[0])
+    best_flex = max(flex_sweep, key=lambda item: item[0])
+    print("\n  Each rule at its own best spending level")
+    print(f"  constant-$ target sweep: best target ${best_constant[1]:,.0f}, CE ${best_constant[0]:,.0f}")
+    print(f"  flex=1 withdrawal sweep: best wr {best_flex[1]:g}%, CE ${best_flex[0]:,.0f}")
 
 
 SECTIONS = {
@@ -549,6 +703,8 @@ SECTIONS = {
     "gamma": run_gamma_sweep,
     "curves": run_flat_curves,
     "vr": run_variance_ratios,
+    "regret": run_regret,
+    "funding": run_funding,
 }
 
 
@@ -574,10 +730,10 @@ def main(argv=None):
                     help="bills-block: real bill mean return %% (default 0.75)")
     ap.add_argument("--bills-vol", type=float, default=2.0,
                     help="bills-block: real bill vol %% (default 2.0)")
-    ap.add_argument("--tips-mean", type=float, default=1.42,
-                    help="tips-etf: real mean %% (default 1.42, = menu cell e/b)")
-    ap.add_argument("--tips-vol", type=float, default=5.4,
-                    help="tips-etf: real vol %% (default 5.4, = menu cell e/b)")
+    ap.add_argument("--tips-mean", type=float, default=None,
+                    help="tips-etf: real arithmetic mean %% (default: forward bond anchor, = menu cell b)")
+    ap.add_argument("--tips-vol", type=float, default=None,
+                    help="tips-etf: real vol %% (default: forward bond anchor, = menu cell b)")
     ap.add_argument("--tips-phi", type=float, default=0.13,
                     help="tips-etf: annual AR(1) phi (default 0.13, VTIP-measured)")
     ap.add_argument("--paths", type=int, default=6_000)
@@ -587,8 +743,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     if args.quick:
-        args.paths = min(args.paths, 3_000)
-        args.passes = min(args.passes, 6)
+        args.paths = min(args.paths, 1_500)
+        args.passes = min(args.passes, 4)
         args.interval = max(args.interval, 10)
 
     for name in args.sections:

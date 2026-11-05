@@ -234,9 +234,9 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   Expected return
                 </Text>
                 <Text size="xs" c="dimmed">
-                  Based on stock / bond mix — e.g. 80/20 is 80% stocks — before and after
-                  retirement. For simplicity, two distinct allocations are used, no gradual
-                  transition in-between.
+                  Nominal compound (geometric) annual return, based on stock / bond mix — e.g. 80/20
+                  is 80% stocks — before and after retirement. For simplicity, two distinct
+                  allocations are used, no gradual transition in-between.
                 </Text>
                 <SimpleGrid
                   cols={{ base: 2, xs: 3 }}
@@ -293,7 +293,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                         <Text size="xs" c="dimmed">
                           Custom returns are easy to overstate. The presets use long-term capital
                           market assumptions; higher figures make any plan look feasible. Use
-                          nominal (pre-inflation) returns.
+                          nominal (pre-inflation) compound returns.
                         </Text>
                         <UserInputFormItem
                           {...num("accumReturn")}

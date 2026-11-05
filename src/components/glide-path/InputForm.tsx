@@ -67,6 +67,11 @@ export default function InputForm({
   const flex = typeof input.flexibility === "number" ? input.flexibility : 0;
   const isCustomGamma = !GAMMA_PRESETS.some((gamma) => isSame(input.gamma, gamma));
   const leveraged = typeof input.maxEquityPct === "number" && input.maxEquityPct > 100;
+  const gammaDescription =
+    "How well you tolerate market volatility — pick the investor that sounds like you. 1 to 2 = very aggressive, 3 to 5 = moderate, 6 to 10 = very cautious." +
+    (flex === 0
+      ? " With constant-dollar spending (flexibility 0), γ barely changes the allocation — the plan is driven by avoiding shortfall years; γ matters once spending is flexible."
+      : "");
 
   return (
     <>
@@ -160,10 +165,7 @@ export default function InputForm({
               )}
 
               <Stack gap={4}>
-                <FieldHeader
-                  label="Risk aversion (γ)"
-                  description="How well you tolerate market volatility — pick the investor that sounds like you. 1 to 2 = very aggressive, 3 to 5 = moderate, 6 to 10 = very cautious."
-                />
+                <FieldHeader label="Risk aversion (γ)" description={gammaDescription} />
                 <Group gap="xs" mt="xs" role="group" aria-label="Risk aversion">
                   {GAMMA_PRESETS.map((g) => (
                     <Button

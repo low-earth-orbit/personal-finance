@@ -6,12 +6,13 @@
  * return/vol curve (the app's PWL / FP-Canada allocation table from presets.ts).
  */
 
-/** Anchor on the allocation curve: [equityWeight (0..1), nominalMean %, vol %]. */
+/** Anchor: [equityWeight (0..1), nominal geometric mean %, vol %]. */
 export type AllocAnchor = readonly [number, number, number];
 
 /**
  * Default capital-market curve — the same PWL Capital / FP-Canada numbers the
- * `/retirement` tool uses (nominal % per year; deflated to real with `inflation`).
+ * `/retirement` tool uses (nominal geometric % per year; converted to arithmetic, then
+ * deflated to real with `inflation`).
  */
 export const DEFAULT_ALLOC_CURVE: AllocAnchor[] = [
   [1.0, 6.87, 12.57],

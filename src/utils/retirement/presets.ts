@@ -75,7 +75,7 @@ export const RETURN_PRESETS = [
 
 /**
  * Stock/bond mixes shown in the SWR technical-note reference table, with their
- * nominal expected return and volatility (%). These mirror the return-preset
+ * nominal geometric (compound) return and volatility (%). These mirror the return-preset
  * values (PWL Capital-based) and span the allocation axis users recognize.
  */
 export const SWR_TABLE_ALLOCATIONS = [
@@ -112,9 +112,9 @@ export const DEFAULTS = {
   guaranteedIncomePct: 20,
   /** Age the guaranteed income starts. Before this, the portfolio funds the full target. */
   pensionStartAge: 65,
-  /** Expected nominal return while still working (accumulation), % per year. */
+  /** Expected nominal geometric (compound) return while working, % per year. */
   accumReturn: 6.29,
-  /** Expected nominal return in retirement (typically more conservative), %. */
+  /** Expected nominal geometric (compound) return in retirement, %. */
   retireReturn: 5.67,
   inflationRate: 2.1,
   /**

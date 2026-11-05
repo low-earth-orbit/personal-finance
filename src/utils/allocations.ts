@@ -1,6 +1,6 @@
 /**
- * PWL Capital-based nominal expected returns and volatility by stock/bond mix.
- * Shared by tools so portfolio assumptions have one source of truth.
+ * PWL Capital-based nominal geometric (compound) annual returns and volatility
+ * by stock/bond mix. Shared by tools so portfolio assumptions have one source of truth.
  */
 export const ALLOCATIONS = {
   "100/0": { returnPct: 6.87, volatility: 12.57 },

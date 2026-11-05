@@ -379,9 +379,9 @@ export default function UserInputForm({
               </Alert>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {
-                  label: "Total return",
+                  label: "Compound return",
                   helperText:
-                    "Expected pre-tax annualized return, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
+                    "Expected pre-tax compound annual return, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
                 })}
                 {perturbed("dividendYield", "dividendYieldSigma", {
                   label: "Annual yield",

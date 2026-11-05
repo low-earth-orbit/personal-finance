@@ -49,7 +49,7 @@ def main(argv=None):
     ap.add_argument("--out", default=_DEFAULT_OUT, help="output TypeScript file path")
     args = ap.parse_args(argv)
 
-    from analysis.glide_path.recommender import PWL_CURVE, _forward_anchors
+    from analysis.glide_path.markets import PWL_CURVE, forward_anchors
     from analysis.shared.jst_history import load_pooled_country_returns, rescale_to_targets
 
     print("Loading JST pooled history...")
@@ -59,7 +59,7 @@ def main(argv=None):
         f"{raw.start_year}–{raw.end_year}"
     )
 
-    eq_mean, eq_vol, bond_mean, bond_vol = _forward_anchors(PWL_CURVE, 2.1, True)
+    eq_mean, eq_vol, bond_mean, bond_vol = forward_anchors(PWL_CURVE, 2.1, True)
     print(
         f"  Forward anchors: equity {eq_mean*100:.4f}% ± {eq_vol*100:.4f}%  "
         f"bonds {bond_mean*100:.4f}% ± {bond_vol*100:.4f}%"
@@ -100,8 +100,8 @@ def main(argv=None):
             "// JST R6 pooled real returns, affine-rescaled to forward-CMA marginals.\n"
             f"// {raw.observations} observations · {raw.country_count} countries · "
             f"{raw.start_year}–{raw.end_year}\n"
-            f"// Equity  mean {eq_mean*100:.4f}%  vol {eq_vol*100:.4f}%\n"
-            f"// Bonds   mean {bond_mean*100:.4f}%  vol {bond_vol*100:.4f}%\n\n"
+            f"// Equity  real arithmetic mean {eq_mean*100:.4f}%  vol {eq_vol*100:.4f}%\n"
+            f"// Bonds   real arithmetic mean {bond_mean*100:.4f}%  vol {bond_vol*100:.4f}%\n\n"
         )
         fh.write(f"export const JST_OBSERVATIONS = {raw.observations};\n\n")
         fh.write(f"export const JST_EQUITY = {_format_float32_array(equity)};\n\n")

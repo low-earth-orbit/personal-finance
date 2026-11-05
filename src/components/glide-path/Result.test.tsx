@@ -51,6 +51,8 @@ function makeResult(o: ResultOverrides = {}): GlidePathResult {
     depletion: 0.05,
     drawdownDepletion: 0.05,
     expectedRetirementBalance: 1200000,
+    initialTargetDraw: 48000,
+    fundingRatio: 0.04,
     flatDepletion: 0.06,
     flatDrawdownDepletion: 0.04,
     incomeCv: 0.2,

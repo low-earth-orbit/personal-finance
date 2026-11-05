@@ -20,7 +20,7 @@ EXAMPLES
   # allow lifecycle leverage: up to 1.5x equity, borrowing at 1.5% real
   python3 analysis/recommend_glide.py --accum 30 --retire 30 --gamma 2 --max-leverage 1.5 --borrow-cost 1.5
 
-  # use your own capital-market curve (CSV rows: equity_weight,mean,vol  — nominal %, deflated by --inflation)
+  # use your own capital-market curve (CSV rows: equity_weight,mean,vol — nominal geometric % by default)
   python3 analysis/recommend_glide.py --curve mycurve.csv --flex 1 --guaranteed-income 40000
 
   # raw equal-weight world history, preserving sequencing in stationary circular blocks
@@ -38,15 +38,9 @@ Run with -h to see every flag and its default.
 from __future__ import annotations
 
 import argparse
-from .recommender import (
-    DATASETS,
-    PWL_CURVE,
-    RETURN_MODES,
-    format_summary,
-    plot_glide_path,
-    recommend_glide_path,
-    run_demo,
-)
+from .markets import DATASETS, PWL_CURVE, RETURN_MODES
+from .recommender import recommend_glide_path
+from .report import format_summary, plot_glide_path, run_demo
 
 
 def parse_year_windows(tokens):
@@ -100,6 +94,7 @@ def print_rec(rec):
           f"guaranteed income ${p['guaranteed_income']:,.0f}/yr | γ {p['gamma']:g}{lev}{ret_cap_note} | "
           f"{p['interval']}y steps")
     print(f"  return mode: {p['return_mode']}")
+    print(f"  curve mean basis: {p.get('curve_mean_basis', 'geometric')}")
     if p["return_mode"] != "iid-mc":
         block = (
             f" | stationary circular blocks averaging {p['block_years']}y"
@@ -111,6 +106,9 @@ def print_rec(rec):
               f"{p['history_observations']} annual observations | "
               f"{p['history_country_count']} countries{block}")
     print(format_summary(rec))
+    ratio = rec.get("funding_ratio")
+    ratio_text = f" ({ratio * 100:.1f}% of expected retirement balance)" if ratio is not None else ""
+    print(f"  year-1 portfolio draw: ${rec['initial_target_draw']:,.0f}{ratio_text}")
     if rec.get("flat_equity_pct") is not None:
         edge = rec["ce_income"] - rec["flat_ce_income"]
         flat_allocation = f"{rec['flat_equity_pct']:.0f}% equity"
@@ -149,10 +147,12 @@ def main(argv=None):
     ap.add_argument("--withdrawal-rate", type=float, default=0.04, help="rate for the flexible spending part")
     ap.add_argument("--inflation", type=float, default=2.1,
                     help="inflation %% used to deflate the iid-mc curve to real")
+    ap.add_argument("--curve-mean-basis", choices=("geometric", "arithmetic"), default="geometric",
+                    help="whether --curve means are nominal geometric or already arithmetic")
     ap.add_argument("--mode", choices=RETURN_MODES,
                     default=None, help="return path generation mode "
-                    "(default: iid-mc — forward-CMA iid normal Monte Carlo, the regime-robust "
-                    "choice; forward-block = historical sequences rescaled to the forward-CMA "
+                    "(default: iid-mc — forward-CMA iid normal Monte Carlo, the no-recovery "
+                    "baseline; forward-block = historical sequences rescaled to the forward-CMA "
                     "marginals then block-bootstrapped, the historical-sequencing scenario)")
     ap.add_argument("--block-years", type=int, default=10,
                     help="average stationary circular-block length for block modes "
@@ -175,7 +175,7 @@ def main(argv=None):
                     help="number of simulation paths used by the optimizer")
     # capital-market curve + outputs
     ap.add_argument("--curve", type=str, default=None,
-                    help="iid-mc CSV of 'equity_weight,mean,vol' rows (default: built-in PWL curve)")
+                    help="iid-mc CSV of 'equity_weight,mean,vol' rows; means are nominal geometric %% by default (default: built-in PWL curve)")
     ap.add_argument("--plot", type=str, default=None, help="save a step-plot of the recommendation to this PNG")
     ap.add_argument("--show", action="store_true", help="display the plot interactively")
     args = ap.parse_args(argv)
@@ -203,6 +203,7 @@ def main(argv=None):
         retirement_max_equity=args.retirement_max_equity,
         start_age=args.start_age, current_savings=args.savings, annual_contribution=args.contrib,
         target_income=args.target_income, withdrawal_rate=args.withdrawal_rate, inflation=args.inflation,
+        curve_mean_basis=args.curve_mean_basis,
         return_mode=mode, block_years=args.block_years,
         dataset=args.dataset, exclude_countries=args.exclude_countries,
         exclude_years=exclude_years,

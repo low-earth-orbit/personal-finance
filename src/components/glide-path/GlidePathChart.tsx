@@ -129,8 +129,9 @@ export default function GlidePathChart({
   const levCap = result.params.maxLeverage * 100;
   const { yMax, ticks: equityTicks } = buildEquityAxis(levCap);
 
-  // The optimizer derisks the final block at the fixed planning horizon (an artifact, not
-  // advice). Detect a notable drop in the last retirement step to footnote it.
+  // Detect a notable terminal change to footnote it. At flex=1 the last-year allocation does not
+  // affect the objective and ties are kept at the incoming value; at flex<1 the end value is a
+  // genuine optimum of a no-bequest horizon.
   const lastBlock = result.schedule.at(-1);
   const prevBlock = result.schedule.at(-2);
   const terminalDerisk =
@@ -252,10 +253,9 @@ export default function GlidePathChart({
           <Text span fw={600}>
             Note:
           </Text>{" "}
-          the dip in the final years is a fixed-horizon artifact, not real. Because the model plans
-          to a fixed age with nothing set aside to leave behind, holding stocks in the last years
-          only adds risk with no upside (you can&apos;t spend a final-year windfall), so the
-          optimizer derisks them.
+          the last step is a fixed-horizon effect. The model plans to a fixed age and puts no value
+          on money left over, so late-retirement equity mostly changes what is left behind, not what
+          you spend. Read the final step loosely.
         </Text>
       )}
     </Card>
