@@ -432,6 +432,10 @@ export default function Result({
     : reco.flatBad
       ? "The glide path is preferred because the constant allocation's CE income is tail-dominated."
       : "The glide path is preferred because the constant allocation trails it.";
+  const fundingText =
+    result.fundingRatio === null
+      ? "not available"
+      : `${(result.fundingRatio * 100).toFixed(1)}% of the expected retirement balance`;
 
   return (
     <Stack gap="lg" pos="relative">
@@ -455,6 +459,10 @@ export default function Result({
           Generation failed. Try again.
         </Text>
       )}
+      <Text size="sm" c="dimmed">
+        Expected retirement balance ≈ {formatCAD(result.expectedRetirementBalance)} · Year-1
+        portfolio draw ≈ {formatCAD(result.initialTargetDraw)} ({fundingText})
+      </Text>
       {planNeedsAdjustment && (
         <Card withBorder radius="md" padding="md">
           <Group gap="sm" wrap="nowrap" align="flex-start">

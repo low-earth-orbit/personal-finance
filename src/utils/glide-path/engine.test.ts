@@ -139,21 +139,22 @@ describe("recommendGlidePath", () => {
   it("lowers recommended equity as risk aversion rises", () => {
     // Test the monotonicity property with the parametric iid-mc mode (deterministic at
     // low path counts); forward-block adds bootstrap noise that can flip the ordering at
-    // numPaths=200.
+    // numPaths=200. Use semi-flexible spending: at flexibility 0 consumption is ~two-valued
+    // (target or floor), so every γ ranks allocations by shortfall years and γ is ~inert.
     const cautious = recommendGlidePath(
-      base({ gamma: 8, maxEquityPct: 100 }),
+      base({ gamma: 8, maxEquityPct: 100, flexibility: 0.5 }),
       undefined,
       0,
       "iid-mc",
     );
     const aggressive = recommendGlidePath(
-      base({ gamma: 1, maxEquityPct: 100 }),
+      base({ gamma: 1, maxEquityPct: 100, flexibility: 0.5 }),
       undefined,
       0,
       "iid-mc",
     );
     const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
-    expect(avg(cautious.equityByYear)).toBeLessThanOrEqual(avg(aggressive.equityByYear) + 1e-9);
+    expect(avg(cautious.equityByYear)).toBeLessThan(avg(aggressive.equityByYear));
   });
 
   it("allows leverage (>100% equity) under low risk aversion and cheap borrowing", () => {

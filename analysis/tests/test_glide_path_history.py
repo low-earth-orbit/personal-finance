@@ -15,7 +15,11 @@ import pandas as pd
 from analysis.glide_path.recommender import (
     PWL_CURVE,
     _HistoricalMarket,
+    _IidMarket,
+    _arithmetic_to_geometric,
     _build_market,
+    _build_alloc,
+    _geometric_to_arithmetic,
     _forward_anchors,
     format_reproduction_command,
     recommend_glide_path,
@@ -146,6 +150,39 @@ class JstHistoryTests(unittest.TestCase):
 
 
 class GlidePathMarketTests(unittest.TestCase):
+    def test_geometric_arithmetic_curve_conversion_round_trips(self):
+        geometric = np.array([0.0142, 0.0467, 0.0687])
+        volatility = np.array([0.0538, 0.1231, 0.1257])
+        arithmetic = _geometric_to_arithmetic(geometric, volatility)
+        np.testing.assert_allclose(
+            _arithmetic_to_geometric(arithmetic, volatility), geometric, rtol=0, atol=1e-14
+        )
+
+    def test_iid_compound_growth_matches_geometric_curve_means(self):
+        market = _IidMarket(_build_alloc(PWL_CURVE, 2.1, True))
+        sample = market.sample(500, 5_000, seed=17)
+        for weight, expected in ((1.0, 0.0467), (0.0, 0.0142)):
+            growth = np.expm1(
+                np.mean(
+                    np.log1p(
+                        np.clip(
+                            market.annual_returns(weight, sample, np.arange(500)),
+                            -0.999999,
+                            np.inf,
+                        )
+                    ),
+                    axis=0,
+                )
+            )
+            self.assertAlmostEqual(float(np.mean(growth)), expected, delta=0.0005)
+
+    def test_arithmetic_curve_basis_preserves_old_deflation(self):
+        curve = [(1.0, 8.0, 12.0), (0.0, 3.0, 5.0)]
+        alloc = _build_alloc(curve, 2.0, True, curve_mean_basis="arithmetic")
+        means, vols = alloc(np.array([0.0, 1.0]))
+        np.testing.assert_allclose(means, [(1.03 / 1.02) - 1, (1.08 / 1.02) - 1])
+        np.testing.assert_allclose(vols, [0.05 / 1.02, 0.12 / 1.02])
+
     def test_reproduction_command_includes_resolved_interactive_inputs(self):
         command = format_reproduction_command(
             accum_years=25,
@@ -467,6 +504,28 @@ class GlidePathMarketTests(unittest.TestCase):
         self.assertLessEqual(max(rec["equity_by_year"][3:]), 0.5)
         self.assertEqual(rec["schedule"][1]["year_end"], 2)
         self.assertEqual(rec["schedule"][2]["year_start"], 3)
+
+    def test_flexible_terminal_year_keeps_incoming_equity_on_tie(self):
+        rec = self._recommend(
+            accum_years=2,
+            retire_years=3,
+            interval=1,
+            flexibility=1.0,
+            withdrawal_rate=0.04,
+            n_paths=120,
+            passes=4,
+        )
+        self.assertEqual(rec["equity_by_year"][-1], rec["equity_by_year"][-2])
+
+    def test_coordinate_ascent_moves_off_the_flat_start(self):
+        # Regression: an absolute tie tolerance (1e-12) exceeded CRRA utility differences
+        # (~1e-14 at gamma=4) and froze the ascent at the flat initialisation.
+        rec = recommend_glide_path(n_paths=2_000, passes=3)
+        self.assertGreater(len(set(rec["equity_by_year"])), 1)
+
+    def test_fully_covered_constant_spending_is_undetermined(self):
+        with self.assertRaisesRegex(ValueError, "allocation undetermined"):
+            self._recommend(flexibility=0.0, target_income=40_000, guaranteed_income=40_000)
 
     @staticmethod
     def _recommend(**overrides):

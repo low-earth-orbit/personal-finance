@@ -394,24 +394,33 @@ def rescale_to_targets(
 
 
 def variance_ratio(
-    returns: np.ndarray, horizon: int, segment_ids: np.ndarray | None = None
+    returns: np.ndarray,
+    horizon: int,
+    segment_ids: np.ndarray | None = None,
+    basis: str = "arithmetic",
 ) -> float:
-    """Lo-MacKinlay-style variance ratio on log returns; <1 = mean reversion.
+    """Lo-MacKinlay-style variance ratio on arithmetic or log returns; <1 = mean reversion.
 
-    ``VR(q) = Var(sum of q consecutive log returns) / (q * Var(one-year log return))``
-    using overlapping windows. ``q``-sums are formed only within a segment, so the
-    statistic never straddles a country boundary or a gap. Returns ``nan`` when no
-    segment is long enough or one-year variance is zero. This is the simple
-    (non-bias-corrected) ratio, intended as a diagnostic, not a formal test.
+    ``VR(q) = Var(sum of q consecutive returns) / (q * Var(one-year return))`` using
+    overlapping windows. The default arithmetic basis is affine-rescale invariant and matches
+    the engine's return representation; ``basis="log"`` preserves the older log-return
+    diagnostic. ``q``-sums are formed only within a segment, so the statistic never straddles a
+    country boundary or a gap. Returns ``nan`` when no segment is long enough or one-year
+    variance is zero. This is the simple (non-bias-corrected) ratio, intended as a diagnostic,
+    not a formal test.
     """
     if horizon < 1:
         raise ValueError("horizon must be >= 1")
-    log_returns = np.log1p(np.asarray(returns, dtype=float))
-    var_one = log_returns.var()
+    if basis not in ("arithmetic", "log"):
+        raise ValueError("basis must be 'arithmetic' or 'log'")
+    values = np.asarray(returns, dtype=float)
+    if basis == "log":
+        values = np.log1p(values)
+    var_one = values.var()
     if var_one == 0:
         return float("nan")
     block_sums = []
-    for segment in _split_segments(log_returns, segment_ids):
+    for segment in _split_segments(values, segment_ids):
         if len(segment) >= horizon:
             prefix = np.concatenate(([0.0], np.cumsum(segment)))
             block_sums.append(prefix[horizon:] - prefix[:-horizon])

@@ -100,8 +100,8 @@ def main(argv=None):
             "// JST R6 pooled real returns, affine-rescaled to forward-CMA marginals.\n"
             f"// {raw.observations} observations · {raw.country_count} countries · "
             f"{raw.start_year}–{raw.end_year}\n"
-            f"// Equity  mean {eq_mean*100:.4f}%  vol {eq_vol*100:.4f}%\n"
-            f"// Bonds   mean {bond_mean*100:.4f}%  vol {bond_vol*100:.4f}%\n\n"
+            f"// Equity  real arithmetic mean {eq_mean*100:.4f}%  vol {eq_vol*100:.4f}%\n"
+            f"// Bonds   real arithmetic mean {bond_mean*100:.4f}%  vol {bond_vol*100:.4f}%\n\n"
         )
         fh.write(f"export const JST_OBSERVATIONS = {raw.observations};\n\n")
         fh.write(f"export const JST_EQUITY = {_format_float32_array(equity)};\n\n")

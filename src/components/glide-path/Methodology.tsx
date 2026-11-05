@@ -45,7 +45,8 @@ export default function Methodology() {
             γ
           </Text>{" "}
           sets how much you dislike swings in retirement spending (higher → safer, lower-equity
-          plans), and{" "}
+          plans once spending is flexible; with constant-dollar spending it barely moves the
+          allocation, because the plan is then driven by avoiding shortfall years), and{" "}
           <Text span fw={600}>
             β
           </Text>{" "}
@@ -80,11 +81,16 @@ export default function Methodology() {
           keeps the best, then repeats for every other step — cycling until nothing improves. No
           parametric shape (flat, rising, falling) is assumed; the shape emerges from the math. By
           default, returns are independent (iid) Monte Carlo draws from our PWL / FP-Canada
-          capital-market assumptions in real (today&apos;s) dollars — the model whose recommendation
-          holds up across historical regimes. A sequence-aware mode (the Simulation toggle) instead
-          replays historical stock and bond sequences (the JST Macrohistory cross-country panel)
-          rescaled to the same assumptions and block-bootstrapped, preserving history&apos;s
-          multi-year structure — crashes followed by recoveries, persistent inflation decades.
+          capital-market assumptions in real (today&apos;s) dollars. Those assumptions are{" "}
+          <Text span fw={600}>
+            compound (geometric)
+          </Text>{" "}
+          returns, so the simulation converts each one to the matching average annual return —
+          otherwise volatility drag would make every mix, and equities most of all, compound below
+          its stated rate. A sequence-aware mode (the Simulation toggle) instead replays historical
+          stock and bond sequences (the JST Macrohistory cross-country panel) rescaled to the same
+          assumptions and block-bootstrapped, preserving history&apos;s multi-year structure —
+          crashes followed by recoveries, persistent inflation decades.
         </Text>
 
         <Title order={3} fz="md">
@@ -92,16 +98,18 @@ export default function Methodology() {
         </Title>
         <Point heading="The return model and the spending rule set the shape.">
           Under the default independent (iid) mode, rigid constant-$ spending derisks into a
-          moderate &ldquo;bond tent&rdquo; near retirement — an interior answer that is never the
-          worst case in any historical era or country cut we tested (it always sits inside the range
-          the sequence-aware mode sweeps across regimes). Under the sequence-aware mode,
-          history&apos;s joint pattern (equities recover, while long nominal bonds quietly fail in
-          inflation decades) pushes the optimum to ~100% equity — but that result leans on pre-1990
-          monetary regimes, surviving developed markets, and long nominal bonds being the only
-          alternative: swap in a real, short-duration holding (e.g. an inflation-linked bond fund)
-          and the optimum drops well below 100%, so we treat the ~100% figure as a scenario rather
-          than the default. Flexible spending (income moves with the market) stays near 100% equity
-          in both — the two modes bracket the answer (see the analysis note&apos;s caveats).
+          moderate &ldquo;bond tent&rdquo; near retirement. How deep that tent goes depends mostly
+          on how well funded you are: the more your savings exceed what the spending target needs,
+          the less upside you can use and the more the optimizer protects the floor. Under the
+          sequence-aware mode, history&apos;s joint pattern (equities recover, while long nominal
+          bonds quietly fail in inflation decades) pushes the optimum to ~100% equity — but that
+          result leans on pre-1990 monetary regimes, surviving developed markets, and long nominal
+          bonds being the only alternative: swap in a real, short-duration holding (e.g. an
+          inflation-linked bond fund) and the optimum drops well below 100%, so we treat the ~100%
+          figure as a scenario rather than the default. Flexible spending (income moves with the
+          market) stays near 100% equity in both. The two modes bracket the answer, and across the
+          historical eras we tested the income cost of picking the &ldquo;wrong&rdquo; regime is
+          small (a few percent of certainty-equivalent income at most — see the analysis note).
         </Point>
         <Point heading="The shape is worth little; the level matters.">
           Out of sample, the full per-age glide path beats the best single flat weight by only ~0.5%
@@ -114,11 +122,20 @@ export default function Methodology() {
           equity weight: since its outcome is nearly identical and a single fixed allocation is far
           easier to hold through market swings, it is often the more practical choice.
         </Point>
+        <Point heading="Compare spending rules at the same spending level.">
+          Flexible plans often show much higher certainty-equivalent income, but most of that gap is
+          usually spending more, not spending flexibly: a 4% draw on a large balance can be double a
+          constant-dollar target. Check the year-1 portfolio draw shown with your result. At the
+          same starting draw, flexibility is worth a few thousand dollars a year in our default
+          case.
+        </Point>
         <Point heading="Guaranteed income is your bond floor.">
           A larger guaranteed income (CPP + OAS + DB) lets the portfolio take more equity risk
           because it already covers some downside. With no guaranteed income, rare depleted years
           dominate CRRA utility, so the web app requires at least $10,000 per year for a meaningful
-          recommendation.
+          recommendation. If guaranteed income covers your whole target and spending is fixed, the
+          portfolio funds nothing and no allocation is better than another, so the tool asks you to
+          adjust the inputs.
         </Point>
 
         <Text size="sm" c="dimmed">

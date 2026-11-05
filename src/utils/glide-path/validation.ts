@@ -109,5 +109,18 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
     errors.retirementMaxEquityPct = "Must not exceed max equity.";
   }
 
+  // With no spending flexibility, guaranteed income covering the target leaves every
+  // allocation tied, so there is no meaningful optimizer answer.
+  if (
+    !errors.flexibility &&
+    !errors.targetIncome &&
+    !errors.guaranteedIncome &&
+    input.flexibility === 0 &&
+    input.targetIncome <= input.guaranteedIncome
+  ) {
+    errors.targetIncome =
+      "Target income must exceed guaranteed income when flexibility is 0; raise the target or set flexibility > 0.";
+  }
+
   return errors;
 }

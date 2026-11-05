@@ -38,15 +38,18 @@ KEY INPUTS
   current_savings           : portfolio balance at the start of accumulation (dollars).
   alloc_curve               : the capital-market assumptions, as anchors
                               [(equity_weight, mean_return, volatility), …] spanning w∈[0,1].
-                              Interpolated to any weight. Units controlled by `returns_in_percent`
-                              and deflated to real with `inflation`. Used only by `iid-mc`.
+                              Means are nominal geometric returns by default; set
+                              `curve_mean_basis="arithmetic"` for a custom curve whose means
+                              are already arithmetic. Interpolated to any weight. Units
+                              controlled by `returns_in_percent` and deflated to real with
+                              `inflation`. Used only by `iid-mc` and forward-block rescaling.
   inflation                 : annual inflation rate used to convert nominal returns to real.
                               Must match the units of `alloc_curve` (default: percent, i.e. 2.1).
                               Used only by `iid-mc`.
   returns_in_percent        : if True (default), `alloc_curve` means/vols are in % per year.
   return_mode               : "iid-mc" (default — forward-CMA normal Monte Carlo, no
-                              sequencing; the regime-robust choice — see the methodology's
-                              §2f robustness notes), "forward-block" (history rescaled to
+                              sequencing; the conservative no-recovery baseline — see the
+                              methodology's §2f and §7.3), "forward-block" (history rescaled to
                               forward-CMA marginals, then block-bootstrapped — the
                               historical-sequencing scenario), "historical-iid" (paired
                               stock/bond years sampled with replacement), or
@@ -81,7 +84,9 @@ KEY INPUTS
                               aversion: higher γ penalizes low retirement-spending outcomes more
                               heavily across simulated market scenarios. This is distinct from
                               spending flexibility, which controls how spending responds to portfolio
-                              value. There is no separate current or accumulation γ.
+                              value. There is no separate current or accumulation γ. With
+                              flexibility=0, γ barely changes the allocation because the plan is
+                              driven by avoiding shortfall years; γ matters once spending is flexible.
   beta                      : annual time-discount factor (default 0.985 → ~1.5% time preference).
                               Applied within retirement only: the first retirement year has weight 1,
                               then each year receives β times the previous year's weight. Choose 1 to
@@ -119,7 +124,7 @@ if __package__ in (None, ""):
     repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     sys.path.insert(0, repo_root)
 
-# Example curve: the app's PWL/FP-Canada allocation table (presets.ts), nominal % + 2.1% inflation.
+# Example curve: the app's PWL/FP-Canada allocation table (presets.ts), nominal geometric % + 2.1% inflation.
 PWL_CURVE = [
     (1.00, 6.87, 12.57), (0.90, 6.59, 11.59), (0.80, 6.29, 10.62),
     (0.70, 5.99, 9.68), (0.60, 5.67, 8.79), (0.50, 5.35, 7.94),
@@ -155,20 +160,51 @@ def _ce_from_util(util_per_period, gamma):
     return float(((1.0 - gamma) * util_per_period) ** (1.0 / (1.0 - gamma)))
 
 
-def _build_alloc(alloc_curve, inflation, returns_in_percent, borrow_cost=0.0):
+def _geometric_to_arithmetic(geometric, volatility):
+    """Convert a geometric return and volatility to the matching arithmetic return."""
+    one_plus_geo = 1.0 + np.asarray(geometric, dtype=float)
+    vol = np.asarray(volatility, dtype=float)
+    q2 = one_plus_geo * one_plus_geo
+    one_plus_arith_sq = (q2 + np.sqrt(q2 * q2 + 4.0 * q2 * vol * vol)) / 2.0
+    return np.sqrt(one_plus_arith_sq) - 1.0
+
+
+def _arithmetic_to_geometric(arithmetic, volatility):
+    """Convert an arithmetic return and volatility to its geometric return."""
+    one_plus_arith = 1.0 + np.asarray(arithmetic, dtype=float)
+    vol = np.asarray(volatility, dtype=float)
+    return one_plus_arith / np.sqrt(1.0 + (vol / one_plus_arith) ** 2) - 1.0
+
+
+def _build_alloc(
+    alloc_curve,
+    inflation,
+    returns_in_percent,
+    borrow_cost=0.0,
+    curve_mean_basis="geometric",
+):
     """Return alloc(w)->(real_mean, vol) interpolating the curve. Accepts any-shape w.
 
     For w > 1 (leverage), borrow (w-1) at the REAL `borrow_cost` to hold w in the all-equity
     portfolio: real_mean = w·eq_mean − (w−1)·borrow, vol = w·eq_vol. `borrow_cost` is already
-    real (the user's real cost of borrowing); only its unit is scaled to a fraction."""
+    real (the user's real cost of borrowing); only its unit is scaled to a fraction. Curve means
+    are nominal geometric by default and are converted to nominal arithmetic before deflation."""
+    if curve_mean_basis not in ("geometric", "arithmetic"):
+        raise ValueError("curve_mean_basis must be 'geometric' or 'arithmetic'")
     arr = sorted(((float(w), float(m), float(v)) for w, m, v in alloc_curve), key=lambda t: t[0])
     cw = np.array([t[0] for t in arr])
     cm = np.array([t[1] for t in arr])
     cv = np.array([t[2] for t in arr])
     scale = 100.0 if returns_in_percent else 1.0
     infl = inflation / scale
-    real_mean = (1.0 + cm / scale) / (1.0 + infl) - 1.0   # deflate nominal mean to real
-    vol = cv / scale
+    nominal_vol = cv / scale
+    nominal_arith = (
+        _geometric_to_arithmetic(cm / scale, nominal_vol)
+        if curve_mean_basis == "geometric"
+        else cm / scale
+    )
+    real_mean = (1.0 + nominal_arith) / (1.0 + infl) - 1.0  # real arithmetic mean
+    vol = nominal_vol / (1.0 + infl)                        # real vol (constant-inflation deflation)
     borrow_real = borrow_cost / scale
     eq_mean = float(np.interp(1.0, cw, real_mean))        # 100%-equity anchor (what we lever)
     eq_vol = float(np.interp(1.0, cw, vol))
@@ -215,6 +251,10 @@ class _IidMarket:
     def mean_returns(self, weights):
         means, _ = self.alloc(weights)
         return means
+
+    def geometric_returns(self, weights):
+        means, vols = self.alloc(weights)
+        return _arithmetic_to_geometric(means, vols)
 
     @staticmethod
     def candidate_allocations(equity_grid, grid_step):
@@ -294,6 +334,12 @@ class _HistoricalMarket:
             self.history.fixed_income.mean(),
         )
 
+    def geometric_returns(self, weights):
+        weights = np.asarray(weights, dtype=float)
+        mixed = self._mix(weights, self.history.equity, self.history.fixed_income)
+        log_mean = np.mean(np.log1p(np.clip(mixed, -0.999999, np.inf)), axis=-1)
+        return np.expm1(log_mean)
+
     @staticmethod
     def candidate_allocations(equity_grid, grid_step):
         return equity_grid
@@ -335,12 +381,20 @@ def _load_history(dataset, exclude_countries=None, exclude_years=None):
     raise ValueError(f"dataset must be one of {', '.join(DATASETS)}")
 
 
-def _forward_anchors(alloc_curve, inflation, returns_in_percent):
-    """Real (decimal) equity and bond mean/vol anchors from the capital-market curve.
+def _forward_anchors(
+    alloc_curve, inflation, returns_in_percent, curve_mean_basis="geometric"
+):
+    """Real arithmetic (decimal) equity and bond mean/vol anchors from the capital-market curve.
 
     Reads the w=1.0 (all-equity) and w=0.0 (all-bond) points the same way iid-mc does, so
     forward-block's rescaled marginals match the iid-mc marginals exactly."""
-    alloc = _build_alloc(alloc_curve, inflation, returns_in_percent, borrow_cost=0.0)
+    alloc = _build_alloc(
+        alloc_curve,
+        inflation,
+        returns_in_percent,
+        borrow_cost=0.0,
+        curve_mean_basis=curve_mean_basis,
+    )
     means, vols = alloc(np.array([0.0, 1.0]))
     return float(means[1]), float(vols[1]), float(means[0]), float(vols[0])
 
@@ -354,6 +408,7 @@ def _build_market(
     block_years,
     history=None,
     *,
+    curve_mean_basis="geometric",
     dataset="pooled",
     exclude_countries=None,
     exclude_years=None,
@@ -367,14 +422,22 @@ def _build_market(
     if return_mode == "iid-mc":
         if exclude_countries or exclude_years:
             raise ValueError("dataset/exclusions apply only to historical modes")
-        return _IidMarket(_build_alloc(alloc_curve, inflation, returns_in_percent, borrow_cost))
+        return _IidMarket(
+            _build_alloc(
+                alloc_curve,
+                inflation,
+                returns_in_percent,
+                borrow_cost,
+                curve_mean_basis,
+            )
+        )
 
     raw = history or _load_history(dataset, exclude_countries, exclude_years)
     if return_mode == "forward-block":
         from analysis.shared.jst_history import rescale_to_targets
 
         eq_mean, eq_vol, bond_mean, bond_vol = _forward_anchors(
-            alloc_curve, inflation, returns_in_percent
+            alloc_curve, inflation, returns_in_percent, curve_mean_basis
         )
         market_history = rescale_to_targets(
             raw,
@@ -472,8 +535,8 @@ def _stats(weights, sample, accum_years, retire_years, market, *, flex, gap_arr,
 
 
 def _deterministic_accum_balance(weights, accum_years, market, *, contrib, start_savings):
-    """Mean-return balance at retirement under a fixed glide path."""
-    means = market.mean_returns(weights)
+    """Geometric (median-path) balance at retirement under a fixed glide path."""
+    means = market.geometric_returns(weights)
     bal = float(start_savings)
     for i in range(accum_years):
         r = float(means[i])
@@ -515,6 +578,84 @@ def _drawdown_stats(weights, sample, accum_years, retire_years, market, *, flex,
     }
 
 
+def evaluate_path(
+    weights,
+    accum_years: int = 30,
+    retire_years: int = 30,
+    flexibility: float = 0,
+    guaranteed_income: float = 20_000.0,
+    alloc_curve: Sequence[tuple] = PWL_CURVE,
+    interval: int = 5,
+    *,
+    inflation: float = 2.1,
+    returns_in_percent: bool = True,
+    curve_mean_basis: str = "geometric",
+    return_mode: str = "iid-mc",
+    block_years: int = 10,
+    dataset: str = "pooled",
+    exclude_countries: Sequence[str] | None = None,
+    exclude_years=None,
+    max_leverage: float = 1.0,
+    retirement_max_equity: float | None = None,
+    borrow_cost: float = 2.0,
+    current_savings: float = 200_000.0,
+    annual_contribution: float = 20_000.0,
+    target_income: float = 60_000.0,
+    withdrawal_rate: float = 0.04,
+    gamma: float = 4.0,
+    beta: float = 0.985,
+    n_paths: int = 15_000,
+    grid_step: float = 0.05,
+    passes: int = 12,
+    seed: int = 20260602,
+    start_age: int | None = None,
+    flat_band: float = 0.10,
+    return_flat_curve: bool = False,
+) -> dict:
+    """Score a supplied per-year equity path on the independent selection sample.
+
+    This is the fixed-path counterpart to :func:`recommend_glide_path`: it reuses the same
+    market construction and lifecycle statistics, but performs no optimization. The sample uses
+    ``seed + 4242`` so a path can be compared with the returned flat-curve selection CEs.
+    """
+    weights = np.asarray(weights, dtype=float)
+    n_years = accum_years + retire_years
+    if weights.shape != (n_years,):
+        raise ValueError(f"weights must have shape ({n_years},), got {weights.shape}")
+    if not (0.0 <= flexibility <= 1.0):
+        raise ValueError("flexibility must be in [0, 1]")
+    market = _build_market(
+        return_mode,
+        alloc_curve,
+        inflation,
+        returns_in_percent,
+        borrow_cost,
+        block_years,
+        curve_mean_basis=curve_mean_basis,
+        dataset=dataset,
+        exclude_countries=exclude_countries,
+        exclude_years=exclude_years,
+    )
+    gap_arr = np.full(retire_years, max(target_income - guaranteed_income, 0.0))
+    guar_arr = np.full(retire_years, guaranteed_income)
+    sample = market.sample(n_years, n_paths, seed + 4242)
+    return _stats(
+        weights,
+        sample,
+        accum_years,
+        retire_years,
+        market,
+        flex=flexibility,
+        gap_arr=gap_arr,
+        guar_arr=guar_arr,
+        wr=withdrawal_rate,
+        contrib=annual_contribution,
+        start_savings=current_savings,
+        gamma=gamma,
+        beta=beta,
+    )
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 def recommend_glide_path(
     accum_years: int = 30,
@@ -527,6 +668,7 @@ def recommend_glide_path(
     # capital-market input units
     inflation: float = 2.1,
     returns_in_percent: bool = True,
+    curve_mean_basis: str = "geometric",
     return_mode: str = "iid-mc",
     block_years: int = 10,
     dataset: str = "pooled",
@@ -563,14 +705,26 @@ def recommend_glide_path(
       ce_income, depletion, income_cv : independent-evaluation outcome stats for the recommended path
       flat_equity_pct, flat_ce_income : the best single CONSTANT allocation and its CE income
                                         (the simpler alternative; the glide's edge is usually tiny)
+      initial_target_draw             : first-year portfolio draw under the spending rule. At
+                                        flexibility=1, `target_income` is ignored; the target is
+                                        `withdrawal_rate * expected_retirement_balance`.
+      funding_ratio                   : initial_target_draw / expected_retirement_balance, or None
+                                        when the expected balance is not positive.
       params        : echo of the resolved inputs
     """
     if not (0.0 <= flexibility <= 1.0):
         raise ValueError("flexibility must be in [0, 1]")
+    if curve_mean_basis not in ("geometric", "arithmetic"):
+        raise ValueError("curve_mean_basis must be 'geometric' or 'arithmetic'")
     if not math.isfinite(guaranteed_income) or guaranteed_income < 0:
         raise ValueError("guaranteed_income must be a finite value >= 0")
     if interval < 1:
         raise ValueError("interval must be >= 1 year")
+    if flexibility == 0.0 and guaranteed_income >= target_income:
+        raise ValueError(
+            "allocation undetermined: guaranteed income covers the target and spending is not "
+            "flexible (flexibility=0); raise the target or set flexibility > 0"
+        )
     n_years = accum_years + retire_years
     if n_years < 1:
         raise ValueError("need at least one year")
@@ -588,6 +742,7 @@ def recommend_glide_path(
         returns_in_percent,
         borrow_cost,
         block_years,
+        curve_mean_basis=curve_mean_basis,
         dataset=dataset,
         exclude_countries=exclude_countries,
         exclude_years=exclude_years,
@@ -662,7 +817,15 @@ def recommend_glide_path(
                 W[block_of_year == b, ...] = block_candidates
                 eu = _eu(W, opt_sample, accum_years, retire_years, market,
                          gamma=gamma, **common)
-                best = block_candidates[int(np.argmax(eu))]
+                current = block_w[b]
+                current_u = eu[int(np.flatnonzero(block_candidates == current)[0])]
+                best = current
+                best_u = current_u
+                tol = 1e-12 * abs(current_u)  # relative: CRRA utilities can be ~1e-14
+                for candidate, candidate_u in zip(block_candidates, eu):
+                    if candidate_u > best_u + tol:
+                        best = candidate
+                        best_u = candidate_u
                 if not np.array_equal(best, block_w[b]):
                     block_w[b] = best
                     changed = True
@@ -712,9 +875,9 @@ def recommend_glide_path(
     twin = min(15, retire_years)
     tent_i = int(np.argmin(ret[:twin])) if retire_years else 0
     accum_dir = classify(acc[-1] - acc[0]) if accum_years >= 2 else "n/a"
-    # The retirement slope drops the final year: with no bequest the optimizer drives equity
-    # toward 0 at the fixed horizon (an artifact, not real) that would otherwise skew the
-    # read. Matches the web engine. Accumulation has no such artifact.
+    # At flex=1 the last-year allocation does not affect the objective; ties are kept at the
+    # incoming value. At flex<1 the end value is a genuine optimum of a no-bequest horizon.
+    # Keep the existing final-year trim for retirement slope classification.
     ret_eff = ret[:-1] if len(ret) >= 3 else ret
     retire_dir = classify(ret_eff[-1] - ret_eff[0]) if len(ret_eff) >= 2 else "n/a"
 
@@ -736,6 +899,13 @@ def recommend_glide_path(
     tent_value = (start_age + accum_years + tent_i) if start_age is not None else (accum_years + tent_i)
 
     best_flat_equity = market.allocation_weights(best_flat_allocation)
+    expected_balance = drawdown_st["start_balance"]
+    initial_target_draw = (
+        (1.0 - flexibility) * gap_arr[0] + flexibility * withdrawal_rate * expected_balance
+        if retire_years
+        else 0.0
+    )
+    funding_ratio = initial_target_draw / expected_balance if expected_balance > 0 else None
     result = {
         "schedule": schedule,
         "equity_by_year": [round(float(w), 4) for w in equity_weights],
@@ -749,7 +919,9 @@ def recommend_glide_path(
         "flat_ce_income": round(flat_st["ce_income"], 0),
         "depletion": round(st["depletion"], 4),
         "drawdown_depletion": round(drawdown_st["depletion"], 4),
-        "expected_retirement_balance": round(drawdown_st["start_balance"], 0),
+        "expected_retirement_balance": round(expected_balance, 0),
+        "initial_target_draw": round(float(initial_target_draw), 0),
+        "funding_ratio": round(float(funding_ratio), 4) if funding_ratio is not None else None,
         "flat_depletion": round(flat_st["depletion"], 4),
         "flat_drawdown_depletion": round(flat_drawdown_st["depletion"], 4),
         "income_cv": round(st["income_cv"], 4),
@@ -759,6 +931,7 @@ def recommend_glide_path(
             "target_income": target_income, "guaranteed": guaranteed,
             "portfolio_income_gap": float(target_income - guaranteed), "interval": interval,
             "gamma": gamma,
+            "curve_mean_basis": curve_mean_basis,
             "max_leverage": max_leverage, "borrow_cost": borrow_cost,
             "retirement_max_equity": retirement_max_equity,
             "n_paths": n_paths, "grid_step": grid_step,
@@ -929,6 +1102,7 @@ def format_reproduction_command(
     n_paths,
     dataset="pooled",
     retirement_max_equity=None,
+    curve_mean_basis="geometric",
 ):
     """Build a shell-safe flag-CLI command matching an interactive run."""
 
@@ -977,6 +1151,8 @@ def format_reproduction_command(
         args.extend(["--block-years", value(block_years)])
     if dataset != "pooled":
         args.extend(["--dataset", dataset])
+    if curve_mean_basis != "geometric":
+        args.extend(["--curve-mean-basis", curve_mean_basis])
     return shlex.join(args)
 
 
@@ -1108,7 +1284,7 @@ def _run_interactive():
     return_mode = _ask_choice(
         "Return mode", "iid-mc", RETURN_MODES,
         labels={
-            "iid-mc": "forward-CMA normal Monte Carlo, no sequencing (recommended)",
+            "iid-mc": "forward-CMA normal Monte Carlo, no sequencing (default)",
             "historical-iid": "raw history, years sampled independently",
             "historical-block": "raw history, stationary circular blocks (keeps sequencing)",
             "forward-block": "history rescaled to forward marginals, then block-bootstrapped (historical-sequencing scenario)",
@@ -1177,6 +1353,7 @@ def _run_interactive():
     tent_label = "tent_age" if "tent_age" in rec else "tent_year"
     print(f"  Equity trough: {rec['tent_pct']}% at age {rec[tent_label]}")
     print(f"  Return mode: {rec['params']['return_mode']}")
+    print(f"  Curve mean basis: {rec['params'].get('curve_mean_basis', 'geometric')}")
     if return_mode != "iid-mc":
         p = rec["params"]
         block = (
@@ -1196,6 +1373,9 @@ def _run_interactive():
           f"(CE ${rec['flat_ce_income']:,.0f}/yr — robust flat comparator)")
     print(f"    Drawdown dep.  : {rec['drawdown_depletion']*100:>8.1f} %  "
           f"(from expected retirement balance ${rec['expected_retirement_balance']:,.0f})")
+    ratio = rec["funding_ratio"]
+    ratio_text = f" ({ratio * 100:.1f}% of expected retirement balance)" if ratio is not None else ""
+    print(f"    Year-1 draw    : ${rec['initial_target_draw']:>10,.0f}{ratio_text}")
     print(f"    Full-path dep. : {rec['depletion']*100:>8.1f} %  "
           f"(includes pre-retirement markets)")
     print(f"    Income CV     : {rec['income_cv']*100:>8.1f} %  (spending variability; lower = steadier)")
@@ -1238,6 +1418,7 @@ def _run_interactive():
         block_years=block_years,
         n_paths=n_paths,
         dataset=dataset,
+        curve_mean_basis=rec["params"].get("curve_mean_basis", "geometric"),
     )
     print("\n  Run this simulation again or modify it with:")
     print(f"  {command}")

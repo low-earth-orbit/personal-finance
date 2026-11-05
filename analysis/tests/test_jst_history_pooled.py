@@ -1,12 +1,14 @@
 """Tests for pooled-country history, sequence-preserving sampling, rescaling, and
 the variance-ratio diagnostic added to ``analysis.shared.jst_history``.
 
-Network-free: the JST workbook is never loaded; loaders are exercised with a patched
-``load_jst_frame`` and the low-level helpers with synthetic arrays.
+Most tests are network-free: loaders are exercised with a patched ``load_jst_frame`` and the
+low-level helpers with synthetic arrays. One regression test uses the local workbook when it is
+available and skips otherwise.
 """
 
 from __future__ import annotations
 
+import os
 import unittest
 from unittest.mock import patch
 
@@ -14,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from analysis.shared.jst_history import (
+    DATA_FILE,
     ReturnHistory,
     _affine_to_target,
     _assign_segments,
@@ -28,12 +31,14 @@ from analysis.shared.jst_history import (
 )
 
 
-def _vr_reference(returns, horizon, segment_ids):
+def _vr_reference(returns, horizon, segment_ids, basis="arithmetic"):
     """Independent (explicit-loop) variance ratio for cross-checking the cumsum impl."""
-    log_returns = np.log1p(np.asarray(returns, dtype=float))
-    var_one = log_returns.var()
+    values = np.asarray(returns, dtype=float)
+    if basis == "log":
+        values = np.log1p(values)
+    var_one = values.var()
     sums = []
-    for run in _split_segments(log_returns, segment_ids):
+    for run in _split_segments(values, segment_ids):
         for start in range(len(run) - horizon + 1):
             sums.append(run[start : start + horizon].sum())
     return np.var(sums) / (horizon * var_one)
@@ -226,6 +231,14 @@ class VarianceRatioTests(unittest.TestCase):
             _vr_reference(returns, 2, segment_ids),
         )
 
+    def test_log_basis_remains_available(self):
+        returns = np.array([0.0, 0.1, 0.2, 1.0, 1.1])
+        segment_ids = np.array([0, 0, 0, 1, 1])
+        self.assertAlmostEqual(
+            variance_ratio(returns, 2, segment_ids, basis="log"),
+            _vr_reference(returns, 2, segment_ids, basis="log"),
+        )
+
     def test_segments_exclude_boundary_window(self):
         returns = np.array([0.0, 0.1, 0.2, 1.0, 1.1])
         segment_ids = np.array([0, 0, 0, 1, 1])
@@ -295,6 +308,11 @@ class PooledLoaderTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "no countries selected"):
                 load_pooled_country_returns(countries=["Nowhere"])
+
+    @unittest.skipUnless(os.path.exists(DATA_FILE), "JST workbook unavailable")
+    def test_full_pooled_bond_vr_uses_arithmetic_engine_basis(self):
+        history = load_pooled_country_returns()
+        self.assertGreater(variance_ratio(history.fixed_income, 10, history.segment_ids), 2.5)
 
 
 if __name__ == "__main__":

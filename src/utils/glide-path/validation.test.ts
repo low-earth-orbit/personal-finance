@@ -38,6 +38,21 @@ describe("validateGlidePathInput", () => {
     expect(errors.guaranteedIncome).toBeTruthy();
   });
 
+  it("rejects fully covered constant-dollar spending", () => {
+    const errors = validateGlidePathInput(
+      base({ flexibility: 0, targetIncome: 60000, guaranteedIncome: 60000 }),
+    );
+    expect(errors.targetIncome).toMatch(/must exceed guaranteed income/i);
+  });
+
+  it("allows fully covered spending when flexibility is positive", () => {
+    expect(
+      validateGlidePathInput(
+        base({ flexibility: 0.5, targetIncome: 60000, guaranteedIncome: 60000 }),
+      ),
+    ).toEqual({});
+  });
+
   it("limits the glide-step interval to one through ten years", () => {
     expect(validateGlidePathInput(base({ interval: 1 }))).toEqual({});
     expect(validateGlidePathInput(base({ interval: 10 }))).toEqual({});
