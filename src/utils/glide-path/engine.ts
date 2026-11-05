@@ -21,6 +21,7 @@ import { fillNormals } from "./rng";
 import { sampleBlockPaths } from "./blockBootstrap";
 import { DEFAULT_ALLOC_CURVE, GRID_STEP, type AllocAnchor } from "./presets";
 import { JST_BOND, JST_EQUITY } from "./jstData";
+import { arithmeticToGeometric, realArithmeticFromNominalGeometric } from "@/utils/returns";
 import type {
   GlidePathInput,
   GlidePathResult,
@@ -40,26 +41,7 @@ export const MAX_OPT_PATHS = 50000;
 const MAX_STATS_PATHS = 8000;
 
 // ── small numeric helpers ─────────────────────────────────────────────────────
-function geometricToArithmetic(geometric: number, volatility: number): number {
-  const onePlusGeo = 1 + geometric;
-  const q2 = onePlusGeo * onePlusGeo;
-  return Math.sqrt((q2 + Math.sqrt(q2 * q2 + 4 * q2 * volatility * volatility)) / 2) - 1;
-}
-
-/** Inverse of geometricToArithmetic; used for median-path deterministic projections. */
-export function arithmeticToGeometric(arithmetic: number, volatility: number): number {
-  const onePlusArith = 1 + arithmetic;
-  return onePlusArith / Math.sqrt(1 + (volatility / onePlusArith) ** 2) - 1;
-}
-
-function realArithmeticMean(
-  nominalGeometricPct: number,
-  nominalVolPct: number,
-  inflationPct: number,
-): number {
-  const nominalArithmetic = geometricToArithmetic(nominalGeometricPct / 100, nominalVolPct / 100);
-  return (1 + nominalArithmetic) / (1 + inflationPct / 100) - 1;
-}
+export { arithmeticToGeometric } from "@/utils/returns";
 
 /** Linear interpolation on ascending `xs`, clamped at the endpoints. */
 function interp(x: number, xs: number[], ys: number[]): number {
@@ -95,8 +77,9 @@ function buildGridStats(
 } {
   const sorted = [...curve].sort((a, b) => a[0] - b[0]);
   const cw = sorted.map((t) => t[0]);
-  const cmReal = sorted.map((t) => realArithmeticMean(t[1], t[2], inflationPct));
-  const cv = sorted.map((t) => t[2] / 100 / (1 + inflationPct / 100)); // real vol
+  const stats = sorted.map((t) => realArithmeticFromNominalGeometric(t[1], t[2], inflationPct));
+  const cmReal = stats.map((s) => s.mean);
+  const cv = stats.map((s) => s.vol);
   const eqMean = interp(1, cw, cmReal);
   const eqVol = interp(1, cw, cv);
   const borrowReal = borrowCostPct / 100;

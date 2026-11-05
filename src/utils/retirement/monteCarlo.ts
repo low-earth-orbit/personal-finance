@@ -1,7 +1,8 @@
-import { accumulationBalances, incomeBreakdown, realMean, withdrawalAtAge } from "./projection";
+import { accumulationBalances, incomeBreakdown, withdrawalAtAge } from "./projection";
 import { RETURN_PRESETS } from "./presets";
 import type { RetirementBand, RetirementInput, RetirementResult } from "./types";
 import { investmentAnnualVolPct } from "../monteCarlo";
+import { realArithmeticFromNominalGeometric } from "../returns";
 
 export const NUM_SIMULATIONS = 1000;
 
@@ -103,8 +104,13 @@ function simulate(
   numSims: number = NUM_SIMULATIONS,
 ): PhaseResult {
   const breakdown = incomeBreakdown(input);
-  const mean = realMean(input.retireReturn, input.inflationRate);
-  const sigma = phaseSigma(input, "retire");
+  const sigmaNominal = phaseSigma(input, "retire");
+  const { mean, vol } = realArithmeticFromNominalGeometric(
+    input.retireReturn,
+    sigmaNominal * 100,
+    input.inflationRate,
+  );
+  const sigma = vol;
   const years = input.planningAge - retireAge;
   const flex = input.spendingFlexibilityPct / 100;
   // Guardrail reference: the withdrawal rate at retirement. A weak sequence that
@@ -175,8 +181,9 @@ export function simulateRetirementPhase(
   input: RetirementInput,
   retireAge: number,
   startBalance: number,
+  numSims: number = NUM_SIMULATIONS,
 ): { bands: RetirementBand[]; successRate: number } {
-  const { bands, successRate } = simulate(input, retireAge, startBalance, true);
+  const { bands, successRate } = simulate(input, retireAge, startBalance, true, numSims);
   return { bands: bands ?? [], successRate };
 }
 
@@ -227,8 +234,13 @@ function retirementAgeRange(
 
   const contribution = (input.currentIncome * input.contributionPct) / 100;
   const { guaranteedIncome } = incomeBreakdown(input);
-  const mean = realMean(input.accumReturn, input.inflationRate);
-  const sigma = phaseSigma(input, "accum");
+  const sigmaNominal = phaseSigma(input, "accum");
+  const { mean, vol } = realArithmeticFromNominalGeometric(
+    input.accumReturn,
+    sigmaNominal * 100,
+    input.inflationRate,
+  );
+  const sigma = vol;
   const rand = mulberry32(ACCUM_SEED);
 
   const crossings: number[] = [];
@@ -296,8 +308,11 @@ export function safeWithdrawalRate(
   successRate: number,
   numSims: number = 4000,
 ): number {
-  const mean = realMean(retireReturnPct, inflationPct);
-  const sigma = retireVolPct / 100;
+  const { mean, vol: sigma } = realArithmeticFromNominalGeometric(
+    retireReturnPct,
+    retireVolPct,
+    inflationPct,
+  );
 
   const survival = (w: number): number => {
     const rand = mulberry32(SEED);

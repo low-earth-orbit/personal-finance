@@ -118,6 +118,11 @@ from typing import Sequence
 
 import numpy as np
 
+from analysis.shared.returns import (
+    arithmetic_to_geometric as _arithmetic_to_geometric,
+    geometric_to_arithmetic as _geometric_to_arithmetic,
+)
+
 # Direct file execution has no package context and puts only this directory on
 # sys.path. Add the repository root so deferred historical imports still resolve.
 if __package__ in (None, ""):
@@ -158,22 +163,6 @@ def _ce_from_util(util_per_period, gamma):
     if abs(gamma - 1.0) < 1e-9:
         return float(np.exp(util_per_period))
     return float(((1.0 - gamma) * util_per_period) ** (1.0 / (1.0 - gamma)))
-
-
-def _geometric_to_arithmetic(geometric, volatility):
-    """Convert a geometric return and volatility to the matching arithmetic return."""
-    one_plus_geo = 1.0 + np.asarray(geometric, dtype=float)
-    vol = np.asarray(volatility, dtype=float)
-    q2 = one_plus_geo * one_plus_geo
-    one_plus_arith_sq = (q2 + np.sqrt(q2 * q2 + 4.0 * q2 * vol * vol)) / 2.0
-    return np.sqrt(one_plus_arith_sq) - 1.0
-
-
-def _arithmetic_to_geometric(arithmetic, volatility):
-    """Convert an arithmetic return and volatility to its geometric return."""
-    one_plus_arith = 1.0 + np.asarray(arithmetic, dtype=float)
-    vol = np.asarray(volatility, dtype=float)
-    return one_plus_arith / np.sqrt(1.0 + (vol / one_plus_arith) ** 2) - 1.0
 
 
 def _build_alloc(

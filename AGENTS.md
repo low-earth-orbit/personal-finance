@@ -17,11 +17,9 @@ python3 -m unittest discover -s analysis -p 'test_*.py' -v
 
 Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
-## Multi-Agent Workflow
+## Agent Workflow
 
-**Roles:** Claude plans/reviews (conceptual risk: direction, UX, finance modeling, architecture). Codex executes/verifies (concrete risk: edits, refactors, tests, lint/build/checks). One writer at a time.
-
-**Default split:** Codex handles scoped implementation directly. Use Claude planning when the task changes finance semantics, adds a tool/route, reshapes UX workflows, or crosses architecture boundaries. If the task is a narrow UI/copy/test fix, keep it with Codex unless Claude is already editing the same files.
+**Default: Claude plans, executes, and verifies.** Codex is optional — the Codex subscription has lapsed, so do not plan around it. If a Codex run is attempted and fails (auth/plan/model error), do the work directly with Claude; never block on Codex. One writer at a time.
 
 **Scope discipline:** Match the user's requested surface. For narrow copy/UI/mechanical tasks, do not refactor adjacent code, update unrelated docs, or "fix" nearby stale tests unless needed to complete the request. Report unrelated failures separately.
 
@@ -29,36 +27,17 @@ Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 ### Task tiers
 
-| Tier | Examples | Who plans | Who executes | Who reviews |
-| --- | --- | --- | --- | --- |
-| **trivial** | lint fix, rename, label change | nobody | Codex | human spot-check |
-| **standard** | new feature, multi-file, test coverage | Claude (1 turn) | Codex | human reviews diff |
-| **complex** | finance engine, new tool, architecture | Claude full plan + risks | Codex | Claude reviews diff |
+| Tier         | Examples                               | Planning                         |
+| ------------ | -------------------------------------- | -------------------------------- |
+| **trivial**  | lint fix, rename, label change         | none                             |
+| **standard** | new feature, multi-file, test coverage | short plan (1 turn)              |
+| **complex**  | finance engine, new tool, architecture | full plan + risks before editing |
 
-For small 1-2 file edits where Claude already in context — Claude does it directly; no Codex handoff.
+No peer-review step: do not spawn reviewer/verifier subagents or second-opinion passes (token cost). Claude checks its own diff once and relies on the Definition of Done checks below; the user reviews the final diff.
 
-### Running Codex
+### Codex (optional, legacy)
 
-Wrapper script picks model + effort from tier automatically:
-
-```bash
-scripts/codex-run.sh auto     "<task>"   # conservative keyword routing
-scripts/codex-run.sh trivial  "<task>"   # gpt-5.4-mini, low
-scripts/codex-run.sh standard "<task>"   # gpt-5.4,      medium
-scripts/codex-run.sh complex  "<task>"   # gpt-5.5,      high
-```
-
-`auto` promotes finance/modeling, methodology, architecture, migration, and security work to `complex`; chooses `trivial` only for clearly mechanical tasks; and defaults uncertain work to `standard`. Prefer `trivial` for unambiguous small changes; promote when user-visible workflow, modeling semantics, architecture, or data migration risk is unclear. Preview routing without launching Codex using `scripts/codex-run.sh --dry-run auto "<task>"`.
-
-Use `$route-codex-task` when classification needs judgment or file inspection. The repo-scoped skill recommends a tier and verification scope; the wrapper performs the actual model and effort selection.
-
-Or raw:
-
-```bash
-codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <repo> "<task>" < /dev/null
-```
-
-**Always review Codex diff.** Watch for: out-of-scope edits, logic changes in "mechanical" passes, glossed regressions.
+`scripts/codex-run.sh <auto|trivial|standard|complex> "<task>"` and the `$route-codex-task` skill remain for anyone with Codex access, but their model slugs may be stale. Raw form: `codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <repo> "<task>" < /dev/null`. If it errors, fall back to Claude.
 
 ## Definition of Done
 

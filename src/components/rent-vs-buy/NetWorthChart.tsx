@@ -55,7 +55,7 @@ const INPUT_LABELS = {
   rentIncreaseRate: "Rent increase rate (%/yr)",
   homePriceGrowthRate: "Home price growth (%/yr)",
   ownerCostGrowthRate: "Owner cost growth (%/yr)",
-  investmentReturnRate: "Investment return (%/yr)",
+  investmentReturnRate: "Compound investment return (%/yr)",
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",

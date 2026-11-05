@@ -109,11 +109,10 @@ function drawPath(scenario: Scenario, horizon: number): ScenarioPath {
       INFLATION_BETA.homePrice * inflShock +
       normalRandom() * ANNUAL_VOL.homePriceIdio;
 
-    // Lognormal draw preserves the scenario arithmetic mean; the annual shock is
-    // iid (drawn fresh each year, no serial correlation).
-    const muArith = scenario.investmentReturnMean / 100;
+    // Lognormal draw preserves the scenario compound (geometric) mean; the annual
+    // shock is iid (drawn fresh each year, no serial correlation).
     const investmentSigma = investmentAnnualVolPct(scenario.investmentReturnMean) / 100;
-    const logMean = Math.log(1 + muArith) - 0.5 * investmentSigma * investmentSigma;
+    const logMean = Math.log(1 + scenario.investmentReturnMean / 100);
 
     const investmentReturn = (Math.exp(logMean + normalRandom() * investmentSigma) - 1) * 100;
 

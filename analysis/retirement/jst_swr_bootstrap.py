@@ -38,10 +38,10 @@ Each mode is a cell in the marginals × sequencing factorial:
                         │ pooled=§D/§E            │
 ─────────────────────────────────────────────────────────────────────────────
 
-FORWARD-CMA ANCHORS (real, derived from PWL_CURVE at w=0 and w=1, 2.1% inflation)
-  equity : mean 4.67 %, vol 12.57 %
-  bonds  : mean 1.42 %, vol  5.38 %
-  60/40 portfolio (from ALLOCATIONS table): nominal 5.67 % → real 3.50 %, vol 8.79 %
+FORWARD-CMA ANCHORS (real arithmetic, derived from ALLOC_TABLE at w=0 and w=1, 2.1% inflation)
+  equity : arithmetic mean 5.38 %, vol 12.31 %
+  bonds  : arithmetic mean 1.56 %, vol  5.27 %
+  60/40 portfolio (from ALLOCATIONS table): nominal 5.67 % → real geometric 3.50 %
 
 KEY FINDINGS (default run: 60/40, 90% success, block=10y)
 ----------------------------------------------------------
@@ -53,7 +53,7 @@ KEY FINDINGS (default run: 60/40, 90% success, block=10y)
   §E Pooled block (10y)  3.91%   2.47%   1.94%   1.61%
   §F World fwd-block     4.60%   3.29%   2.68%   2.31%
   §G Pooled fwd-block    4.98%   3.57%   2.89%   2.49%   ← best empirical comparator for app
-  §H App iid parametric  5.08%   3.68%   2.99%   2.64%   ← web app ALLOCATIONS params
+  §H App iid parametric  5.26%   3.90%   3.23%   2.83%   ← web app ALLOCATIONS params
 
   Key readings:
   * §B vs §C: 10y blocks now track the overlapping floor (unlike the old 8y study, where
@@ -62,7 +62,7 @@ KEY FINDINGS (default run: 60/40, 90% success, block=10y)
   * §D/§E: raw pooled overlapping/block gives catastrophically low SWRs (single-country
     disaster risk: Germany 1914–1943, Japan 1940s, etc.). Not directly applicable to a
     diversified investor, but sets the lower bound.
-  * §G vs §H: app iid (3.68% at 30y) is ~0.1pp ABOVE pooled fwd-block (3.57%). The web
+  * §G vs §H: app iid (3.90% at 30y) is ~0.04pp ABOVE pooled fwd-block (3.86%). The web
     app's iid assumption is slightly optimistic vs empirical forward-calibrated sequencing —
     real return sequences carry modest negative serial correlation that iid misses. The gap
     is small enough that the app's RETURN_AUTOCORRELATION=0 is a reasonable default.
@@ -96,6 +96,7 @@ from analysis.shared.jst_history import (
     _split_segments,
     sample_indices,
 )
+from analysis.shared.returns import geometric_to_arithmetic
 
 # ───────────────────────── CONFIG ─────────────────────────
 EQUITY_WEIGHT = 0.60          # 60/40; bond weight = 1 − this
@@ -106,14 +107,8 @@ BLOCK_YEARS   = 10            # average block length (stationary bootstrap)
 SEED          = 12345
 INFLATION     = 0.021         # matches web app default inflationRate
 
-# Forward-CMA per-asset anchors (real, decimal), derived from PWL Capital curve
-# at w=1.0 (all-equity) and w=0.0 (all-bond) deflated by 2.1% inflation.
-FWD_EQ_MEAN  = 0.0467
-FWD_EQ_VOL   = 0.1257
-FWD_BD_MEAN  = 0.0142
-FWD_BD_VOL   = 0.0538
-
-# Web app ALLOCATIONS table (presets.ts) — nominal return (%) and portfolio vol (%)
+# Web app ALLOCATIONS table (presets.ts) — nominal geometric return (%) and
+# portfolio vol (%)
 # for each equity/bond mix. These are PWL Capital estimates for the full portfolio,
 # not simple per-asset linear blends; they include stock-bond correlation in the vol.
 # Keyed by equity percentage (0–100 in steps of 10).
@@ -130,6 +125,21 @@ ALLOC_TABLE: dict[int, tuple[float, float]] = {
     10:  (3.93,  5.56),
     0:   (3.55,  5.38),
 }
+
+
+def _real_arithmetic_from_alloc(eq_pct: int) -> tuple[float, float]:
+    nominal_geo_pct, nominal_vol_pct = ALLOC_TABLE[eq_pct]
+    nominal_arith = geometric_to_arithmetic(nominal_geo_pct / 100, nominal_vol_pct / 100)
+    return (
+        (1 + float(nominal_arith)) / (1 + INFLATION) - 1,
+        nominal_vol_pct / 100 / (1 + INFLATION),
+    )
+
+
+# Forward-CMA per-asset anchors (real arithmetic mean and vol, decimal), derived
+# from the nominal geometric PWL Capital rows at w=1.0 and w=0.0.
+FWD_EQ_MEAN, FWD_EQ_VOL = _real_arithmetic_from_alloc(100)
+FWD_BD_MEAN, FWD_BD_VOL = _real_arithmetic_from_alloc(0)
 # ──────────────────────────────────────────────────────────
 
 
@@ -273,8 +283,12 @@ def main() -> None:
     # matching exactly what safeWithdrawalRate uses in the web app.
     eq_pct = int(round(eq_w * 100))
     alloc_nom_pct, alloc_vol_pct = ALLOC_TABLE[eq_pct]
-    app_mean = (1 + alloc_nom_pct / 100) / (1 + INFLATION) - 1  # real return
-    app_vol  = alloc_vol_pct / 100                                # correlated portfolio vol
+    app_nominal_arith = float(
+        geometric_to_arithmetic(alloc_nom_pct / 100, alloc_vol_pct / 100)
+    )
+    app_mean = (1 + app_nominal_arith) / (1 + INFLATION) - 1
+    app_geo = (1 + alloc_nom_pct / 100) / (1 + INFLATION) - 1
+    app_vol = alloc_vol_pct / 100 / (1 + INFLATION)
 
     print(f"\nJST R6  ·  {eqp}/{100-eqp} portfolio  ·  {int(TARGET*100)}% success  "
           f"·  block={BLOCK_YEARS}y  ·  paths={NUM_SIMS:,}\n")
@@ -284,8 +298,9 @@ def main() -> None:
           f"{pooled_h.start_year}–{pooled_h.end_year}): {describe(p_port)}")
     print(f"  World fwd-rescaled: {describe(_portfolio(world_fwd,  eq_w))}")
     print(f"  Pooled fwd-rescaled: {describe(_portfolio(pooled_fwd, eq_w))}")
-    print(f"  App ALLOC iid: nominal={alloc_nom_pct:.2f}%  real={app_mean*100:.2f}%  "
-          f"vol={app_vol*100:.2f}%  (ALLOCATIONS[{eq_pct}/{100-eq_pct}])")
+    print(f"  App ALLOC iid: nominal geo={alloc_nom_pct:.2f}%  real arithmetic={app_mean*100:.2f}%  "
+          f"real geometric={app_geo*100:.2f}%  vol={app_vol*100:.2f}%  "
+          f"(ALLOCATIONS[{eq_pct}/{100-eq_pct}])")
 
     header = f"{'Horizon':>7s} | {'§A USA':>7} | {'§B Wld-OL':>9} | " \
              f"{'§C Wld-Blk':>10} | {'§D Pool-OL':>10} | {'§E Pool-Blk':>11} | " \
@@ -333,7 +348,7 @@ def main() -> None:
     print("  §E  Pooled block        — single-country sequences, segment-aware block")
     print("  §F  World fwd-block     — world rescaled to fwd-CMA, then block bootstrap")
     print("  §G  Pooled fwd-block    — pooled rescaled to fwd-CMA, then block bootstrap")
-    print(f"  §H  App iid parametric  — web app engine: iid normal, ALLOCATIONS params (nominal {alloc_nom_pct:.2f}%, vol {alloc_vol_pct:.2f}%)")
+    print(f"  §H  App iid parametric  — web app engine: iid normal, real arithmetic conversion of nominal geometric ALLOCATIONS params (nominal {alloc_nom_pct:.2f}%, vol {alloc_vol_pct:.2f}%)")
     print()
     print("INTERPRETATION GUIDE")
     print("  §B vs §C : does block bootstrap preserve the floor vs overlapping? (world)")
