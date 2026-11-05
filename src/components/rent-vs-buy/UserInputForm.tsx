@@ -104,6 +104,15 @@ export default function UserInputForm({
 
   const rentalYield = formatPercentage((userInput.monthlyRent * 12) / userInput.initialHomePrice);
 
+  // Combined nominal growth of maintenance + condo fees (stacks
+  // multiplicatively: inflation × aging). Shown in the aging helper so the
+  // two knobs read as one effective number.
+  const maintTotalGrowth =
+    (1 + userInput.ownerCostGrowthRate / 100) * (1 + userInput.maintAgingPct / 100) - 1;
+  const maintTotalText = Number.isFinite(maintTotalGrowth)
+    ? `Maintenance + fees grow ≈${formatPercentage(maintTotalGrowth)}/yr in total (stacks with cost inflation).`
+    : null;
+
   // While a field is mid-edit it can transiently be "" or 0. Show a placeholder
   // rather than a misleading "$0/mo" (empty amortization) or "NaN" (empty price).
   // calculateMonthlyMortgagePayment itself soft-fails, so this is display-only.
@@ -289,10 +298,21 @@ export default function UserInputForm({
               />
 
               {perturbed("ownerCostGrowthRate", "ownerCostGrowthSigma", {
-                label: "Owner cost growth",
+                label: "Cost inflation",
                 helperText:
-                  "Expected annual growth in maintenance, property tax, insurance, and condo fees. Slightly above inflation or follows home price.",
+                  "General price inflation for property tax, insurance, condo fees, and baseline maintenance. Maintenance and condo fees grow an extra building-aging uplift on top (see Building aging).",
               })}
+
+              <UserInputFormItem
+                id="maintAgingPct"
+                label="Building aging"
+                labelHelperText={`Extra yearly rise from building deterioration, on top of cost inflation.${maintTotalText ? ` ${maintTotalText}` : ""} Default 1%/yr matches the AHS maintenance-only age gradient (see methodology note). 0% for new builds. Does not apply to property tax.`}
+                value={userInput.maintAgingPct}
+                onChange={bind("maintAgingPct")}
+                error={errors.maintAgingPct}
+                suffix="%"
+                {...c("maintAgingPct")}
+              />
 
               <UserInputFormItem
                 id="holdingPeriod"
