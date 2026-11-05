@@ -101,15 +101,16 @@ export default function Methodology() {
           moderate &ldquo;bond tent&rdquo; near retirement. How deep that tent goes depends mostly
           on how well funded you are: the more your savings exceed what the spending target needs,
           the less upside you can use and the more the optimizer protects the floor. Under the
-          sequence-aware mode, history&apos;s joint pattern (equities recover, while long nominal
-          bonds quietly fail in inflation decades) pushes the optimum to ~100% equity — but that
-          result leans on pre-1990 monetary regimes, surviving developed markets, and long nominal
-          bonds being the only alternative: swap in a real, short-duration holding (e.g. an
-          inflation-linked bond fund) and the optimum drops well below 100%, so we treat the ~100%
-          figure as a scenario rather than the default. Flexible spending (income moves with the
-          market) stays near 100% equity in both. The two modes bracket the answer, and across the
-          historical eras we tested the income cost of picking the &ldquo;wrong&rdquo; regime is
-          small (a few percent of certainty-equivalent income at most — see the analysis note).
+          sequence-aware mode, history&apos;s joint pattern (equities partly recover, while long
+          nominal bonds suffer bad decades through inflation and interest-rate cycles) pushes the
+          optimum to ~100% equity — but that result leans on pre-1990 monetary regimes, surviving
+          developed markets, and long nominal bonds being the only alternative: swap in a real,
+          short-duration holding (e.g. a short inflation-linked bond fund) and the optimum drops to
+          roughly 50–70% equity in our tests, so we treat the ~100% figure as a scenario rather than
+          the default. Flexible spending (income moves with the market) stays near 100% equity in
+          both. The two modes bracket the answer, and across the historical eras we tested the
+          income cost of picking the &ldquo;wrong&rdquo; regime is small (a few percent of
+          certainty-equivalent income at most — see the analysis note).
         </Point>
         <Point heading="The shape is worth little; the level matters.">
           Out of sample, the full per-age glide path beats the best single flat weight by only ~0.5%

@@ -5,7 +5,7 @@ SWR vs. horizon from real global return history (Jordà–Schularick–Taylor Ma
 WHY THIS EXISTS
 ---------------
 Our app's parametric Monte Carlo (iid, forward-CMA assumptions) produces SWRs that keep
-declining at long horizons (50y → ~2.6% for 60/40). This script tests whether historical
+declining at long horizons (50y → ~2.8% for 60/40). This script tests whether historical
 data reproduces that pattern, whether it survives dropping US-exceptionalism, and — building
 on the glide-path factorial research — whether the dataset choice (world average vs pooled
 single-country sequences) and block structure materially change the SWR.
@@ -51,8 +51,8 @@ KEY FINDINGS (default run: 60/40, 90% success, block=10y)
   §C World block (10y)   5.00%   3.78%   3.22%   2.95%   ← tracks §B closely (cf. 8y blocks below)
   §D Pooled overlapping  3.41%   2.18%   1.59%   1.20%   ← single-country disaster risk
   §E Pooled block (10y)  3.91%   2.47%   1.94%   1.61%
-  §F World fwd-block     4.60%   3.29%   2.68%   2.31%
-  §G Pooled fwd-block    4.98%   3.57%   2.89%   2.49%   ← best empirical comparator for app
+  §F World fwd-block     4.86%   3.56%   2.96%   2.61%
+  §G Pooled fwd-block    5.26%   3.86%   3.19%   2.80%   ← best empirical comparator for app
   §H App iid parametric  5.26%   3.90%   3.23%   2.83%   ← web app ALLOCATIONS params
 
   Key readings:
@@ -63,11 +63,11 @@ KEY FINDINGS (default run: 60/40, 90% success, block=10y)
     disaster risk: Germany 1914–1943, Japan 1940s, etc.). Not directly applicable to a
     diversified investor, but sets the lower bound.
   * §G vs §H: app iid (3.90% at 30y) is ~0.04pp ABOVE pooled fwd-block (3.86%). The web
-    app's iid assumption is slightly optimistic vs empirical forward-calibrated sequencing —
-    real return sequences carry modest negative serial correlation that iid misses. The gap
-    is small enough that the app's RETURN_AUTOCORRELATION=0 is a reasonable default.
-  * §G > §F: pooled sequences have weaker bond persistence (VR~1.7 vs world VR~3.8),
-    which makes the 60/40 portfolio slightly more mean-reverting → higher SWR than world.
+    app's iid assumption is very slightly optimistic vs forward-calibrated historical
+    sequencing (≤ 0.07pp at every horizon). Equity mean reversion and bond persistence
+    roughly offset in a 60/40, so RETURN_AUTOCORRELATION=0 is a reasonable default.
+  * §G > §F: pooled sequences have weaker bond persistence (arithmetic VR(10y) ≈ 2.7 vs
+    world ≈ 3.7) and stronger within-country equity mean reversion → higher SWR than world.
 
 See docs/retirement/swr-methodology.md for full annotation.
 

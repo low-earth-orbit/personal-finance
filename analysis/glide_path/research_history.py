@@ -12,11 +12,15 @@ Sections (choose with --sections; default all):
   blocks  : block-length sweep (sequencing strength) on the pooled dataset
   channels: which ingredient flips the answer — corr, marginal shapes, equity-only or
             bond-only sequencing, vs the full joint sequence structure
-  menu    : replace the nominal-bond leg with synthetic real assets (buyable ETF proxy and
-            idealized short-TIPS/RRB ladder) — how much of flat-100% is the bond menu?
+  menu    : replace the nominal-bond leg with synthetic real assets (idealized real asset and
+            short-TIPS/RRB ladder) — how much of flat-100% is the bond menu?
+  tips-etf: the real leg as an AR(1) at a measured short-TIPS-ETF persistence (--tips-phi)
+  tips-stress: cell (b) with one assumption changed at a time (correlation, phi, mean, vol)
+  bills-block: a real-bill leg that keeps its own historical persistence
   gamma   : risk-aversion sweep across the key modes
   curves  : CE vs constant equity weight (how peaked is "100% equity"?)
   vr      : variance-ratio diagnostic (mean reversion) for world vs pooled
+  bond-decomp: bond VR(10) split into carry, rate-cycle (price) and inflation terms by era
   regret  : CE regret of constant weights and the iid recommended glide across historical cuts
   funding : funding-ratio and matched-spending flexibility sweeps
 
@@ -229,14 +233,15 @@ def run_menu(args):
 
     Equity keeps its forward-block sequencing throughout; only the non-equity asset changes:
       a) forward-block              : rescaled historical long nominal bonds (joint structure)
-      b) synthetic short-TIPS ETF proxy: VR=1 at the bond mean/vol, zero equity correlation
+      b) idealized real asset       : VR=1 at the bond mean/vol, zero equity correlation
       c) idealized short-TIPS ladder   : iid normal, bond mean, 2% vol
       d) idealized ladder @2% real     : c) with a 2.0% real yield
 
     Cells (c)/(d) are idealized: no real-rate duration risk, no equity correlation, no
     liquidity/issuance constraints (Canada stopped RRB issuance in 2022). The 2% vol in (c) is the
     LADDER property (hold-to-maturity pull-to-par), not a property of being short or real. Read c/d
-    as upper bounds; b is the buyable short-TIPS-ETF proxy.
+    as upper bounds. (b) is generous to a real fund on correlation, persistence and mean and
+    conservative on volatility; ``tips-stress`` varies each.
     """
     eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
     rescaled = J.rescale_to_targets(
@@ -267,7 +272,7 @@ def run_menu(args):
         **base_kwargs(args, return_mode="forward-block", dataset="pooled",
                       block_years=args.block_years))))
     cells = [
-        ("b) buyable short-TIPS ETF proxy (VR=1, 0 corr)", bd_m, bd_v),
+        ("b) idealized real asset (VR=1, 0 corr, bond mean/vol)", bd_m, bd_v),
         ("c) idealized short-TIPS ladder (2% vol)", bd_m, 0.02),
         ("d) idealized ladder @2% real", 0.02, 0.02),
     ]
@@ -327,6 +332,19 @@ def run_flat_curves(args):
         print(f"  {label:<28} {'  '.join(cells_out)}")
 
 
+def _history_cuts():
+    """Era / country cuts shared by the ``vr`` and ``bond-decomp`` sections (pooled kwargs)."""
+    all_countries = [c for c in J.load_jst_frame()["country"].dropna().unique()]
+    not_stable = [c for c in all_countries if c not in STABLE_SIX]
+    return [
+        ("full 1871-2020", {}),
+        ("post-1950", {"exclude_years": [(1871, 1949)]}),
+        ("ex Germany+Japan", {"exclude_countries": DISASTER_COUNTRIES}),
+        ("stable six", {"exclude_countries": not_stable}),
+        ("1990-2020 infl-target", {"exclude_years": [(1871, 1989)]}),
+    ]
+
+
 def run_variance_ratios(args):
     from analysis.shared.jst_history import (
         load_pooled_bills,
@@ -371,17 +389,7 @@ def run_variance_ratios(args):
     # Era / country cuts (pooled basis): does bond mean reversion in any era carry over
     # to the empirical short asset? The 1990–2020 inflation-targeting cut is the test —
     # bonds flip to VR<1 there (the secular rate decline), bills do not.
-    from analysis.shared.jst_history import load_jst_frame
-
-    all_countries = [c for c in load_jst_frame()["country"].dropna().unique()]
-    not_stable = [c for c in all_countries if c not in STABLE_SIX]
-    cuts = [
-        ("full 1871-2020", {}),
-        ("post-1950", {"exclude_years": [(1871, 1949)]}),
-        ("ex Germany+Japan", {"exclude_countries": DISASTER_COUNTRIES}),
-        ("stable six", {"exclude_countries": not_stable}),
-        ("1990-2020 infl-target", {"exclude_years": [(1871, 1989)]}),
-    ]
+    cuts = _history_cuts()
     def iid_null(series, segments, reps=300, seed=20260604):
         """Mean and 5th-95th percentile under within-segment permutation."""
         series = np.asarray(series, dtype=float)
@@ -415,6 +423,54 @@ def run_variance_ratios(args):
               f"{eq_null[0]:>5.2f}[{eq_null[1][0]:.2f},{eq_null[1][1]:.2f}] "
               f"{bond_null[0]:>5.2f}[{bond_null[1][0]:.2f},{bond_null[1][1]:.2f}] "
               f"{bill_vol:>6.1f}% {history.observations:>5}")
+
+
+def run_bond_decomposition(args):
+    """Split pooled real-bond (and bill) persistence into rate and inflation terms.
+
+    real = (carry + price - inflation) / (1 + inflation) exactly, so each term's covariance
+    with the 10-year real sum adds up to the bond VR(10) reported by ``vr``.
+    """
+    print("\n" + "=" * 100)
+    print("BOND PERSISTENCE DECOMPOSITION  (arithmetic basis; contributions sum to bond VR)")
+    print("  carry     = prior-year long yield            (income)")
+    print("  price     = nominal return minus carry       (yield changes: the rate cycle)")
+    print("  inflation = -CPI change                      (erosion of the nominal claim)")
+    print("  each term deflated by (1 + CPI); attribution by Cov(10y real sum, 10y term sum)")
+    print("=" * 100)
+    names = J.BOND_COMPONENTS
+    head = "  ".join(f"{n:>9}" for n in names)
+    print(f"\n  {'cut':<24} {'n':>5} {'bondVR10':>8}  {head}   corr10(price,infl)  infl-only VR10")
+    for cut_name, kw in _history_cuts():
+        panel, segments = J.load_pooled_bond_components(**kw)
+        history = J.load_pooled_country_returns(**kw)
+        if not np.allclose(panel["fixed_income"].to_numpy(), history.fixed_income):
+            raise AssertionError(f"{cut_name}: component rows diverge from the pooled history")
+        total = panel["fixed_income"].to_numpy()
+        parts = {n: panel[n].to_numpy() for n in names}
+        contrib = J.variance_decomposition(total, parts, 10, segments)
+        vr = J.variance_ratio(total, 10, segments)
+        cells = "  ".join(f"{contrib[n]:>4.2f} {contrib[n] / vr:>4.0%}" for n in names)
+
+        def sums10(values):
+            runs = [r for r in J._split_segments(values, segments) if len(r) >= 10]
+            return np.concatenate([np.convolve(r, np.ones(10), "valid") for r in runs])
+
+        corr = np.corrcoef(sums10(parts["price"]), sums10(parts["inflation"]))[0, 1]
+        infl_vr = J.variance_ratio(parts["inflation"], 10, segments)
+        print(f"  {cut_name:<24} {len(total):>5} {vr:>8.2f}  {cells}   {corr:>17.2f}  {infl_vr:>14.2f}")
+
+    print("\n  Bills: real = (bill rate - CPI) / (1 + CPI); rate-only VR10 is the deflated bill rate alone")
+    print(f"  {'cut':<24} {'n':>5} {'billVR10':>8}  {'rate':>9}  {'inflation':>9}   rate-only VR10")
+    for cut_name, kw in _history_cuts():
+        panel, segments = J.load_pooled_bill_components(**kw)
+        total = panel["bills"].to_numpy()
+        parts = {n: panel[n].to_numpy() for n in ("rate", "inflation")}
+        contrib = J.variance_decomposition(total, parts, 10, segments)
+        vr = J.variance_ratio(total, 10, segments)
+        cells = "  ".join(f"{contrib[n]:>4.2f} {contrib[n] / vr:>4.0%}" for n in parts)
+        rate_vr = J.variance_ratio(parts["rate"], 10, segments)
+        print(f"  {cut_name:<24} {len(total):>5} {vr:>8.2f}  {cells}   {rate_vr:>14.2f}")
 
 
 def run_bills_block(args):
@@ -486,13 +542,14 @@ def run_bills_block(args):
 def run_tips_etf(args):
     """Data-anchored realistic short-TIPS-ETF leg (e.g. XSTH/VTIP), not the idealized VR=1 cell.
 
-    Menu cell (b) assumes the buyable real asset is VR=1. Live ETF data (VTIP/STIP 2012-, deflated
-    by US CPI) says short-TIPS real returns are only *mildly* persistent — annual AR(1) phi ~= 0.13,
-    i.e. VR(2y) ~= 1.13 — because the inflation-accretion leg (VR~=1) dominates but the real-yield
-    repricing leg adds a little persistence and ~0.6 correlation to short Treasuries. Still far below
-    short *nominal* bills (VR(2y) ~= 4.8 in the same data; ~2.9 in JST). This builds the safe leg as
-    an AR(1) at VTIP's measured phi/marginals (--tips-mean/--tips-vol/--tips-phi), block-sampled
-    jointly so it carries that mild persistence while equity keeps its JST forward-block sequencing.
+    Menu cell (b) assumes the buyable real asset is VR=1. Annual VTIP returns (2012-, deflated by
+    US CPI) suggest short-TIPS real returns are only mildly persistent: AR(1) phi ~= 0.13, i.e.
+    VR(2y) ~= 1.13. That estimate rests on ~13 annual observations (standard error ~0.27), so it
+    cannot rule out phi = 0 or phi ~= 0.5; ``tips-stress`` sweeps phi. For comparison, JST real
+    bills have arithmetic VR(2y) ~= 1.50 pooled / 1.74 world (VR(10y) ~= 3.3 pooled). This builds
+    the safe leg as an AR(1) at the given phi/marginals (--tips-mean/--tips-vol/--tips-phi),
+    block-sampled jointly so it carries that persistence while equity keeps its JST forward-block
+    sequencing.
     """
     eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
     # Default the TIPS marginals to the forward bond anchors so phi=0 reproduces menu cell (b).
@@ -549,6 +606,70 @@ def run_tips_etf(args):
             args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
             history=make_hist(series, label)))
         print(summary_row(label, rec))
+
+
+def run_tips_stress(args):
+    """Stress the short-TIPS cell: which of its generous assumptions carries the 100% -> ~50% drop?
+
+    Menu cell (b) gives the real asset three favourable properties at once: zero equity
+    correlation, no persistence (VR=1) and the long-bond forward mean, while keeping the long-bond
+    volatility (an unfavourable choice for a short fund). Each row changes one of them, then the
+    last row combines the unfavourable settings. The leg is a standardized AR(1) mixed with the
+    (rescaled) equity series to hit the target correlation, then affine-mapped to the exact target
+    mean/vol, and block-sampled jointly with equity so the correlation and persistence survive.
+    """
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
+    hist = J.rescale_to_targets(
+        J.load_pooled_country_returns(),
+        equity_mean=eq_m, equity_vol=eq_v,
+        fixed_income_mean=bd_m, fixed_income_vol=bd_v,
+        label_suffix="forward-CMA rescaled",
+    )
+    n = hist.observations
+    seg = hist.segment_ids if hist.segment_ids is not None else np.zeros(n, dtype=int)
+    z_eq = (hist.equity - hist.equity.mean()) / hist.equity.std()
+
+    def leg(mean, vol, phi, corr, seed=7):
+        rng = np.random.default_rng(seed)
+        ar = np.empty(n)
+        prev, x = None, 0.0
+        for i in range(n):
+            if seg[i] != prev:
+                x, prev = rng.standard_normal(), seg[i]
+            else:
+                x = phi * x + rng.standard_normal() * np.sqrt(1 - phi * phi)
+            ar[i] = x
+        mixed = corr * z_eq + np.sqrt(1 - corr * corr) * ar
+        return J._affine_to_target(mixed, mean, vol)
+
+    pct = lambda x: x * 100.0  # noqa: E731
+    rows = [
+        ("b) menu cell: corr 0, phi 0, bond mean/vol", bd_m, bd_v, 0.0, 0.0),
+        ("corr 0.29 (nominal bonds' historical)", bd_m, bd_v, 0.0, 0.29),
+        ("corr 0.48 (iid curve-implied)", bd_m, bd_v, 0.0, 0.48),
+        ("phi 0.30", bd_m, bd_v, 0.30, 0.0),
+        ("phi 0.50", bd_m, bd_v, 0.50, 0.0),
+        ("mean 1.00% real (no term premium)", 0.010, bd_v, 0.0, 0.0),
+        ("vol 3.0% (short-fund amplitude)", bd_m, 0.030, 0.0, 0.0),
+        ("phi 0.80 (real-rate cycle, near random-walk real yield)", bd_m, bd_v, 0.80, 0.0),
+        ("combined: 1.00% / 3.0% / phi 0.30 / corr 0.29", 0.010, 0.030, 0.30, 0.29),
+        ("harsh: 1.00% / 5.27% / phi 0.50 / corr 0.48", 0.010, bd_v, 0.50, 0.48),
+    ]
+    print("\n" + "=" * 100)
+    print("SHORT-TIPS STRESS  (equity keeps forward-block sequencing; real leg varied one knob at a time)")
+    print(f"  base leg: {pct(bd_m):.2f}% real / {pct(bd_v):.2f}% vol, iid, zero equity correlation")
+    print("=" * 100)
+    for label, mean, vol, phi, corr in rows:
+        series = leg(mean, vol, phi, corr)
+        realized_corr = float(np.corrcoef(hist.equity, series)[0, 1])
+        vr2 = J.variance_ratio(series, 2, hist.segment_ids)
+        history = J.ReturnHistory(years=hist.years, equity=hist.equity, fixed_income=series,
+                                  label=label, country_count=hist.country_count,
+                                  segment_ids=hist.segment_ids)
+        rec = recommend_glide_path(**base_kwargs(
+            args, return_mode="historical-block", dataset="pooled", block_years=args.block_years,
+            history=history))
+        print(summary_row(f"{label} [corr {realized_corr:.2f}, VR2 {vr2:.2f}]", rec))
 
 
 def _regret_regimes(args):
@@ -703,8 +824,10 @@ SECTIONS = {
     "gamma": run_gamma_sweep,
     "curves": run_flat_curves,
     "vr": run_variance_ratios,
+    "bond-decomp": run_bond_decomposition,
     "regret": run_regret,
     "funding": run_funding,
+    "tips-stress": run_tips_stress,
 }
 
 

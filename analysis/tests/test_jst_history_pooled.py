@@ -23,10 +23,16 @@ from analysis.shared.jst_history import (
     _normalize_year_windows,
     _segment_bounds,
     _split_segments,
+    BOND_COMPONENTS,
+    load_pooled_bill_components,
+    load_pooled_bills,
+    load_pooled_bond_components,
     load_pooled_country_returns,
+    real_bond_components,
     rescale_to_targets,
     sample_indices,
     sample_return_paths,
+    variance_decomposition,
     variance_ratio,
 )
 
@@ -313,6 +319,75 @@ class PooledLoaderTests(unittest.TestCase):
     def test_full_pooled_bond_vr_uses_arithmetic_engine_basis(self):
         history = load_pooled_country_returns()
         self.assertGreater(variance_ratio(history.fixed_income, 10, history.segment_ids), 2.5)
+
+
+class BondComponentTests(unittest.TestCase):
+    @staticmethod
+    def _frame():
+        # Country X with a 2003 hole; 2004 has a return but no yield (all carry).
+        rows = [
+            ("X", 2000, None, None, 0.050, 100.0),
+            ("X", 2001, 0.10, 0.02, 0.060, 104.0),
+            ("X", 2002, 0.12, 0.09, 0.040, 105.0),
+            ("X", 2004, 0.08, 0.03, None, 111.0),
+            ("X", 2005, 0.05, 0.04, 0.050, 113.0),
+            ("Y", 2000, None, None, 0.030, 100.0),
+            ("Y", 2001, 0.20, -0.02, 0.050, 110.0),
+            ("Y", 2002, 0.15, 0.07, 0.040, 112.0),
+        ]
+        frame = pd.DataFrame(
+            rows, columns=["country", "year", "eq_tr", "bond_tr", "bond_rate", "cpi"]
+        )
+        frame["bill_rate"] = 0.01
+        return frame
+
+    def test_components_sum_to_real_bond_return(self):
+        parts = real_bond_components(self._frame()[lambda f: f["country"] == "X"])
+        np.testing.assert_array_equal(parts["year"], [2001, 2002, 2004, 2005])
+        np.testing.assert_allclose(parts[list(BOND_COMPONENTS)].sum(axis=1), parts["fixed_income"])
+        # Prior-year yield as carry; 2004 has neither a 2003 row nor its own yield, so its
+        # whole nominal return is carry; 2005's prior yield is missing, so it uses its own.
+        deflator = np.array([1.04, 105 / 104, 111 / 105, 113 / 111])
+        np.testing.assert_allclose(parts["carry"], np.array([0.05, 0.06, 0.03, 0.05]) / deflator)
+        self.assertAlmostEqual(parts["price"].iloc[2], 0.0)
+
+    def test_pooled_components_match_pooled_history_rows(self):
+        with patch(
+            "analysis.shared.jst_history.load_jst_frame", return_value=self._frame()
+        ):
+            panel, segments = load_pooled_bond_components()
+            history = load_pooled_country_returns()
+        np.testing.assert_allclose(panel["fixed_income"], history.fixed_income)
+        np.testing.assert_array_equal(segments, history.segment_ids)
+
+    def test_pooled_bill_components_match_pooled_bills(self):
+        with patch(
+            "analysis.shared.jst_history.load_jst_frame", return_value=self._frame()
+        ):
+            panel, segments = load_pooled_bill_components(exclude_years=[2002])
+            bills, bill_segments = load_pooled_bills(exclude_years=[2002])
+        np.testing.assert_allclose(panel["bills"], bills)
+        np.testing.assert_allclose(panel["rate"] + panel["inflation"], bills)
+        np.testing.assert_array_equal(segments, bill_segments)
+
+    def test_decomposition_sums_to_variance_ratio(self):
+        rng = np.random.default_rng(5)
+        a = np.cumsum(rng.normal(0, 0.01, 120)) * 0.1 + rng.normal(0, 0.02, 120)
+        b = rng.normal(0, 0.03, 120)
+        segment_ids = np.repeat([0, 1], 60)
+        contrib = variance_decomposition(a + b, {"a": a, "b": b}, 10, segment_ids)
+        self.assertAlmostEqual(
+            sum(contrib.values()), variance_ratio(a + b, 10, segment_ids), places=12
+        )
+
+    @unittest.skipUnless(os.path.exists(DATA_FILE), "JST workbook unavailable")
+    def test_full_pooled_bond_persistence_is_mostly_inflation(self):
+        panel, segments = load_pooled_bond_components()
+        total = panel["fixed_income"].to_numpy()
+        contrib = variance_decomposition(
+            total, {n: panel[n].to_numpy() for n in BOND_COMPONENTS}, 10, segments
+        )
+        self.assertGreater(contrib["inflation"], contrib["price"] + contrib["carry"])
 
 
 if __name__ == "__main__":

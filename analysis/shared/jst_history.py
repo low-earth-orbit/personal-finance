@@ -102,6 +102,37 @@ def real_bill_returns(sub: pd.DataFrame) -> pd.DataFrame:
     return sub.dropna(subset=["inflation", "bills"])[columns]
 
 
+BOND_COMPONENTS = ("carry", "price", "inflation")
+
+
+def real_bond_components(sub: pd.DataFrame) -> pd.DataFrame:
+    """Split one country's real long-bond return into carry, price and inflation terms.
+
+    With nominal total return ``n = carry + price`` and CPI inflation ``i``, the real return
+    is exactly ``(1 + n) / (1 + i) - 1 = (carry + price - i) / (1 + i)``, so the three
+    columns ``carry / (1 + i)``, ``price / (1 + i)`` and ``-i / (1 + i)`` sum to
+    ``fixed_income``. ``carry`` is the prior year's long yield (``bond_rate``; JST records
+    annual averages, so this proxies the start-of-year yield) and falls back to the same
+    year's yield when the prior year is missing; in the few years with a return but no yield
+    at all (Belgium 1913, Germany 1922–23, Finland 1939–47, mostly flat coupon prints) the
+    whole nominal return is treated as carry. ``price`` is the remainder of the nominal
+    return: duration times the yield change plus roll-down and timing noise — the
+    interest-rate-cycle channel. Rows match :func:`real_stock_fixed_income_returns`.
+    """
+    sub = sub.sort_values("year").copy()
+    sub["inflation_rate"] = sub["cpi"].pct_change(fill_method=None)
+    prior = sub["bond_rate"].shift(1).where(sub["year"].diff() == 1)
+    yield_start = prior.fillna(sub["bond_rate"]).fillna(sub["bond_tr"])
+    deflator = 1 + sub["inflation_rate"]
+    sub["equity"] = (1 + sub["eq_tr"]) / deflator - 1
+    sub["fixed_income"] = (1 + sub["bond_tr"]) / deflator - 1
+    sub["carry"] = yield_start / deflator
+    sub["price"] = (sub["bond_tr"] - yield_start) / deflator
+    sub["inflation"] = -sub["inflation_rate"] / deflator
+    rows = sub.dropna(subset=["inflation_rate", "equity", "fixed_income", "carry"])
+    return rows[["year", "fixed_income", *BOND_COMPONENTS]]
+
+
 def _as_history(frame: pd.DataFrame, label: str, country_count: int) -> ReturnHistory:
     frame = frame.sort_values("year").dropna(subset=["equity", "fixed_income"])
     if frame.empty:
@@ -336,6 +367,111 @@ def load_pooled_bills(
         panel["country"].to_numpy(), panel["year"].to_numpy(dtype=int)
     )
     return panel["bills"].to_numpy(dtype=float), segment_ids
+
+
+def real_bill_components(sub: pd.DataFrame) -> pd.DataFrame:
+    """Split one country's real bill return into ``rate`` and ``inflation`` terms.
+
+    ``real = (bill_rate - i) / (1 + i)``, so ``rate = bill_rate / (1 + i)`` and
+    ``inflation = -i / (1 + i)`` sum to ``bills``. Rows match :func:`real_bill_returns`.
+    """
+    sub = sub.sort_values("year").copy()
+    sub["inflation_rate"] = sub["cpi"].pct_change(fill_method=None)
+    deflator = 1 + sub["inflation_rate"]
+    sub["bills"] = (1 + sub["bill_rate"]) / deflator - 1
+    sub["rate"] = sub["bill_rate"] / deflator
+    sub["inflation"] = -sub["inflation_rate"] / deflator
+    return sub.dropna(subset=["inflation_rate", "bills"])[["year", "bills", "rate", "inflation"]]
+
+
+def _pool_country_frames(builder, path, exclude_countries, exclude_years):
+    """Apply a per-country ``builder`` with the pooled loaders' selection and segmentation."""
+    frame = load_jst_frame(path)
+    selected = [c for c in frame["country"].dropna().unique()]
+    if exclude_countries:
+        dropped = set(exclude_countries)
+        selected = [c for c in selected if c not in dropped]
+    windows = _normalize_year_windows(exclude_years)
+    country_frames = []
+    for country in selected:
+        parts = builder(frame[frame["country"] == country]).copy()
+        if windows:
+            years = parts["year"].to_numpy()
+            drop = np.zeros(len(parts), dtype=bool)
+            for lo, hi in windows:
+                drop |= (years >= lo) & (years <= hi)
+            parts = parts[~drop]
+        if parts.empty:
+            continue
+        parts["country"] = country
+        country_frames.append(parts)
+    if not country_frames:
+        raise ValueError("no rows available for the pooled selection")
+    panel = pd.concat(country_frames, ignore_index=True)
+    segment_ids = _assign_segments(
+        panel["country"].to_numpy(), panel["year"].to_numpy(dtype=int)
+    )
+    return panel, segment_ids
+
+
+def load_pooled_bond_components(
+    path: str | None = None,
+    *,
+    exclude_countries: list[str] | None = None,
+    exclude_years=None,
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Pooled per-country :func:`real_bond_components` and matching ``segment_ids``.
+
+    Uses the same selection, row set and segmentation as :func:`load_pooled_country_returns`,
+    so ``fixed_income`` equals that history's bond series and the component columns sum to it.
+    """
+    return _pool_country_frames(real_bond_components, path, exclude_countries, exclude_years)
+
+
+def load_pooled_bill_components(
+    path: str | None = None,
+    *,
+    exclude_countries: list[str] | None = None,
+    exclude_years=None,
+) -> tuple[pd.DataFrame, np.ndarray]:
+    """Pooled per-country :func:`real_bill_components`; rows match :func:`load_pooled_bills`."""
+    return _pool_country_frames(real_bill_components, path, exclude_countries, exclude_years)
+
+
+def variance_decomposition(
+    total: np.ndarray,
+    components: dict[str, np.ndarray],
+    horizon: int,
+    segment_ids: np.ndarray | None = None,
+) -> dict[str, float]:
+    """Each component's additive contribution to ``VR(horizon)`` of ``total``.
+
+    For ``total = sum(components)``, the ``horizon``-sum variance splits exactly as
+    ``Var(S_total) = sum_k Cov(S_total, S_k)``; dividing by ``horizon * Var(total)`` gives
+    contributions that sum to :func:`variance_ratio` (arithmetic basis). Covariance
+    attribution assigns shared variance through each component's co-movement with the
+    total, so it is a variance accounting, not a causal split.
+    """
+    total = np.asarray(total, dtype=float)
+
+    def window_sums(values):
+        sums = []
+        for segment in _split_segments(np.asarray(values, dtype=float), segment_ids):
+            if len(segment) >= horizon:
+                prefix = np.concatenate(([0.0], np.cumsum(segment)))
+                sums.append(prefix[horizon:] - prefix[:-horizon])
+        return np.concatenate(sums) if sums else np.array([])
+
+    total_sums = window_sums(total)
+    scale = horizon * total.var()
+    if total_sums.size == 0 or scale == 0:
+        return {name: float("nan") for name in components}
+    centered = total_sums - total_sums.mean()
+    out = {}
+    for name, values in components.items():
+        part = window_sums(values)
+        out[name] = float(np.mean(centered * (part - part.mean())) / scale)
+    return out
 
 
 def _affine_to_target(values: np.ndarray, target_mean: float, target_vol: float) -> np.ndarray:
