@@ -13,7 +13,8 @@ Python engine and research scripts for the Lifetime Allocation Optimizer (`/glid
 | `interactive.py` | Prompt flow and `format_reproduction_command` |
 | `cli.py` | Flag CLI behind `analysis/recommend_glide.py` |
 | `research.py` | iid research sweep (methodology §2) |
-| `research_history.py` | History, bond-menu, regret and funding sections (methodology §3–§4) |
+| `research_history.py` | History, bond-persistence decomposition, bond-menu and short-TIPS stress, regret and funding sections (methodology §3–§4) |
+| `doc_figures.py` | Methodology Figures 1–3 as light/dark SVGs in `docs/glide-path/img/` (needs matplotlib) |
 | `generate_bundle.py` | Writes `src/utils/glide-path/jstData.ts` (forward-rescaled JST history) |
 
 Shared helpers live in `analysis/shared/` (`jst_history.py` for JST loading, rescaling, block sampling and variance ratios; `returns.py` for geometric ↔ arithmetic conversion).
@@ -27,6 +28,8 @@ python3 analysis/recommend_glide.py --help               # one recommendation fr
 python3 -m analysis.glide_path.recommender               # interactive prompts (--demo: lever sweep)
 python3 -m analysis.glide_path.research                  # §2 sweep (~5 min)
 python3 -m analysis.glide_path.research_history --quick  # all history sections, low fidelity
+python3 -m analysis.glide_path.research_history --sections tips-stress  # one section
+python3 -m analysis.glide_path.doc_figures                # regenerate methodology SVGs
 python3 -m unittest discover -s analysis -p 'test_*.py'
 ```
 
