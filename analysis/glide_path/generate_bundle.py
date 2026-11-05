@@ -49,7 +49,7 @@ def main(argv=None):
     ap.add_argument("--out", default=_DEFAULT_OUT, help="output TypeScript file path")
     args = ap.parse_args(argv)
 
-    from analysis.glide_path.recommender import PWL_CURVE, _forward_anchors
+    from analysis.glide_path.markets import PWL_CURVE, forward_anchors
     from analysis.shared.jst_history import load_pooled_country_returns, rescale_to_targets
 
     print("Loading JST pooled history...")
@@ -59,7 +59,7 @@ def main(argv=None):
         f"{raw.start_year}–{raw.end_year}"
     )
 
-    eq_mean, eq_vol, bond_mean, bond_vol = _forward_anchors(PWL_CURVE, 2.1, True)
+    eq_mean, eq_vol, bond_mean, bond_vol = forward_anchors(PWL_CURVE, 2.1, True)
     print(
         f"  Forward anchors: equity {eq_mean*100:.4f}% ± {eq_vol*100:.4f}%  "
         f"bonds {bond_mean*100:.4f}% ± {bond_vol*100:.4f}%"

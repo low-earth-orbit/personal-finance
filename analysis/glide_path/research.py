@@ -75,7 +75,11 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-from .recommender import PWL_CURVE, _arithmetic_to_geometric, _build_alloc
+from analysis.shared.returns import arithmetic_to_geometric
+
+from .markets import PWL_CURVE, IidMarket, build_alloc
+from .recommender import BlockLayout, optimize_blocks
+from .simulate import Lifecycle, path_outcomes
 
 # ───────────────────────────── CONFIG ─────────────────────────────
 INFLATION = 2.1  # %, to deflate nominal CMAs to real
@@ -119,12 +123,14 @@ SEED = 20260602
 OUT_DIR = os.path.join("analysis", "artifacts", "glide_path", "research")
 # ───────────────────────────────────────────────────────────────────
 
-_ALLOC = _build_alloc(ALLOC_ANCHORS, INFLATION, True, curve_mean_basis="geometric")
+# The research sweep runs on the shared engine (markets/simulate/recommender), so it cannot drift
+# from the product recommender. Draws come from MARKET.sample — standard normals per seed.
+MARKET = IidMarket(build_alloc(ALLOC_ANCHORS, INFLATION, True))
 
 
 def alloc(w):
     """Real arithmetic mean and stdev (fractions) for equity weight(s) w."""
-    return _ALLOC(np.asarray(w, dtype=float))
+    return MARKET.alloc(np.asarray(w, dtype=float))
 
 
 def classify(delta):
@@ -135,129 +141,34 @@ def classify(delta):
     return "Flat"
 
 
-# ── CRRA utility ────────────────────────────────────────────────────────────--
-def crra(c, gamma):
-    c = np.maximum(c, 1.0)
-    if abs(gamma - 1.0) < 1e-9:
-        return np.log(c)
-    return c ** (1.0 - gamma) / (1.0 - gamma)
-
-
-def ce_from_util(util_per_period, gamma):
-    if abs(gamma - 1.0) < 1e-9:
-        return float(np.exp(util_per_period))
-    return float(((1.0 - gamma) * util_per_period) ** (1.0 / (1.0 - gamma)))
-
-
 def predraw(n_years, n_sims, seed):
-    return np.random.default_rng(seed).standard_normal((n_years, n_sims))
+    return MARKET.sample(n_years, n_sims, seed)
 
 
-# ── Vectorized lifecycle EU over a *bundle* of candidate glide paths ────────────
-def eu_vec(W, Z, accum_years, retire_years, flex, gamma=GAMMA, beta=BETA):
-    """Expected discounted utility for many candidate paths at once.
-
-    W: equity-weight matrix, shape (n_years, G) — column c is one full lifecycle glide.
-    Z: shared standard-normal shocks, shape (n_years, n_sims) — common random numbers, so
-       every candidate sees the identical markets (noise-free comparison across candidates).
-    Returns EU per candidate, shape (G,)."""
-    means, vols = alloc(W)                      # each (n_years, G)
-    G = W.shape[1]
-    bal = np.full((G, Z.shape[1]), START_SAVINGS)
-    for i in range(accum_years):
-        r = means[i][:, None] + vols[i][:, None] * Z[i][None, :]
-        bal = bal * (1 + r) + CONTRIB * (1 + r / 2)
-    disc = beta ** np.arange(retire_years)
-    eu = np.zeros((G, Z.shape[1]))
-    for t in range(retire_years):
-        i = accum_years + t
-        r = means[i][:, None] + vols[i][:, None] * Z[i][None, :]
-        grown = np.maximum(bal * (1 + r), 0.0)
-        target = (1 - flex) * GAP + flex * (WITHDRAWAL_RATE * bal)
-        afford = grown / (1 + r / 2)
-        w = np.minimum(target, afford)
-        bal = grown - w * (1 + r / 2)
-        eu += disc[t] * crra(GUARANTEED + w, gamma)
-    return eu.mean(axis=1)
+def lifecycle(accum_years, retire_years, flex, gamma=GAMMA, beta=BETA):
+    """The research household (CONFIG block) as an engine Lifecycle."""
+    return Lifecycle.build(
+        accum_years=accum_years, retire_years=retire_years, current_savings=START_SAVINGS,
+        annual_contribution=CONTRIB, target_income=TARGET_GROSS, guaranteed_income=GUARANTEED,
+        flexibility=flex, withdrawal_rate=WITHDRAWAL_RATE, gamma=gamma, beta=beta,
+    )
 
 
 def full_stats(weights, Z, accum_years, retire_years, flex, gamma=GAMMA, beta=BETA):
-    """Rich stats for a single glide: CE consumption, income variability, downside."""
-    eu_paths = eu_vec(weights[:, None], Z, accum_years, retire_years, flex, gamma, beta)
-    # Re-run once more to collect the consumption path distribution (kept separate for clarity).
-    means, vols = alloc(weights)
-    bal = np.full(Z.shape[1], START_SAVINGS)
-    for i in range(accum_years):
-        r = means[i] + vols[i] * Z[i]
-        bal = bal * (1 + r) + CONTRIB * (1 + r / 2)
-    disc = beta ** np.arange(retire_years)
-    n = Z.shape[1]
-    C = np.empty((retire_years, n))
-    depleted = np.zeros(n, bool)
-    for t in range(retire_years):
-        i = accum_years + t
-        r = means[i] + vols[i] * Z[i]
-        grown = np.maximum(bal * (1 + r), 0.0)
-        target = (1 - flex) * GAP + flex * (WITHDRAWAL_RATE * bal)
-        afford = grown / (1 + r / 2)
-        w = np.minimum(target, afford)
-        bal = grown - w * (1 + r / 2)
-        C[t] = GUARANTEED + w
-        depleted |= w < target
-    ce = ce_from_util(float(eu_paths[0]) / disc.sum(), gamma)
-    cv = float(np.mean(C.std(axis=0) / C.mean(axis=0)))
-    path_mean = C.mean(axis=0)
-    return {
-        "ce": ce,
-        "cv": cv,
-        "p10_consumption": float(np.percentile(path_mean, 10)),
-        "median_consumption": float(np.median(path_mean)),
-        "depletion": float(depleted.mean()),
-    }
+    """CE consumption, income CV, and income-shortfall rate for one per-age glide."""
+    out = path_outcomes(np.asarray(weights, dtype=float), Z, MARKET,
+                        lifecycle(accum_years, retire_years, flex, gamma, beta))
+    return {"ce": out["ce_income"], "cv": out["income_cv"], "depletion": out["depletion"]}
 
 
-# ── Per-age optimizer: coordinate ascent on the equity-by-age vector ────────────
 def optimize_glide(accum_years, retire_years, flex, gamma=GAMMA, n=OPT_N, seed=SEED,
                    passes=OPT_PASSES):
-    """Return the EU-maximizing equity weight at EACH age (length accum_years+retire_years).
-
-    Coordinate ascent: hold all ages fixed but one, evaluate that age over the equity grid on
-    the shared shocks, take the best, and cycle (alternating sweep direction) until the whole
-    vector stops moving. CRN makes each one-dimensional search exact for the drawn markets, so
-    the only approximation is the grid resolution + sampling — no parametric shape is imposed,
-    so flat-then-dip / tent / monotone shapes can all emerge."""
-    n_years = accum_years + retire_years
-    Z = predraw(n_years, n, seed)
+    """EU-maximizing equity weight at EACH age (the recommender's optimizer with 1-year steps)."""
+    life = lifecycle(accum_years, retire_years, flex, gamma)
     grid = np.round(np.arange(0.0, 1.0001, GRID_STEP), 4)
-    G = len(grid)
-
-    # Initialize at the best single (flat) weight — a good, shape-neutral starting point.
-    flat_W = np.tile(grid, (n_years, 1))                 # (n_years, G), column c ≡ grid[c]
-    flat_eu = eu_vec(flat_W, Z, accum_years, retire_years, flex, gamma)
-    w = np.full(n_years, grid[int(np.argmax(flat_eu))])
-
-    for p in range(passes):
-        order = range(n_years) if p % 2 == 0 else range(n_years - 1, -1, -1)
-        changed = False
-        for k in order:
-            W = np.tile(w[:, None], (1, G))
-            W[k, :] = grid
-            eu = eu_vec(W, Z, accum_years, retire_years, flex, gamma)
-            current = w[k]
-            current_u = eu[int(np.flatnonzero(grid == current)[0])]
-            best = current
-            best_u = current_u
-            tol = 1e-12 * abs(current_u)
-            for candidate, candidate_u in zip(grid, eu):
-                if candidate_u > best_u + tol:
-                    best = candidate
-                    best_u = candidate_u
-            if best != current:
-                w[k] = best
-                changed = True
-        if not changed:
-            break
-    return w
+    layout = BlockLayout.build(accum_years, retire_years, 1)
+    return optimize_blocks(predraw(life.n_years, n, seed), MARKET, life, layout, grid,
+                           np.full(layout.n_blocks, len(grid) - 1), passes)
 
 
 TRANSITION_WINDOW = 15  # years around retirement in which we locate the "tent" bottom
@@ -508,8 +419,8 @@ def main():
     print("Year-by-year optimal equity glide path — iid Monte Carlo on our forward CMAs")
     eq_a, eq_v = (float(x) for x in alloc(1.0))
     bd_a, bd_v = (float(x) for x in alloc(0.0))
-    eq_g = float(_arithmetic_to_geometric(eq_a, eq_v))
-    bd_g = float(_arithmetic_to_geometric(bd_a, bd_v))
+    eq_g = float(arithmetic_to_geometric(eq_a, eq_v))
+    bd_g = float(arithmetic_to_geometric(bd_a, bd_v))
     print(f"Real endpoints: 100%eq arithmetic {eq_a*100:.2f}% / geometric {eq_g*100:.2f}% (vol {eq_v*100:.1f}%) … "
           f"0%eq arithmetic {bd_a*100:.2f}% / geometric {bd_g*100:.2f}% (vol {bd_v*100:.1f}%); "
           f"premiums: arithmetic {(eq_a-bd_a)*100:.2f}pp / geometric {(eq_g-bd_g)*100:.2f}pp")

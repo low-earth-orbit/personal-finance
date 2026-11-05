@@ -28,6 +28,13 @@ import {
 import GlidePathChart from "./GlidePathChart";
 import FieldLabel from "@/components/shared/FieldLabel";
 import { formatCAD } from "@/utils/format";
+import {
+  DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD,
+  FULLPATH_RISK_HIGHLIGHT_THRESHOLD,
+  LOW_DRAWDOWN_SHORTFALL_THRESHOLD,
+  ceIsDegenerate,
+  pickRecommendation,
+} from "@/utils/glide-path/recommendation";
 import type { GlidePathInput, GlidePathResult, SlopeDir } from "@/utils/glide-path/types";
 
 interface ResultProps {
@@ -47,19 +54,6 @@ interface ResultProps {
   onReroll?: () => void;
 }
 
-// Calibration (methodology §2e/§2f): the glide's honest out-of-sample CE edge is ≤ ~0.6%
-// and MC noise at 8,000 stats paths is ~0.3%, while the era/mode brackets move CE by
-// 2–3% — so CE gaps under 3% are within the model's own uncertainty and shouldn't
-// overturn the simpler pick. The shortfall gates carry the real veto: 0.5pp/1.5pp are
-// 2–4× the Monte Carlo standard error of those rates, so the simpler pick can't add
-// meaningful tail risk, but noise can't flip the recommendation either.
-const SIMPLICITY_CE_THRESHOLD = 0.03;
-const SIMPLICITY_DRAWDOWN_THRESHOLD = 0.005;
-const SIMPLICITY_FULLPATH_THRESHOLD = 0.015;
-const DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD = 0.15;
-const FULLPATH_RISK_HIGHLIGHT_THRESHOLD = 0.3;
-const LOW_DRAWDOWN_SHORTFALL_THRESHOLD = 0.05;
-
 const METRIC_HELP = {
   ce: "Certainty-equivalent income — the steady, guaranteed yearly income that would feel as good as this uncertain plan once the bad years are penalised. It sits below the simple average because shortfalls hurt more than surpluses help.",
   drawdown:
@@ -67,52 +61,6 @@ const METRIC_HELP = {
   fullPath:
     "The same shortfall measure taken over the whole path from today, so it also reflects the luck of markets in the years before you retire.",
 } as const;
-
-/**
- * A CE income this far below the target is the FLOOR=1 / CRRA artifact (the certainty-equivalent
- * collapses toward zero when consumption hits the floor in a meaningful share of paths), not a
- * real planning figure. We use it to suppress percentage comparisons against a degenerate
- * denominator; the shortfall rate is the pass/fail signal.
- */
-function ceIsDegenerate(income: number, targetIncome: number): boolean {
-  return income < Math.max(1000, 0.05 * targetIncome);
-}
-
-interface Recommendation {
-  preferConstant: boolean;
-  inconclusive: boolean;
-  glideBad: boolean;
-  flatBad: boolean;
-}
-
-/**
- * Decide which allocation to recommend. Bias toward the simpler constant weight when it wins all
- * comparable outcomes or comes within the simplicity threshold on CE income, drawdown shortfall,
- * or full-path shortfall. When both CE scores are tail-dominated, the comparison is inconclusive;
- * when only one is, prefer the allocation that avoids the near-zero-income tail.
- */
-function pickRecommendation(input: GlidePathInput, result: GlidePathResult): Recommendation {
-  const glideBad = ceIsDegenerate(result.ceIncome, input.targetIncome);
-  const flatBad = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
-  if (glideBad && flatBad) {
-    return { preferConstant: false, inconclusive: true, glideBad, flatBad };
-  }
-  if (glideBad) {
-    return { preferConstant: true, inconclusive: false, glideBad, flatBad };
-  }
-  if (flatBad) {
-    return { preferConstant: false, inconclusive: false, glideBad, flatBad };
-  }
-
-  const ceWithin = result.flatCeIncome >= result.ceIncome * (1 - SIMPLICITY_CE_THRESHOLD);
-  const drawdownWithin =
-    result.flatDrawdownDepletion <= result.drawdownDepletion + SIMPLICITY_DRAWDOWN_THRESHOLD;
-  const fullPathWithin = result.flatDepletion <= result.depletion + SIMPLICITY_FULLPATH_THRESHOLD;
-  const constantWinsCe = result.flatCeIncome > result.ceIncome;
-  const preferConstant = constantWinsCe || (ceWithin && drawdownWithin && fullPathWithin);
-
-  return { preferConstant, inconclusive: false, glideBad, flatBad };
-}
 
 const DIR_COLOR: Record<SlopeDir, string> = {
   Rising: "teal",

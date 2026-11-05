@@ -10,11 +10,12 @@
  *
  * Two sampling modes:
  *   "iid-mc" — iid normal returns from the forward-CMA curve (default; the no-recovery
- *     baseline — see docs/glide-path/methodology.md §2f and §7.3).
+ *     baseline — see docs/glide-path/methodology.md §3 and §3d).
  *   "forward-block" — stationary block bootstrap from JST pooled history rescaled to
  *     forward-CMA marginals (the historical-sequencing scenario).
  *
- * The hot path (`meanUtility`) is specialized per mode. Intended to run inside a Web Worker.
+ * One simulation kernel (`simulatePaths`) serves the optimizer and the outcome stats. Intended to
+ * run inside a Web Worker.
  */
 
 import { fillNormals } from "./rng";
@@ -132,63 +133,74 @@ interface SimCtx {
   invOneMinusGamma: number;
 }
 
+/** Real portfolio return in simulation year `i` on path `p` for grid index `idx`. */
+function portfolioReturn(
+  ctx: SimCtx,
+  idx: number,
+  i: number,
+  n: number,
+  p: number,
+  Z: Float64Array,
+): number {
+  if (ctx.mode === "block") {
+    const w = ctx.grid[idx];
+    const ep = ctx.eqPaths[i * n + p];
+    return w > 1 ? w * ep - (w - 1) * ctx.borrowReal : w * ep + (1 - w) * ctx.bdPaths[i * n + p];
+  }
+  return ctx.gridMean[idx] + ctx.gridVol[idx] * Z[i * n + p];
+}
+
+/** Balance at retirement on path `p`: mid-year contributions; a negative balance floors at 0. */
+function accumulate(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number, p: number) {
+  let bal = ctx.startSavings;
+  for (let i = 0; i < ctx.accumYears; i++) {
+    const r = portfolioReturn(ctx, yearIdx[i], i, n, p, Z);
+    const grown = bal * (1 + r);
+    bal = (grown < 0 ? 0 : grown) + ctx.contrib * (1 + r / 2);
+  }
+  return bal;
+}
+
+interface PathTotals {
+  /** Σ over paths of discounted retirement utility. */
+  utility: number;
+  /** Σ over paths of each path's coefficient of variation of retirement spending. */
+  incomeCv: number;
+  /** Paths with an income shortfall (a year the portfolio can't fund the target draw). */
+  shortfalls: number;
+}
+
 /**
- * Mean discounted utility over `n` paths for a per-year grid-index path. The single
- * inner kernel for both the flat init and the per-block grid search.
+ * The single simulation kernel: run `n` paths of one per-year allocation (grid indices) and
+ * sum their outcomes. `fixedStart` = a common retirement balance (the drawdown-only view);
+ * `null` = accumulate each path from today.
+ *
+ * Each retirement year targets (1−flex)·gap + flex·wr·start-of-year balance, capped at what
+ * the portfolio can afford; consumption = guaranteed income + withdrawal, scored by CRRA.
+ * At flex=1 the target is a fraction of the live balance and always affordable, so shortfall
+ * is ~0 by construction — judge tail risk there by CE income / income CV.
  */
-function meanUtility(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number): number {
-  const {
-    mode,
-    gridMean,
-    gridVol,
-    grid,
-    eqPaths,
-    bdPaths,
-    borrowReal,
-    accumYears,
-    retireYears,
-    disc,
-    gapArr,
-    guarArr,
-    flex,
-    wr,
-    contrib,
-    startSavings,
-    isLog,
-    oneMinusGamma,
-    invOneMinusGamma,
-  } = ctx;
-  const isBlock = mode === "block";
-  let sum = 0;
+function simulatePaths(
+  yearIdx: Int32Array,
+  ctx: SimCtx,
+  Z: Float64Array,
+  n: number,
+  fixedStart: number | null,
+): PathTotals {
+  const { accumYears, retireYears, disc, gapArr, guarArr, flex, wr } = ctx;
+  const { isLog, oneMinusGamma, invOneMinusGamma } = ctx;
+  let utilitySum = 0;
+  let cvSum = 0;
+  let shortfalls = 0;
   for (let p = 0; p < n; p++) {
-    let bal = startSavings;
-    for (let i = 0; i < accumYears; i++) {
-      const idx = yearIdx[i];
-      let r: number;
-      if (isBlock) {
-        const w = grid[idx];
-        const ep = eqPaths[i * n + p];
-        const bp = bdPaths[i * n + p];
-        r = w > 1 ? w * ep - (w - 1) * borrowReal : w * ep + (1 - w) * bp;
-      } else {
-        r = gridMean[idx] + gridVol[idx] * Z[i * n + p];
-      }
-      const grown = bal * (1 + r);
-      bal = (grown < 0 ? 0 : grown) + contrib * (1 + r / 2);
-    }
-    let eu = 0;
+    let bal = fixedStart ?? accumulate(yearIdx, ctx, Z, n, p);
+    let u = 0;
+    let sumC = 0;
+    let sumC2 = 0;
+    let shortfall = false;
     for (let t = 0; t < retireYears; t++) {
       const i = accumYears + t;
-      const idx = yearIdx[i];
-      let r: number;
-      if (isBlock) {
-        const w = grid[idx];
-        const ep = eqPaths[i * n + p];
-        const bp = bdPaths[i * n + p];
-        r = w > 1 ? w * ep - (w - 1) * borrowReal : w * ep + (1 - w) * bp;
-      } else {
-        r = gridMean[idx] + gridVol[idx] * Z[i * n + p];
-      }
+      const r = portfolioReturn(ctx, yearIdx[i], i, n, p, Z);
       let grown = bal * (1 + r);
       if (grown < 0) grown = 0;
       const target = (1 - flex) * gapArr[t] + flex * (wr * bal);
@@ -197,25 +209,43 @@ function meanUtility(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: numbe
       bal = grown - wdr * (1 + r / 2);
       let c = guarArr[t] + wdr;
       if (c < FLOOR) c = FLOOR;
-      eu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      u += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      sumC += c;
+      sumC2 += c * c;
+      if (wdr < target) shortfall = true;
     }
-    sum += eu;
+    utilitySum += u;
+    const mean = sumC / retireYears;
+    const variance = sumC2 / retireYears - mean * mean;
+    cvSum += (variance > 0 ? Math.sqrt(variance) : 0) / mean;
+    if (shortfall) shortfalls++;
   }
-  return sum / n;
+  return { utility: utilitySum, incomeCv: cvSum, shortfalls };
+}
+
+/** Mean discounted utility — the optimizer's objective. */
+function meanUtility(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number): number {
+  return simulatePaths(yearIdx, ctx, Z, n, null).utility / n;
 }
 
 interface PathStats {
   ceIncome: number;
-  /** Fraction of paths with an income shortfall (a year the portfolio can't fund the target draw). */
+  /** Fraction of paths with an income shortfall. */
   depletion: number;
   incomeCv: number;
 }
 
-interface DrawdownStats extends PathStats {
-  startBalance: number;
+function toStats(totals: PathTotals, ctx: SimCtx, n: number, gamma: number): PathStats {
+  let discSum = 0;
+  for (let t = 0; t < ctx.retireYears; t++) discSum += ctx.disc[t];
+  return {
+    ceIncome: ceFromUtil(totals.utility / n / discSum, gamma),
+    depletion: totals.shortfalls / n,
+    incomeCv: totals.incomeCv / n,
+  };
 }
 
-/** Out-of-sample outcome stats for a fixed per-year path (CE income, shortfall rate, CV). */
+/** Out-of-sample outcome stats for a fixed per-year path, simulated from today. */
 function computeStats(
   yearIdx: Int32Array,
   ctx: SimCtx,
@@ -223,100 +253,10 @@ function computeStats(
   n: number,
   gamma: number,
 ): PathStats {
-  const {
-    mode,
-    gridMean,
-    gridVol,
-    grid,
-    eqPaths,
-    bdPaths,
-    borrowReal,
-    accumYears,
-    retireYears,
-    disc,
-    gapArr,
-    guarArr,
-    flex,
-    wr,
-    contrib,
-    startSavings,
-    isLog,
-    oneMinusGamma,
-    invOneMinusGamma,
-  } = ctx;
-  const isBlock = mode === "block";
-  let discSum = 0;
-  for (let t = 0; t < retireYears; t++) discSum += disc[t];
-
-  let consEuSum = 0;
-  let cvSum = 0;
-  let depCount = 0;
-
-  for (let p = 0; p < n; p++) {
-    let bal = startSavings;
-    for (let i = 0; i < accumYears; i++) {
-      const idx = yearIdx[i];
-      let r: number;
-      if (isBlock) {
-        const w = grid[idx];
-        const ep = eqPaths[i * n + p];
-        const bp = bdPaths[i * n + p];
-        r = w > 1 ? w * ep - (w - 1) * borrowReal : w * ep + (1 - w) * bp;
-      } else {
-        r = gridMean[idx] + gridVol[idx] * Z[i * n + p];
-      }
-      const grown = bal * (1 + r);
-      bal = (grown < 0 ? 0 : grown) + contrib * (1 + r / 2);
-    }
-    let consEu = 0;
-    let sumC = 0;
-    let sumC2 = 0;
-    let shortfall = false;
-    for (let t = 0; t < retireYears; t++) {
-      const i = accumYears + t;
-      const idx = yearIdx[i];
-      let r: number;
-      if (isBlock) {
-        const w = grid[idx];
-        const ep = eqPaths[i * n + p];
-        const bp = bdPaths[i * n + p];
-        r = w > 1 ? w * ep - (w - 1) * borrowReal : w * ep + (1 - w) * bp;
-      } else {
-        r = gridMean[idx] + gridVol[idx] * Z[i * n + p];
-      }
-      let grown = bal * (1 + r);
-      if (grown < 0) grown = 0;
-      const target = (1 - flex) * gapArr[t] + flex * (wr * bal);
-      const afford = grown / (1 + r / 2);
-      const wdr = target < afford ? target : afford;
-      bal = grown - wdr * (1 + r / 2);
-      let c = guarArr[t] + wdr;
-      if (c < FLOOR) c = FLOOR;
-      consEu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
-      sumC += c;
-      sumC2 += c * c;
-      // Shortfall = the portfolio couldn't fund the targeted draw (income fell short of plan).
-      // Not "balance hit zero": a fully guaranteed-income-covered year has target 0 and no shortfall.
-      // CAVEAT: at flex=1 the target is `wr * bal` (a fraction of the live balance), which is always
-      // affordable, so shortfall is structurally ~0 regardless of markets. That's correct, not a bug —
-      // flexible spending trades depletion risk for income volatility. Judge tail risk by CE income /
-      // income CV at high flexibility, not by shortfall.
-      if (wdr < target) shortfall = true;
-    }
-    consEuSum += consEu;
-    const tMean = sumC / retireYears;
-    const tVar = sumC2 / retireYears - tMean * tMean;
-    cvSum += (tVar > 0 ? Math.sqrt(tVar) : 0) / tMean;
-    if (shortfall) depCount++;
-  }
-
-  return {
-    ceIncome: ceFromUtil(consEuSum / n / discSum, gamma),
-    depletion: depCount / n,
-    incomeCv: cvSum / n,
-  };
+  return toStats(simulatePaths(yearIdx, ctx, Z, n, null), ctx, n, gamma);
 }
 
+/** Median-path balance at retirement: compounds each year's geometric return. */
 function deterministicAccumBalance(yearIdx: Int32Array, ctx: SimCtx): number {
   const { detMean, accumYears, contrib, startSavings } = ctx;
   let bal = startSavings;
@@ -328,6 +268,7 @@ function deterministicAccumBalance(yearIdx: Int32Array, ctx: SimCtx): number {
   return bal;
 }
 
+/** Geometric mean annual return of a weight's mix over the JST bundle rows. */
 function historyGeometricMix(weight: number, borrowReal: number): number {
   let logSum = 0;
   for (let i = 0; i < JST_EQUITY.length; i++) {
@@ -341,9 +282,8 @@ function historyGeometricMix(weight: number, borrowReal: number): number {
 }
 
 /**
- * Retirement-phase stats conditional on reaching the deterministic geometric-growth balance
- * at retirement. This matches the `/retirement` tool's headline success-rate semantics;
- * `computeStats` above is the full path from today and includes accumulation market luck.
+ * Retirement-only stats starting every path from the median (geometric-growth) retirement
+ * balance; `computeStats` is the full path from today including accumulation market luck.
  */
 function computeDrawdownStats(
   yearIdx: Int32Array,
@@ -351,77 +291,10 @@ function computeDrawdownStats(
   Z: Float64Array,
   n: number,
   gamma: number,
-): DrawdownStats {
-  const {
-    mode,
-    gridMean,
-    gridVol,
-    grid,
-    eqPaths,
-    bdPaths,
-    borrowReal,
-    accumYears,
-    retireYears,
-    disc,
-    gapArr,
-    guarArr,
-    flex,
-    wr,
-    isLog,
-    oneMinusGamma,
-    invOneMinusGamma,
-  } = ctx;
-  const isBlock = mode === "block";
-  let discSum = 0;
-  for (let t = 0; t < retireYears; t++) discSum += disc[t];
-
+): PathStats & { startBalance: number } {
   const startBalance = deterministicAccumBalance(yearIdx, ctx);
-  let consEuSum = 0;
-  let cvSum = 0;
-  let depCount = 0;
-
-  for (let p = 0; p < n; p++) {
-    let bal = startBalance;
-    let consEu = 0;
-    let sumC = 0;
-    let sumC2 = 0;
-    let shortfall = false;
-    for (let t = 0; t < retireYears; t++) {
-      const i = accumYears + t;
-      const idx = yearIdx[i];
-      let r: number;
-      if (isBlock) {
-        const w = grid[idx];
-        const ep = eqPaths[i * n + p];
-        const bp = bdPaths[i * n + p];
-        r = w > 1 ? w * ep - (w - 1) * borrowReal : w * ep + (1 - w) * bp;
-      } else {
-        r = gridMean[idx] + gridVol[idx] * Z[i * n + p];
-      }
-      let grown = bal * (1 + r);
-      if (grown < 0) grown = 0;
-      const target = (1 - flex) * gapArr[t] + flex * (wr * bal);
-      const afford = grown / (1 + r / 2);
-      const wdr = target < afford ? target : afford;
-      bal = grown - wdr * (1 + r / 2);
-      let c = guarArr[t] + wdr;
-      if (c < FLOOR) c = FLOOR;
-      consEu += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
-      sumC += c;
-      sumC2 += c * c;
-      if (wdr < target) shortfall = true;
-    }
-    consEuSum += consEu;
-    const tMean = sumC / retireYears;
-    const tVar = sumC2 / retireYears - tMean * tMean;
-    cvSum += (tVar > 0 ? Math.sqrt(tVar) : 0) / tMean;
-    if (shortfall) depCount++;
-  }
-
   return {
-    ceIncome: ceFromUtil(consEuSum / n / discSum, gamma),
-    depletion: depCount / n,
-    incomeCv: cvSum / n,
+    ...toStats(simulatePaths(yearIdx, ctx, Z, n, startBalance), ctx, n, gamma),
     startBalance,
   };
 }
@@ -523,7 +396,7 @@ export function buildEquityGrid(maxLeverage: number): Float64Array {
  * `returnMode`:
  *   "iid-mc" (default) — iid normal draws from the forward-CMA curve. The conservative
  *     no-recovery baseline; forward-block's flat-100% depends on the full-sample joint
- *     sequence structure (see methodology §2f and §7.3 for the era cuts and CE regret).
+ *     sequence structure (see methodology §3c–§3d for the era cuts and CE regret).
  *   "forward-block" — stationary block bootstrap from JST pooled history rescaled to
  *     forward-CMA marginals. Captures sequence risk (mean reversion, bond persistence)
  *     while honoring the user's return assumptions — the historical-sequencing scenario.

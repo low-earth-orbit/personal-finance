@@ -38,15 +38,9 @@ Run with -h to see every flag and its default.
 from __future__ import annotations
 
 import argparse
-from .recommender import (
-    DATASETS,
-    PWL_CURVE,
-    RETURN_MODES,
-    format_summary,
-    plot_glide_path,
-    recommend_glide_path,
-    run_demo,
-)
+from .markets import DATASETS, PWL_CURVE, RETURN_MODES
+from .recommender import recommend_glide_path
+from .report import format_summary, plot_glide_path, run_demo
 
 
 def parse_year_windows(tokens):

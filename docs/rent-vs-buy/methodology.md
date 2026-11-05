@@ -37,7 +37,7 @@ Two-layer uncertainty model:
 
 `INFLATION_BETA` couples home prices, rents, owner costs, mortgage rates through inflation factor.
 
-**Investment returns:** lognormal (`logMean = log(1+μ) − σ²/2`; `R = exp(logMean + σZ) − 1`). iid shocks — no AR(1). Long-run-mean uncertainty dominates long-horizon spread.
+**Investment returns:** lognormal with the input treated as a **compound (geometric)** annual return `g` (`logMean = log(1+g)`; `R = exp(logMean + σZ) − 1`), so the portfolio compounds at `g` on the median path — consistent with the PWL / FP-Canada figures the default (6.3%, the 80/20 row) comes from. (Before Nov 2026 the input was treated as the arithmetic mean, `logMean = log(1+μ) − σ²/2`, which compounded ~σ²/2 too low.) iid shocks — no AR(1). Long-run-mean uncertainty dominates long-horizon spread.
 
 **Mortgage renewals:** at 5yr multiples, rate redrawn with inflation shock, balance re-amortized over remaining years.
 
