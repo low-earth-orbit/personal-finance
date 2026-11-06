@@ -33,7 +33,7 @@ Default household: age 35, $200k saved, $20k/yr contributions for 30 years, a $6
 2. **The spending rule sets the shape within either model.** Constant-dollar spending produces the tent; semi-flexible and flexible spending hold **100% equity throughout** in both models (§2b, §3a).
 3. **The glide shape is worth little; the level matters more.** Out of sample, the optimized glide beats the best single constant weight by ≤ ~0.5% of certainty-equivalent (CE) income under iid and by ≈ $0 under forward-block (§2e, §3a).
 4. **Funding level drives the iid tent.** The default plan's first-year withdrawal is only ~2.3% of its median retirement balance. A constant-dollar spender this well funded has little use for upside, so the optimizer protects the floor; at a ~3.3% draw the iid tent disappears (§2f).
-5. **The flat-100% result is about long nominal bonds.** Forward-block's 100% depends on how long nominal bonds behaved _jointly_ with equities in history: bad decades, a 0.29 stock/bond correlation and a fat left tail. Replace the bond leg with an idealized real asset (uncorrelated with equity, independent years, same mean and volatility) and the optimum falls to ~50%. Persistence alone does not restore 100%: an uncorrelated synthetic leg as persistent as long bonds (VR(10y) ≈ 2.6) still gives 60%. Less generous assumptions about a real fund move the optimum to 55–70% (§4c). The result is also era-dependent: the 1990–2020 history gives 50% with ordinary nominal bonds (§3c).
+5. **The flat-100% result is about long nominal bonds.** Forward-block's 100% depends on how long nominal bonds behaved _jointly_ with equities in history: bad decades, a 0.29 stock/bond correlation and a fat left tail. Replace the bond leg with an idealized real asset (uncorrelated with equity, independent years, same mean and volatility) and the optimum falls to ~50%. Persistence alone does not restore 100%: an uncorrelated synthetic leg as persistent as long bonds (VR(10y) ≈ 2.6) still gives 60%. Less generous assumptions about a real fund move the optimum to 55–70% (§4c). The result is also era-dependent: the 1990–2020 history gives 50% with ordinary nominal bonds (§3c). Blending nominal and real bonds, CE rises with the real share up to an all-real sleeve in the full history and is flat in 1990–2020; US CPI hedges ~90% of Canadian 10-year inflation in inflationary eras (§4f).
 6. **The regime choice costs little welfare.** Across era and country cuts, holding any constant weight from 70% to 100% costs at most ~2% of CE versus that regime's optimum (§3d).
 7. **γ barely matters with constant-dollar spending.** Consumption is then almost always either the full target or the guaranteed floor, so every γ ranks allocations the same way: by the expected (discounted) number of years spent at the floor (§2d).
 
@@ -524,8 +524,8 @@ The "none" row re-draws cell b on a different random stream; its CE differs from
 
 - **The direction is robust.** No single change takes the optimum above 70%, and a plausible combined case lands at 55%. A real short asset brings back a substantial bond share. Even a leg twice as persistent as long bonds (φ = 0.8) stays at 70%, so persistence alone is not what pins forward-block at 100%.
 - **The size of the gain is not.** The gain falls from ~$1.5k/yr (2.6% of CE) in the idealized cell to ~$0.8k/yr (1.4%) in the combined case. Correlation and the lower mean (1.00% instead of 1.56%) matter most. Only when most assumptions are unfavourable at once (the harsh row) does the gain shrink to within Monte Carlo noise (~$170/yr) and the optimum return to 85%.
-- **Not modelled:** US versus Canadian CPI (XSTH indexes to US CPI), the indexation lag (TIPS principal follows CPI with a ~3-month lag), hedging costs and fees. All of them reduce the hedge's precision for a Canadian spender.
-- **Regime-conditional (expected, not tested).** `tips-stress` runs on the full history only. In 1990–2020, nominal bonds already mean-reverted and gave 50% on their own (§3c), so the gain there should be small.
+- **Not modelled:** the indexation lag (TIPS principal follows CPI with a ~3-month lag), hedging costs and fees. All of them reduce the hedge's precision for a Canadian spender. The US-versus-Canadian CPI basis is measured separately in §4f.
+- **Regime-conditional.** `tips-stress` runs on the full history only. In 1990–2020, nominal bonds already mean-reverted and gave 50% on their own (§3c), and §4f confirms the real asset's gain there is ≤ 0.1% of CE.
 
 The realistic reading: a short real asset is worth roughly 1–2.5% of CE income over long nominal bonds in inflation-prone histories, and moves the optimum to about 50–70% equity. It is a hedge across regimes, not a free lunch.
 
@@ -545,7 +545,78 @@ The realistic reading: a short real asset is worth roughly 1–2.5% of CE income
 | XRB (Canadian real return bonds) | long (~13–15y) | Canadian CPI | real-rate cycle: 2022-style drawdown (≈ −14%) |
 | GIC / bill ladder | short, hold to maturity | none | inflation persistence |
 
-No product offers short duration **and** Canadian CPI (Canada stopped issuing RRBs in 2022). For the sequence-hedge role XSTH fits best. Adding some XRB brings in Canadian CPI at the cost of duration, so a blend of the two is a rough stand-in for the missing short Canadian real asset. As with any real asset here, the blend's value is regime-conditional (§4c).
+No product offers short duration **and** Canadian CPI (Canada stopped issuing RRBs in 2022). For the sequence-hedge role XSTH fits best. Adding some XRB brings in Canadian CPI at the cost of duration, so a blend of the two is a rough stand-in for the missing short Canadian real asset. As with any real asset here, the blend's value is regime-conditional (§4c). §4f tests a nominal/real sleeve blend and how much the US-CPI basis matters.
+
+### 4f. Blending nominal and real bonds
+
+A bond sleeve need not be all one asset. Two questions: what share of the sleeve should be real, and does the answer depend on which regime you believe? Inputs:
+
+- Both histories (full 1871–2020 and 1990–2020) are rescaled to the same forward anchors, so they differ only in volatility, correlation and sequencing, not in average returns.
+- The non-equity leg is (1 − s) long nominal bonds + s synthetic real asset, rebalanced annually; s is the real share.
+- Two real legs: **idealized** (§4a cell b) and **realistic** (§4c's combined row: 1.00% real mean, 3.0% vol, φ 0.30, equity correlation 0.29).
+- Constant equity weights only, scored on one common sample (`--sections sleeve-blend regime-mix`, constant dollar, 30y + 30y, 8,000 paths; seed-to-seed CE noise ≤ 0.4%).
+
+**Sleeve blend.** CE income at the best constant weight (best weight in brackets):
+
+| Real share s     | full history, idealized | full history, realistic | 1990–2020, either leg |
+| ---------------- | ----------------------- | ----------------------- | --------------------- |
+| 0 (nominal only) | $57.6k (100%)           | $57.6k (100%)           | $59.9k (50%)          |
+| 0.25             | $57.6k (90%)            | $57.6k (100%)           | $59.9–60.0k           |
+| 0.5              | $58.1k (70%)            | $57.7k (80%)            | $59.9–60.0k           |
+| 0.75             | $58.8k (50%)            | $58.1k (60%)            | $59.9–60.0k           |
+| 1 (real only)    | **$59.3k** (50%)        | **$58.5k** (60%)        | $59.8–60.0k           |
+
+- **Full history: more real is better all the way to s = 1.** CE gains are +3.0% (idealized) and +1.6% (realistic) over nominal bonds. There is no interior optimum, and no plateau across mid shares.
+- **1990–2020: the sleeve hardly matters.** Every share and weight from 30% to 100% lies within ~0.3% of CE, so a fully real sleeve costs ≤ 0.1%.
+- **The real share sets the equity weight.** Nominal bonds do not hedge inflation regimes, so equity takes that job (90–100%). With a mostly real sleeve the best weight falls to 50–60%.
+
+**Regime mixture.** Each simulated lifecycle lives in the 1990–2020 regime with probability p, else in the full history; a second variant redraws the regime each year with probability 1/30 (a ~30-year mean regime length) and gives nearly the same numbers. Regret is the CE lost against that p's best constant weight. Largest regret over p = 0–1:
+
+| Sleeve               | 50%      | 60%      | 70%  | 80%      | 90%  | 100% |
+| -------------------- | -------- | -------- | ---- | -------- | ---- | ---- |
+| nominal only (s = 0) | 4.9%     | 3.0%     | 1.7% | 0.9%     | 0.3% | 0.3% |
+| realistic, s = 0.5   | 1.0%     | 0.4%     | 0.1% | **0.1%** | 0.2% | 0.4% |
+| realistic, s = 1     | 0.1%     | **0.0%** | 0.2% | 0.5%     | 1.0% | 1.5% |
+| idealized, s = 1     | **0.0%** | 0.2%     | 0.7% | 1.2%     | 1.9% | 2.9% |
+
+The belief p barely moves the answer: the best weight shifts by ≤ 10pp between p = 0.2 and p = 0.8, because the 1990–2020 regime is nearly indifferent to allocation (above). What matters is pairing the equity weight with the sleeve: ~80% equity with a half-real sleeve, ~60% with an all-real one. Each keeps regret ≤ 0.5% for any p.
+
+**US versus Canadian CPI.** XSTH indexes to US CPI. `--sections cpi-basis` measures how much of a Canadian spender's inflation a 1:1 US-CPI claim removes. **Hedged share** = 1 − Var(US − CA)/Var(CA) on overlapping cumulative log inflation:
+
+| Era            | 1y  | 5y  | 10y | Canadian 10y inflation s.d. |
+| -------------- | --- | --- | --- | --------------------------- |
+| full 1871–2020 | 70% | 87% | 92% | 26.6%                       |
+| post-1950      | 85% | 92% | 94% | 23.5%                       |
+| 1965–1985      | 75% | 86% | 88% | 14.9%                       |
+| 1990–2020      | 50% | 18% | 20% | 2.0%                        |
+
+- **In the eras where inflation matters, US CPI hedges ~90% of Canadian 10-year inflation variance.** The basis would cut a real sleeve's hedge value by roughly a tenth, not more.
+- **The low 1990–2020 shares are large only relative to tiny inflation** (2.0% s.d. over 10 years). That regime needs no inflation hedge (above).
+- **CAD hedging absorbs expected inflation gaps.** The hedge carry (Canadian minus US short rate) offsets expected differences, leaving mostly the gap in inflation surprises. In 1965–1985 the CAD-hedged 10-year basis had 2.4% s.d., against 14.9% for Canadian inflation. Its mean was +0.17%/yr over the full sample and +0.81%/yr in 1990–2020 (in the holder's favour).
+
+**XSTH, ZGB and a GIC ladder.** `--sections gic-ladder` adds a third leg, a 5-year GIC ladder: five rungs bought over the prior five years and held to maturity. Inputs:
+
+- **Rung rate:** the midpoint of JST's short and long rates. The ladder keeps its own history, so it has no price risk but carries the inflation surprise.
+- **Rescaling:** shifted to a real mean of 1.25% (about 3.4% nominal) or 2.0% (a generous GIC premium). Its volatility is scaled by the same factor as bonds', giving 3.5% in the full history.
+- **Persistence:** the ladder is more persistent than long bonds (VR(10y) 3.54 vs 2.40), because its yield lags inflation even more than bills do.
+- **Other legs:** XSTH is the realistic real leg; ZGB is the nominal-bond leg.
+
+Mixes step by 25%; CE at the best constant weight:
+
+| XSTH / ZGB / GIC          | full, GIC 1.25%  | full, GIC 2.0%        | 1990–2020, either |
+| ------------------------- | ---------------- | --------------------- | ----------------- |
+| 100 / 0 / 0               | **$58.5k** (60%) | **$58.5k** (60%)      | $59.8k            |
+| 75 / 0 / 25               | $58.2k (60%)     | $58.4k (50%)          | $59.8–59.9k       |
+| 75 / 25 / 0               | $58.1k (60%)     | $58.1k (60%)          | $59.9k            |
+| 50 / 0 / 50               | $57.8k (80%)     | $58.2k (60%)          | $59.8–60.0k       |
+| no XSTH (any ZGB/GIC mix) | $57.6k (100%)    | $57.6–57.7k (80–100%) | $59.8–60.0k       |
+
+- **XSTH stays best in the full history, even against a 2% real GIC**, double its assumed 1% mean. A sleeve without it falls back to 100% equity: a GIC ladder does not hedge inflation regimes any better than bonds.
+- **In 1990–2020 every mix lies within ~0.3%.**
+- **As the nominal slot, a GIC ladder at least ties ZGB** (equal at 1.25% real, better at 2.0%).
+- **The model is generous to GICs on rebalancing.** It rebalances the whole sleeve annually at market value. Non-redeemable GICs free only the maturing rung (~20% a year), so in a crash they cannot fund equity purchases as the model assumes.
+
+**Reading.** For a permanent sleeve, the model favours a mostly or fully real sleeve: worth 1.5–3% of CE if inflation regimes recur, close to free if 1990–2020 continues. The equity weight should move with it. Any nominal slice is better held in a GIC ladder than in long nominal bonds when GICs pay a premium. The synthetic real leg is an assumption, not a fund (§4c lists where a real fund falls short); the harsh row there shows the real asset's edge can shrink to noise.
 
 ---
 
@@ -597,12 +668,14 @@ Where each result comes from (`research_history` sections are passed as `--secti
 | §4a, §4d | `menu`, `tips-etf`, `bills-block` |
 | §4b | `bond-decomp` |
 | §4c | `tips-stress` |
+| §4f | `sleeve-blend`, `regime-mix`, `cpi-basis`, `gic-ladder` |
 | γ checks (§2d) | `gamma` |
 
 ```bash
 python3 -m analysis.glide_path.research               # §2 tables + figures (~5 min)
 python3 -m analysis.glide_path.research_history --sections matrix blocks channels menu \
-    tips-etf tips-stress bills-block gamma curves vr bond-decomp regret funding \
+    tips-etf tips-stress sleeve-blend regime-mix cpi-basis gic-ladder bills-block gamma curves vr \
+    bond-decomp regret funding \
     --accum 30 --retire 30 --savings 200000 --contrib 20000 --interval 5 --paths 8000
 python3 -m analysis.glide_path.doc_figures             # Figures 1–3 (light + dark SVG)
 python3 -m analysis.glide_path.generate_bundle         # regenerate src/utils/glide-path/jstData.ts
