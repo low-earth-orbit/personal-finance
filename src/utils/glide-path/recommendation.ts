@@ -5,12 +5,14 @@
  */
 import type { GlidePathInput, GlidePathResult } from "./types";
 
-// Calibration (methodology §1.5, §2e, §3d): the glide's honest out-of-sample CE edge is ≤ ~0.5%
-// and MC noise at 8,000 stats paths is ~0.3%, while the era/mode brackets move CE by
-// 2–3% — so CE gaps under 3% are within the model's own uncertainty and shouldn't
-// overturn the simpler pick. The shortfall gates carry the real veto: 0.5pp/1.5pp are
-// 2–4× the Monte Carlo standard error of those rates, so the simpler pick can't add
-// meaningful tail risk, but noise can't flip the recommendation either.
+// Calibration (methodology §1.5, §2e, §3d). The glide's out-of-sample CE edge is typically
+// ≤ ~0.5%, while the era/mode brackets move CE by 2–3%, so smaller CE gaps are inside the
+// model's own uncertainty. A 72-case input grid (both return modes, savings $100k–$800k,
+// target $50k/$75k, flex 0/0.5/1, γ 3/6, two seeds each, 2026-11) gave a largest glide edge
+// of 1.7% and seed-to-seed swings in that edge of up to 2.3%. Every threshold ≥ 2% gave the
+// same seed-stable picks; 1% flipped one case between seeds and 0% flipped ten. 3% keeps a
+// margin above the worst swing. The shortfall gates carry the tail-risk veto; in that grid
+// the constant never added more than 0.2pp drawdown or 0.3pp full-path shortfall.
 export const SIMPLICITY_CE_THRESHOLD = 0.03;
 export const SIMPLICITY_DRAWDOWN_THRESHOLD = 0.005;
 export const SIMPLICITY_FULLPATH_THRESHOLD = 0.015;

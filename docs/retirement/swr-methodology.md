@@ -115,7 +115,7 @@ SWR at 90% success for 60/40, by assumed real **compound** return (current prese
 
 **In brief.** Is drawing independent normal returns too optimistic or too pessimistic compared with how markets actually behaved? To check, the same withdrawal plan is run on real historical sequences, both at their raw historical return levels and rescaled to the app's forward-looking averages. At matched averages, history and the engine agree to within 0.07pp.
 
-[`analysis/retirement/jst_swr_bootstrap.py`](../../analysis/retirement/jst_swr_bootstrap.py) runs the comparison on the **JST R6** database (1870–2020; the 16 countries with both stock and bond returns, which excludes Canada and Ireland). It downloads the data to the gitignored `analysis/.data/` and reuses the glide-path bootstrap code (`analysis/shared/jst_history.py`).
+[`analysis/retirement/jst_swr_bootstrap.py`](../../analysis/retirement/jst_swr_bootstrap.py) runs the comparison on the **JST R6** database (1871–2020; the 16 countries with both stock and bond returns, which excludes Canada and Ireland). It downloads the data to the gitignored `analysis/.data/` and reuses the glide-path bootstrap code (`analysis/shared/jst_history.py`).
 
 ### 3.1 Design
 
