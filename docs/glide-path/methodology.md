@@ -372,20 +372,22 @@ iid-mc gives 70%. Forward-block reaches 100% on either dataset, so pooling is no
 
 ### 3c. Era and country cuts
 
-Each cut restricts the history before rescaling, so only the sequencing changes. VRs are on arithmetic returns (what the engine samples). `bond iid null` is the mean and 5th–95th percentile of bond VR(10y) after shuffling years within each country, since short samples bias VR below 1 even for iid data. Bills (short-term government paper) are shown for comparison.
+Each cut restricts the history before rescaling, so only the sequencing changes. VRs are on arithmetic returns (what the engine samples). `bond iid null` is the mean and 5th–95th percentile of bond VR(10y) after shuffling years within each country, since short samples bias VR below 1 even for iid data. That shuffle treats the 16 countries as independent. Where the panel is balanced (post-1950, 1990–2020), a **common-year null** applies the same shuffle of calendar years to every country, which keeps their co-movement and gives the honest width. Bills (short-term government paper) are shown for comparison.
 
 | History | bond VR(10y) | bond iid null | bill VR(10y) | equity VR(10y) | best constant | CE gain vs 100% |
 | --- | --- | --- | --- | --- | --- | --- |
 | full 1871–2020 | 2.66 | 1.00 [0.87, 1.15] | 3.29 | 0.91 | 100% | — |
-| post-1950 | 2.21 | 0.94 [0.78, 1.09] | 4.97 | 0.91 | 100% | — |
+| post-1950 | 2.21 | 0.94 [0.78, 1.09]; common-year 0.93 [0.65, 1.28] | 4.97 | 0.91 | 100% | — |
 | ex Germany + Japan | 2.54 | 0.99 [0.85, 1.13] | 3.63 | 0.94 | 100% | — |
 | stable six¹ | 1.92 | 0.96 [0.77, 1.19] | 3.23 | 0.73 | 90% | +0.1% |
-| 1990–2020 | **0.58** | 0.82 [0.61, 1.08] | 3.85 | 0.69 | **50%** | +0.4% |
+| 1990–2020 | **0.58** | 0.82 [0.61, 1.08]; common-year 0.79 [0.44, 1.35] | 3.85 | 0.69 | **50%** | +0.4% |
 
-¹ USA, UK, Canada, Australia, Switzerland, Sweden.
+¹ USA, UK, Canada, Australia, Switzerland, Sweden. JST has no return data for Canada, so five countries contribute.
 
 - **Not a disaster artifact.** Dropping Germany and Japan leaves bond persistence about the same (2.54 vs 2.66).
-- **Era-dependent for bonds.** In 1990–2020 bonds mean-revert (VR 0.58, near the null's 5th percentile), stock/bond correlation falls to ≈0, and the interior tent returns. That is one 31-year regime (about three independent decades), and it ends before the 2021–22 inflation shock. §4b explains why.
+- **Era-dependent for bonds.** In 1990–2020 bond persistence disappears and stock/bond correlation falls to ≈0 (0.06), and the interior optimum returns. That is one 31-year regime (about three independent decades), and it ends before the 2021–22 inflation shock. §4b explains why.
+- **The 1990–2020 bond VR is consistent with iid, not evidence of mean reversion.** 0.58 sits at the 2nd percentile of the within-country null but only the ~23rd of the common-year null, because the 16 countries' bond markets moved together. It is below 1 in all 16 countries (0.13–0.86) and in every nearby window (0.41–0.74 for 1980/1985/1995 starts or 2010/2015 ends), so the loss of persistence is robust; the reversion beyond iid is not. The full-history and post-1950 persistence (2.66, 2.21) lie far outside either null.
+- **The 50% optimum comes from correlation, not sequencing.** Drawing the same 1990–2020 years independently instead of in blocks still gives 50% (`--sections era-seq`); block sequencing only flattens the curve (100% costs 0.4% of CE with blocks, 2.6% without). In the full history the same switch moves the optimum from 100% to 80%.
 - **Bills stay persistent in every era** (VR 3.2–5.0), through lagging inflation in the long samples and the policy-rate cycle in 1990–2020 (§4b). Short duration removes neither.
 
 ### 3d. Welfare regret across regimes (robustness check)
@@ -452,13 +454,13 @@ _Figure 3. Contributions to bond VR(10y) by history cut. The bars add up to each
 - **Bills** split the same way. Inflation is 75–87% of bill persistence in the long samples, and the bill rate alone is nearly a random walk (VR(10y) ≈ 8). In 1990–2020 the rate term is 124% and inflation −24%: policy rates fell toward zero while inflation held near target. That is a **real-rate cycle**, which inflation linkage does not remove.
 - **Limits:** this is variance accounting, not a causal split, and the price term is a noisy proxy for yield moves (JST yields are annual averages; the implied duration is only ~3.4).
 
-**Why long bonds mean-revert in 1990–2020.**
+**Why long bonds lose their persistence in 1990–2020.**
 
 - **Inflation stopped mattering** (1.81 → −0.05). Inflation was still persistent, but its swings were small and yields moved with it, so carry offset most of it.
 - **Rate moves unwound.** The price term's own VR(10y) is ≈ 0.24, against ≈ 1.0 in every other cut. Rate spikes (1994, 1999, 2013, 2018) reversed within a few years, and with stock/bond correlation ≈ 0, bonds rallied in equity crises (2000–02, 2008, 2020) and gave some back in recoveries.
 - **Not duration matching or falling yields.** Carry and price co-move slightly positively, so higher income did not earn back price losses. A steady fall in yields raises the mean return; it does not create reversion.
 
-Inflation targeting is therefore the likely **condition** for bond VR < 1, not a demonstrated cause; 31 years cannot separate it from the falling-rate backdrop.
+Inflation targeting is therefore the likely **condition** for bond VR ≈ 1 or below, not a demonstrated cause; 31 years cannot separate it from the falling-rate backdrop.
 
 ### 4c. How robust is the short-TIPS result?
 
@@ -583,7 +585,7 @@ Mixes step by 25%; CE at the best constant weight:
 
 ## 5. Comparison with ACO and ERN
 
-- **ACO**: Anarkulova, Cederburg & O'Doherty, _Beyond the Status Quo_ ([SSRN 4590406](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4590406)). A 38-country block bootstrap finds ~100% equity held flat over the lifecycle, with a shallow tent at retirement for constant spending.
+- **ACO**: Anarkulova, Cederburg & O'Doherty, _Beyond the Status Quo_ ([SSRN 4590406](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4590406), version of August 2026). A block bootstrap of a monthly 39-country panel (Global Financial Data, 1890–2023; domestic stocks, international stocks, bonds, bills) finds ~100% equity held flat over the lifecycle, with a shallow tent at retirement for constant spending.
 - **ERN**: [earlyretirementnow.com, Part 20](https://earlyretirementnow.com/2017/09/20/the-ultimate-guide-to-safe-withdrawal-rates-part-20-more-thoughts-on-equity-glidepaths/). A US backtest finds a rising retirement glide (e.g. 60%→100%) adds ~0.1–0.3pp to the SWR, but only when CAPE > 20.
 - **Kitces & Pfau** (2014): a rising equity glide through retirement beats a constant or declining one on success rate, by reducing exposure in the early, sequence-sensitive years.
 
@@ -593,7 +595,11 @@ Mixes step by 25%; CE at the best constant weight:
 | ERN / Kitces–Pfau: rising retirement glide | The derisk-then-rise shape appears under iid with rigid spending, and largely vanishes under forward-block. ERN's SWR boost does **not** reproduce under iid (§2a): the rising glide only ties the best constant weight. |
 | Both: beat a declining (target-date) retirement glide | Direction agreed, magnitude tiny: the glide shape is worth ≤ ~0.5% of CE. |
 
-**Why our iid path differs from ACO's.** ACO stays at ~100% through accumulation; our iid constant-dollar path falls into the tent. Two levers each close the gap on their own: historical sequencing (§3) and less over-funding (§2f). The third difference is the objective: ACO also values terminal wealth, which removes the "wasted upside" of a capped spender. JST and ACO draw on largely the same history, so reproducing ACO is a consistency check, not independent confirmation.
+**Why our iid path differs from ACO's.** ACO stays at ~100% through accumulation; our iid constant-dollar path falls into the tent. Two levers each close the gap on their own: historical sequencing (§3) and less over-funding (§2f). The third difference is the objective: ACO also values terminal wealth, which removes the "wasted upside" of a capped spender. ACO uses Global Financial Data rather than JST, but the two cover largely the same markets and events, so reproducing ACO is a consistency check, not independent confirmation.
+
+**Persistence and the 1990–2020 regime in ACO.** ACO reports bond VR(10) of 1.88 in the actual data and 2.16 in its 10-year-block bootstrap (international stocks 0.86 / 0.89, domestic stocks 0.79 / 0.90, bills 2.49 / 2.70), the same direction as our full-history 2.66 (bonds), 0.91 (equity) and 3.29 (bills). Its only era cut is post-WWII (1945–2023), which still gives 100% equity. It does not test an inflation-targeting or post-1990 period, so our 1990–2020 result has no counterpart there.
+
+**Real bonds in ACO.** A footnote (untabulated) adds TIPS, simulated as fitted values from a regression of a TIPS fund (VIPSX, 2000–2023, R² 66%) on ACO's four assets plus noise, and finds zero weight. That proxy is built from nominal bonds and stocks, so it inherits their inflation exposure; it does not test an asset whose real value is fixed, which is what §4a's idealized and §4c's realistic real legs model.
 
 ---
 
@@ -624,7 +630,7 @@ Where each result comes from (`research_history` sections are passed as `--secti
 | §2f | `research_history` `funding` |
 | §3a | `recommend_glide_path(..., interval=1, return_mode="forward-block", n_paths=15_000)` |
 | §3b | `matrix`, `blocks`, `channels` |
-| §3c | `vr` (variance ratios and nulls), `regret` (best constant per cut) |
+| §3c | `vr` (variance ratios and nulls), `regret` (best constant per cut), `era-seq` (block vs iid draws) |
 | §3d | `regret` |
 | §4a, §4d | `menu`, `tips-etf`, `bills-block` |
 | §4b | `bond-decomp` |
@@ -636,7 +642,7 @@ Where each result comes from (`research_history` sections are passed as `--secti
 python3 -m analysis.glide_path.research               # §2 tables + figures (~5 min)
 python3 -m analysis.glide_path.research_history --sections matrix blocks channels menu \
     tips-etf tips-stress sleeve-blend regime-mix cpi-basis gic-ladder bills-block gamma curves vr \
-    bond-decomp regret funding \
+    bond-decomp regret funding era-seq \
     --accum 30 --retire 30 --savings 200000 --contrib 20000 --interval 5 --paths 8000
 python3 -m analysis.glide_path.doc_figures             # Figures 1–3 (light + dark SVG)
 python3 -m analysis.glide_path.generate_bundle         # regenerate src/utils/glide-path/jstData.ts

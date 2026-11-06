@@ -22,6 +22,7 @@ Sections (choose with --sections; default all):
   vr      : variance-ratio diagnostic (mean reversion) for world vs pooled
   bond-decomp: bond VR(10) split into carry, rate-cycle (price) and inflation terms by era
   sleeve-blend: fixed nominal/real bond sleeve — CE by real share and equity weight, per regime
+  era-seq : 1990-2020 vs full history under block vs iid draws of the same years
   regime-mix: constant-weight regret when the 1990-2020 regime holds with probability p
   cpi-basis: how well US CPI (XSTH's index) tracks Canadian CPI, by era and horizon
   gic-ladder: three-leg sleeve — synthetic short TIPS (XSTH), nominal bonds (ZGB), 5y GIC ladder
@@ -412,6 +413,28 @@ def run_variance_ratios(args):
             values.append(variance_ratio(shuffled, 10, segments, basis="arithmetic"))
         return float(np.mean(values)), tuple(float(x) for x in np.percentile(values, [5, 95]))
 
+    def joint_null(series, years, segments, reps=1000, seed=20260606):
+        """Same calendar-year permutation applied to every country, which keeps cross-country
+        co-movement (the within-segment null treats 16 correlated countries as independent).
+        Needs a balanced panel (every segment covers the same years); else None."""
+        series, years = np.asarray(series, dtype=float), np.asarray(years)
+        segments = np.asarray(segments)
+        changes = np.flatnonzero(np.diff(segments) != 0) + 1
+        groups = np.split(np.arange(len(series)), changes)
+        span = years[groups[0]]
+        if any(not np.array_equal(years[g], span) for g in groups):
+            return None
+        rng = np.random.default_rng(seed)
+        values = []
+        for _ in range(reps):
+            order = rng.permutation(len(span))
+            shuffled = series.copy()
+            for indices in groups:
+                shuffled[indices] = series[indices][order]
+            values.append(variance_ratio(shuffled, 10, segments, basis="arithmetic"))
+        values = np.asarray(values)
+        return float(values.mean()), tuple(float(x) for x in np.percentile(values, [5, 95]))
+
     print("\n  Era / country cuts — arithmetic VR(10), plus within-segment iid null (300 permutations)")
     print(f"  {'cut':<24} {'eqVR':>5} {'bondVR':>6} {'billVR':>6} {'eq null':>17} {'bond null':>19} {'billVol':>7} {'n':>5}")
     for cut_i, (cut_name, kw) in enumerate(cuts):
@@ -427,6 +450,11 @@ def run_variance_ratios(args):
               f"{eq_null[0]:>5.2f}[{eq_null[1][0]:.2f},{eq_null[1][1]:.2f}] "
               f"{bond_null[0]:>5.2f}[{bond_null[1][0]:.2f},{bond_null[1][1]:.2f}] "
               f"{bill_vol:>6.1f}% {history.observations:>5}")
+        joint = joint_null(history.fixed_income, history.years, history.segment_ids)
+        if joint is not None:
+            observed = bond_vr
+            print(f"  {'':<24} bond joint-year null (balanced panel, 1000 permutations): "
+                  f"{joint[0]:.2f} [{joint[1][0]:.2f}, {joint[1][1]:.2f}] vs observed {observed:.2f}")
 
 
 def run_bond_decomposition(args):
@@ -854,13 +882,32 @@ def _blended(hist, share, variant):
                            segment_ids=hist.segment_ids)
 
 
-def _constant_ce(args, history, sampler=None):
+def _constant_ce(args, history, sampler=None, mode="historical-block"):
     """CE income of each constant equity weight on one fixed sample (common random numbers)."""
     kwargs = base_kwargs(args, flexibility=0.0, n_paths=max(args.paths, 8_000),
-                         return_mode="historical-block", dataset="pooled",
+                         return_mode=mode, dataset="pooled",
                          block_years=args.block_years, history=history, sampler=sampler)
     years = args.accum + args.retire
     return {w: evaluate_path(np.full(years, w / 100), **kwargs)["ce_income"] for w in CONSTANT_WEIGHTS}
+
+
+def run_era_sequencing(args):
+    """Does the 1990-2020 interior optimum need that era's sequencing (bond mean reversion)?
+
+    Same forward-rescaled history, sampled in 10-year blocks or as independent years. If the
+    best constant weight is the same under both, the era's correlation and marginals drive it,
+    not its variance ratios."""
+    print("\n" + "=" * 100)
+    print("ERA SEQUENCING  (constant-weight CE, $000/yr; block vs iid draws of the same years)")
+    print("=" * 100)
+    for label, kw in (("full 1871-2020", {}), ("1990-2020", {"exclude_years": POST_1990})):
+        hist = _forward_rescaled(**kw)
+        corr = np.corrcoef(hist.equity, hist.fixed_income)[0, 1]
+        for mode in ("historical-block", "historical-iid"):
+            ce = _constant_ce(args, hist, mode=mode)
+            best = max(ce, key=ce.get)
+            cells = " ".join(f"{w}:{ce[w] / 1000:.1f}" for w in CONSTANT_WEIGHTS)
+            print(f"  {label:<15} corr {corr:+.2f} {mode:<17} best {best:>3}%  {cells}")
 
 
 def run_sleeve_blend(args):
@@ -1072,6 +1119,7 @@ SECTIONS = {
     "funding": run_funding,
     "tips-stress": run_tips_stress,
     "sleeve-blend": run_sleeve_blend,
+    "era-seq": run_era_sequencing,
     "regime-mix": run_regime_mix,
     "cpi-basis": run_cpi_basis,
     "gic-ladder": run_gic_ladder,
