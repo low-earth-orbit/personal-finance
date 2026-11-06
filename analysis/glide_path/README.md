@@ -13,7 +13,7 @@ Python engine and research scripts for the Lifetime Allocation Optimizer (`/glid
 | `interactive.py` | Prompt flow and `format_reproduction_command` |
 | `cli.py` | Flag CLI behind `analysis/recommend_glide.py` |
 | `research.py` | iid research sweep (methodology §2) |
-| `research_history.py` | History, bond-persistence decomposition, bond-menu and short-TIPS stress, regret and funding sections (methodology §3–§4) |
+| `research_history.py` | History, bond-persistence decomposition, bond-menu, short-TIPS stress, sleeve-blend, regime-mixture, CPI-basis and GIC-ladder, regret and funding sections (methodology §3–§4) |
 | `doc_figures.py` | Methodology Figures 1–3 as light/dark SVGs in `docs/glide-path/img/` (needs matplotlib) |
 | `generate_bundle.py` | Writes `src/utils/glide-path/jstData.ts` (forward-rescaled JST history) |
 

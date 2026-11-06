@@ -21,6 +21,10 @@ Sections (choose with --sections; default all):
   curves  : CE vs constant equity weight (how peaked is "100% equity"?)
   vr      : variance-ratio diagnostic (mean reversion) for world vs pooled
   bond-decomp: bond VR(10) split into carry, rate-cycle (price) and inflation terms by era
+  sleeve-blend: fixed nominal/real bond sleeve — CE by real share and equity weight, per regime
+  regime-mix: constant-weight regret when the 1990-2020 regime holds with probability p
+  cpi-basis: how well US CPI (XSTH's index) tracks Canadian CPI, by era and horizon
+  gic-ladder: three-leg sleeve — synthetic short TIPS (XSTH), nominal bonds (ZGB), 5y GIC ladder
   regret  : CE regret of constant weights and the iid recommended glide across historical cuts
   funding : funding-ratio and matched-spending flexibility sweeps
 
@@ -608,6 +612,28 @@ def run_tips_etf(args):
         print(summary_row(label, rec))
 
 
+def real_leg(hist, mean, vol, phi, corr, seed=7):
+    """Synthetic real-asset return series aligned row-for-row with ``hist``.
+
+    A standardized AR(1) (restarted at each country segment) is mixed with the standardized
+    equity series to hit the target equity correlation, then affine-mapped to the exact target
+    mean/vol. Block-sampling it jointly with equity keeps both the correlation and persistence."""
+    n = hist.observations
+    seg = hist.segment_ids if hist.segment_ids is not None else np.zeros(n, dtype=int)
+    z_eq = (hist.equity - hist.equity.mean()) / hist.equity.std()
+    rng = np.random.default_rng(seed)
+    ar = np.empty(n)
+    prev, x = None, 0.0
+    for i in range(n):
+        if seg[i] != prev:
+            x, prev = rng.standard_normal(), seg[i]
+        else:
+            x = phi * x + rng.standard_normal() * np.sqrt(1 - phi * phi)
+        ar[i] = x
+    mixed = corr * z_eq + np.sqrt(1 - corr * corr) * ar
+    return J._affine_to_target(mixed, mean, vol)
+
+
 def run_tips_stress(args):
     """Stress the short-TIPS cell: which of its generous assumptions carries the 100% -> ~50% drop?
 
@@ -625,22 +651,6 @@ def run_tips_stress(args):
         fixed_income_mean=bd_m, fixed_income_vol=bd_v,
         label_suffix="forward-CMA rescaled",
     )
-    n = hist.observations
-    seg = hist.segment_ids if hist.segment_ids is not None else np.zeros(n, dtype=int)
-    z_eq = (hist.equity - hist.equity.mean()) / hist.equity.std()
-
-    def leg(mean, vol, phi, corr, seed=7):
-        rng = np.random.default_rng(seed)
-        ar = np.empty(n)
-        prev, x = None, 0.0
-        for i in range(n):
-            if seg[i] != prev:
-                x, prev = rng.standard_normal(), seg[i]
-            else:
-                x = phi * x + rng.standard_normal() * np.sqrt(1 - phi * phi)
-            ar[i] = x
-        mixed = corr * z_eq + np.sqrt(1 - corr * corr) * ar
-        return J._affine_to_target(mixed, mean, vol)
 
     pct = lambda x: x * 100.0  # noqa: E731
     rows = [
@@ -660,7 +670,7 @@ def run_tips_stress(args):
     print(f"  base leg: {pct(bd_m):.2f}% real / {pct(bd_v):.2f}% vol, iid, zero equity correlation")
     print("=" * 100)
     for label, mean, vol, phi, corr in rows:
-        series = leg(mean, vol, phi, corr)
+        series = real_leg(hist, mean, vol, phi, corr)
         realized_corr = float(np.corrcoef(hist.equity, series)[0, 1])
         vr2 = J.variance_ratio(series, 2, hist.segment_ids)
         history = J.ReturnHistory(years=hist.years, equity=hist.equity, fixed_income=series,
@@ -814,6 +824,239 @@ def run_funding(args):
     print(f"  flex=1 withdrawal sweep: best wr {best_flex[1]:g}%, CE ${best_flex[0]:,.0f}")
 
 
+# Sleeve-blend / regime-mixture inputs: the 1990-2020 cut and two real-leg variants
+# (mean, vol, phi, equity corr). "realistic" is the tips-stress combined row.
+POST_1990 = [(1871, 1989)]
+REAL_LEGS = {
+    "idealized": lambda bd_m, bd_v: (bd_m, bd_v, 0.0, 0.0),
+    "realistic": lambda bd_m, bd_v: (0.010, 0.030, 0.30, 0.29),
+}
+SLEEVE_SHARES = (0.0, 0.25, 0.5, 0.75, 1.0)
+CONSTANT_WEIGHTS = (30, 40, 50, 60, 70, 80, 90, 100)
+
+
+def _forward_rescaled(**load_kwargs):
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
+    return J.rescale_to_targets(
+        J.load_pooled_country_returns(**load_kwargs),
+        equity_mean=eq_m, equity_vol=eq_v, fixed_income_mean=bd_m, fixed_income_vol=bd_v,
+        label_suffix="forward-CMA rescaled",
+    )
+
+
+def _blended(hist, share, variant):
+    """History whose non-equity leg is (1 - share) nominal bonds + share synthetic real asset."""
+    _, _, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
+    real = real_leg(hist, *REAL_LEGS[variant](bd_m, bd_v))
+    return J.ReturnHistory(years=hist.years, equity=hist.equity,
+                           fixed_income=(1 - share) * hist.fixed_income + share * real,
+                           label=f"{variant} s={share:g}", country_count=hist.country_count,
+                           segment_ids=hist.segment_ids)
+
+
+def _constant_ce(args, history, sampler=None):
+    """CE income of each constant equity weight on one fixed sample (common random numbers)."""
+    kwargs = base_kwargs(args, flexibility=0.0, n_paths=max(args.paths, 8_000),
+                         return_mode="historical-block", dataset="pooled",
+                         block_years=args.block_years, history=history, sampler=sampler)
+    years = args.accum + args.retire
+    return {w: evaluate_path(np.full(years, w / 100), **kwargs)["ce_income"] for w in CONSTANT_WEIGHTS}
+
+
+def run_sleeve_blend(args):
+    """Fixed nominal/real bond sleeve: CE by real share s and constant equity weight, per regime.
+
+    Both histories are rescaled to the same forward anchors, so the regimes differ only in
+    volatility, correlation and sequencing. The real leg is generated per history."""
+    regimes = {"full 1871-2020": _forward_rescaled(),
+               "1990-2020": _forward_rescaled(exclude_years=POST_1990)}
+    print("\n" + "=" * 100)
+    print("SLEEVE BLEND  (non-equity leg = (1-s) nominal bonds + s synthetic real asset; constant-$)")
+    print("  cells: CE income $k per constant equity weight; best = best weight on that row")
+    print("=" * 100)
+    for variant in REAL_LEGS:
+        for regime, hist in regimes.items():
+            print(f"\n  {variant} real leg, {regime}")
+            print(f"  {'s':>5} " + " ".join(f"{w:>6}%" for w in CONSTANT_WEIGHTS) + "    best")
+            for share in SLEEVE_SHARES:
+                ce = _constant_ce(args, _blended(hist, share, variant))
+                best = max(ce, key=ce.get)
+                print(f"  {share:>5.2f} " + " ".join(f"{ce[w] / 1e3:>7.1f}" for w in CONSTANT_WEIGHTS)
+                      + f"    {best}% (${ce[best]:,.0f})")
+
+
+def mixture_sampler(n_first, p_second, switch_years=None):
+    """Sampler over a history made of two stacked regimes (rows [:n_first] and [n_first:]).
+
+    Each path lives in the second regime with probability ``p_second``, else the first; each
+    regime is block-sampled within its own rows. With ``switch_years`` the regime is redrawn each
+    year with probability 1/switch_years (mean regime length; stationary share stays p_second)."""
+    def sample(history, n_years, n_paths, *, mode, block_years, seed):
+        seg = history.segment_ids
+        idx_a = J.sample_indices(n_first, n_years, n_paths, mode="historical-block",
+                                 block_years=block_years, seed=seed, segment_ids=seg[:n_first])
+        seg_b = seg[n_first:] - seg[n_first:].min()
+        idx_b = n_first + J.sample_indices(history.observations - n_first, n_years, n_paths,
+                                           mode="historical-block", block_years=block_years,
+                                           seed=seed + 1, segment_ids=seg_b)
+        rng = np.random.default_rng(seed + 2)
+        state = rng.random(n_paths) < p_second
+        if switch_years is None:
+            in_b = np.broadcast_to(state, (n_years, n_paths))
+        else:
+            in_b = np.empty((n_years, n_paths), dtype=bool)
+            for t in range(n_years):
+                redraw = rng.random(n_paths) < 1 / switch_years
+                state = np.where(redraw, rng.random(n_paths) < p_second, state)
+                in_b[t] = state
+        idx = np.where(in_b, idx_b, idx_a)
+        return history.equity[idx], history.fixed_income[idx]
+    return sample
+
+
+def run_regime_mix(args):
+    """Regret of constant weights when the 1990-2020 regime holds with probability p.
+
+    The history stacks the full sample and the 1990-2020 cut (both forward-rescaled); each path
+    draws its regime once (or switches with a 30-year mean regime length). Regret is the best
+    constant CE at that p minus the weight's CE, in % of the best."""
+    full, recent = _forward_rescaled(), _forward_rescaled(exclude_years=POST_1990)
+    probs = (0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+    print("\n" + "=" * 100)
+    print("REGIME MIXTURE  (p = probability the 1990-2020 regime holds; regret % of that p's best CE)")
+    print("=" * 100)
+    for variant in REAL_LEGS:
+        for share in (0.0, 0.5, 1.0):
+            if variant == "idealized" and share == 0.0:
+                continue  # s=0 has no real leg; printed once under the realistic variant
+            a, b = _blended(full, share, variant), _blended(recent, share, variant)
+            stacked = J.ReturnHistory(
+                years=np.concatenate([a.years, b.years]),
+                equity=np.concatenate([a.equity, b.equity]),
+                fixed_income=np.concatenate([a.fixed_income, b.fixed_income]),
+                label="regime mixture", country_count=a.country_count,
+                segment_ids=np.concatenate([a.segment_ids, b.segment_ids + a.segment_ids.max() + 1]),
+            )
+            for switch in (None, 30):
+                curves = {p: _constant_ce(args, stacked, mixture_sampler(full.observations, p, switch))
+                          for p in probs}
+                tag = "fixed per path" if switch is None else f"switch ~{switch}y"
+                print(f"\n  {'nominal only' if share == 0 else variant + ' real leg'}, s={share:g}, {tag}")
+                print(f"  {'weight':>6} " + " ".join(f"p={p:<4g}" for p in probs) + "   max")
+                for w in CONSTANT_WEIGHTS:
+                    reg = [100 * (1 - curves[p][w] / max(curves[p].values())) for p in probs]
+                    print(f"  {w:>5}% " + " ".join(f"{r:>6.2f}" for r in reg) + f"  {max(reg):>5.2f}")
+
+
+def run_cpi_basis(args):
+    """How well US CPI (XSTH's index) tracks Canadian CPI, by era and horizon.
+
+    hedged share = 1 - Var(US - CA k-year cumulative log inflation) / Var(CA): the share of a
+    Canadian spender's k-year inflation variance a 1:1 US-CPI claim removes. The CAD-hedged
+    basis adds the hedge carry (Canadian minus US short rate), which offsets expected
+    inflation gaps and leaves mostly the gap in inflation surprises."""
+    import pandas as pd
+
+    frame = J.load_jst_frame()
+
+    def country(iso):
+        rows = frame[frame.iso == iso].set_index("year").sort_index()
+        return pd.DataFrame({"pi": rows.cpi.pct_change(fill_method=None), "i": rows.stir / 100})
+
+    us, ca = country("USA"), country("CAN")
+    data = pd.DataFrame({"pi_us": us.pi, "pi_ca": ca.pi, "i_us": us.i, "i_ca": ca.i}).dropna(
+        subset=["pi_us", "pi_ca"])
+
+    def cumulative(x, k):
+        return np.log1p(x).rolling(k).sum().dropna()
+
+    print("\n" + "=" * 100)
+    print("US vs CANADIAN CPI  (overlapping k-year cumulative log inflation)")
+    print("=" * 100)
+    print(f"  {'era':<16} {'k':>3} {'corr':>6} {'sd CA':>7} {'sd gap':>7} {'hedged':>7}"
+          f" {'hedged-basis sd':>16}")
+    for label, lo, hi in (("full 1871-2020", 1871, 2020), ("post-1950", 1950, 2020),
+                          ("1965-1985", 1965, 1985), ("1990-2020", 1990, 2020)):
+        era = data.loc[lo:hi]
+        carry = era.dropna(subset=["i_us", "i_ca"])
+        hedged_basis = (carry.pi_us - carry.pi_ca) + (carry.i_ca - carry.i_us)
+        for k in (1, 5, 10):
+            ca_k, us_k = cumulative(era.pi_ca, k).align(cumulative(era.pi_us, k), join="inner")
+            gap = us_k - ca_k
+            basis_sd = hedged_basis.rolling(k).sum().dropna().std()
+            print(f"  {label:<16} {k:>2}y {np.corrcoef(ca_k, us_k)[0, 1]:>6.2f} {ca_k.std() * 100:>6.1f}%"
+                  f" {gap.std() * 100:>6.1f}% {1 - gap.var() / ca_k.var():>6.0%} {basis_sd * 100:>15.1f}%")
+        print(f"  {'':<16} mean CAD-hedged basis {hedged_basis.mean() * 100:+.2f}%/yr")
+
+
+def _ladder_panel():
+    """Per-country rows with real equity, real long-bond and real 5-year ladder returns.
+
+    The 5-year rung rate is approximated as the midpoint of JST's short and long rates; the
+    ladder holds five rungs bought over the prior five years to maturity, so its nominal return
+    is their average yield (no price risk) and its real return carries the inflation surprise."""
+    import pandas as pd
+
+    frame = J.load_jst_frame()
+    parts = []
+    for country in frame["country"].dropna().unique():
+        sub = frame[frame["country"] == country].sort_values("year").copy()
+        legs = J.real_stock_fixed_income_returns(sub)
+        inflation = sub["cpi"].pct_change(fill_method=None)
+        rung = (sub["stir"] + sub["ltrate"]) / 200.0
+        sub["ladder"] = (1 + rung.shift(1).rolling(5).mean()) / (1 + inflation) - 1
+        merged = legs.merge(sub[["year", "ladder"]], on="year").dropna()
+        merged["country"] = country
+        parts.append(merged)
+    return pd.concat(parts, ignore_index=True)
+
+
+def run_gic_ladder(args):
+    """Three-leg sleeve: synthetic short TIPS (XSTH), nominal bonds (ZGB), 5-year GIC ladder.
+
+    Equity and bonds are rescaled to the forward anchors; the ladder keeps its own history,
+    shifted to the given real mean with its volatility scaled by the same factor as bonds'.
+    The XSTH leg is the realistic real leg. Mixes step by 25%; constant equity weights."""
+    eq_m, eq_v, bd_m, bd_v = forward_anchors(PWL_CURVE, 2.1, True)
+    panel = _ladder_panel()
+    print("\n" + "=" * 100)
+    print("XSTH / ZGB / 5y GIC LADDER  (sleeve mixes in 25% steps; CE at the best constant weight)")
+    print("=" * 100)
+    for regime, first_year in (("full 1871-2020", 0), ("1990-2020", 1990)):
+        rows = panel[panel["year"] >= first_year].reset_index(drop=True)
+        hist = J.rescale_to_targets(
+            J.ReturnHistory(years=rows["year"].to_numpy(), equity=rows["equity"].to_numpy(float),
+                            fixed_income=rows["fixed_income"].to_numpy(float), label=regime,
+                            country_count=rows["country"].nunique(),
+                            segment_ids=J._assign_segments(rows["country"].to_numpy(),
+                                                           rows["year"].to_numpy())),
+            equity_mean=eq_m, equity_vol=eq_v, fixed_income_mean=bd_m, fixed_income_vol=bd_v,
+            label_suffix="forward-CMA rescaled")
+        ladder_raw = rows["ladder"].to_numpy(float)
+        ladder_vol = bd_v * ladder_raw.std() / rows["fixed_income"].to_numpy(float).std()
+        tips = real_leg(hist, *REAL_LEGS["realistic"](bd_m, bd_v))
+        for gic_mean in (0.0125, 0.02):
+            gic = J._affine_to_target(ladder_raw, gic_mean, ladder_vol)
+            print(f"\n  {regime}, GIC {gic_mean * 100:.2f}% real / {ladder_vol * 100:.2f}% vol, "
+                  f"ladder VR(10y) {J.variance_ratio(gic, 10, hist.segment_ids):.2f} vs bonds "
+                  f"{J.variance_ratio(hist.fixed_income, 10, hist.segment_ids):.2f}")
+            print(f"  {'XSTH':>5} {'ZGB':>5} {'GIC':>5}   best        CE")
+            results = []
+            for xsth in (0.0, 0.25, 0.5, 0.75, 1.0):
+                for zgb in np.arange(0.0, 1.0 - xsth + 1e-9, 0.25):
+                    gic_share = 1.0 - xsth - zgb
+                    mix = J.ReturnHistory(years=hist.years, equity=hist.equity,
+                                          fixed_income=xsth * tips + zgb * hist.fixed_income
+                                          + gic_share * gic, label="sleeve",
+                                          country_count=hist.country_count,
+                                          segment_ids=hist.segment_ids)
+                    ce = _constant_ce(args, mix)
+                    best = max(ce, key=ce.get)
+                    results.append((ce[best], xsth, zgb, gic_share, best))
+            for ce_best, xsth, zgb, gic_share, best in sorted(results, reverse=True):
+                print(f"  {xsth:>5.2f} {zgb:>5.2f} {gic_share:>5.2f}   {best:>3}%  ${ce_best:,.0f}")
+
+
 SECTIONS = {
     "matrix": run_matrix,
     "blocks": run_block_sweep,
@@ -828,6 +1071,10 @@ SECTIONS = {
     "regret": run_regret,
     "funding": run_funding,
     "tips-stress": run_tips_stress,
+    "sleeve-blend": run_sleeve_blend,
+    "regime-mix": run_regime_mix,
+    "cpi-basis": run_cpi_basis,
+    "gic-ladder": run_gic_ladder,
 }
 
 
