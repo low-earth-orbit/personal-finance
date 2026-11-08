@@ -3,6 +3,7 @@ import { RETURN_PRESETS } from "./presets";
 import type { RetirementBand, RetirementInput, RetirementResult } from "./types";
 import { investmentAnnualVolPct } from "../monteCarlo";
 import { realArithmeticFromNominalGeometric } from "../returns";
+import { mulberry32, standardNormal } from "../rng";
 
 export const NUM_SIMULATIONS = 1000;
 
@@ -57,24 +58,6 @@ const INNOVATION_SCALE = Math.sqrt(1 - RETURN_AUTOCORRELATION * RETURN_AUTOCORRE
  */
 const GUARDRAIL_TRIGGER = 1.2;
 
-/** Deterministic PRNG (mulberry32) for reproducible simulations. */
-function mulberry32(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) | 0;
-    let t = Math.imul(s ^ (s >>> 15), 1 | s);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** One standard-normal draw via Box–Muller, using the supplied uniform source. */
-function standardNormalFrom(rand: () => number): number {
-  const u1 = Math.max(rand(), 1e-12);
-  const u2 = rand();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
 function percentile(sorted: number[], p: number): number {
   const idx = Math.min(Math.floor(sorted.length * p), sorted.length - 1);
   return sorted[idx];
@@ -82,6 +65,8 @@ function percentile(sorted: number[], p: number): number {
 
 interface PhaseResult {
   successRate: number;
+  /** Share of simulations that trim spending to the floor at least once (0 at 0% flex). */
+  cutRate: number;
   /** Per-age percentile bands (retireAge..planningAge); null when not collected. */
   bands: RetirementBand[] | null;
 }
@@ -122,11 +107,13 @@ function simulate(
     ? Array.from({ length: years + 1 }, () => [] as number[])
     : null;
   let successes = 0;
+  let cuts = 0;
   const rand = mulberry32(SEED);
 
   for (let sim = 0; sim < numSims; sim++) {
     let balance = startBalance;
     let depleted = false;
+    let cut = false;
     let deviation = 0; // AR(1) state: deviation from the long-run mean return
     if (balancesByAge) balancesByAge[0].push(balance);
 
@@ -134,7 +121,7 @@ function simulate(
       const age = retireAge + i;
       const full = withdrawalAtAge(input, breakdown, age);
       deviation =
-        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormal(rand);
       const r = mean + deviation;
 
       if (!depleted) {
@@ -145,6 +132,7 @@ function simulate(
         // the fixed-withdrawal model. Mid-year draw earns a half-year of return.
         const behind = full > balance * initialRate * GUARDRAIL_TRIGGER;
         const withdrawal = behind ? full * (1 - flex) : full;
+        if (behind && flex > 0 && full > 0) cut = true;
         balance = balance * (1 + r) - withdrawal * (1 + r / 2);
         if (balance <= 0) {
           balance = 0;
@@ -154,6 +142,7 @@ function simulate(
       if (balancesByAge) balancesByAge[i + 1].push(balance);
     }
     if (!depleted) successes++;
+    if (cut) cuts++;
   }
 
   let bands: RetirementBand[] | null = null;
@@ -169,7 +158,7 @@ function simulate(
     });
   }
 
-  return { successRate: successes / numSims, bands };
+  return { successRate: successes / numSims, cutRate: cuts / numSims, bands };
 }
 
 /**
@@ -254,7 +243,7 @@ function retirementAgeRange(
         break;
       }
       deviation =
-        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+        RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormal(rand);
       const r = mean + deviation;
       // A pension that starts while still working is saved (matches accumulationBalances).
       const inflow = contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
@@ -323,7 +312,7 @@ export function safeWithdrawalRate(
       let deviation = 0;
       for (let i = 0; i < years; i++) {
         deviation =
-          RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormalFrom(rand);
+          RETURN_AUTOCORRELATION * deviation + INNOVATION_SCALE * sigma * standardNormal(rand);
         const r = mean + deviation;
         if (!depleted) {
           balance = balance * (1 + r) - w * (1 + r / 2);
@@ -369,13 +358,14 @@ export function computeRetirement(input: RetirementInput): RetirementResult {
     const { successRate } = simulate(input, age, startBalance, false);
     if (successRate < target) continue;
 
-    const { bands } = simulate(input, age, startBalance, true);
+    const { bands, cutRate } = simulate(input, age, startBalance, true);
     return {
       ...breakdown,
       earliestRetirementAge: age,
       yearsUntilRetirement: age - input.currentAge,
       portfolioAtRetirement: startBalance,
       successRate,
+      cutRate,
       accumulationPath: accum.slice(0, age - input.currentAge + 1),
       retirementBands: bands,
       retirementAgeRange: retirementAgeRange(input, age),
@@ -388,8 +378,22 @@ export function computeRetirement(input: RetirementInput): RetirementResult {
     yearsUntilRetirement: null,
     portfolioAtRetirement: null,
     successRate: null,
+    cutRate: null,
     accumulationPath: null,
     retirementBands: null,
     retirementAgeRange: null,
   };
+}
+
+/** The retirement result plus its headline year-1 withdrawal rate (what the UI renders). */
+export function computePlan(input: RetirementInput): {
+  result: RetirementResult;
+  planSWR: number | null;
+} {
+  const result = computeRetirement(input);
+  const planSWR =
+    result.earliestRetirementAge != null && result.portfolioAtRetirement != null
+      ? computePlanSWR(input, result.earliestRetirementAge, result.portfolioAtRetirement)
+      : null;
+  return { result, planSWR };
 }

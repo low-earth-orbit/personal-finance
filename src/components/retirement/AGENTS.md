@@ -4,7 +4,7 @@ Projects portfolio in real $ → finds earliest feasible retirement age. Grows s
 
 ## Files
 
-- `Main.tsx` — state container, persists via `src/utils/retirement/storage.ts`
+- `Main.tsx` — state container, persists via `src/utils/retirement/storage.ts`; runs `computePlan` in `src/workers/retirementWorker.ts` (main-thread fallback when `Worker` is missing, e.g. jsdom)
 - `RetirementApp.tsx` — `"use client"` wrapper, lazy-loads Main (`ssr:false`)
 - `InputForm.tsx` — user inputs (age, income, savings, guaranteed income, target %)
 - `Result.tsx` — renders feasibility result
@@ -15,6 +15,6 @@ Projects portfolio in real $ → finds earliest feasible retirement age. Grows s
 
 ## Engine (`src/utils/retirement/`)
 
-- `projection.ts` — deterministic single-return projection engine
-- `monteCarlo.ts` — MC engine (planned; deterministic is current default)
+- `projection.ts` — deterministic mean-return accumulation path and income breakdown
+- `monteCarlo.ts` — MC engine (live): deterministic accumulation + seeded MC drawdown; earliest age meeting the confidence target, age range, cut rate
 - `presets.ts`, `validation.ts`, `storage.ts`, `types.ts`

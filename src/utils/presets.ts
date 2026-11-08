@@ -29,6 +29,8 @@ export const DEFAULTS = {
   dividendYield: 2.4,
   dividendTaxRate: 22.5,
   capitalGainTaxRate: 15.6,
+  /** Share of invested savings (renter's and owner's) held in TFSA/RRSP-type accounts. */
+  taxShelteredPct: 0,
   ...INPUT_UNCERTAINTIES,
 };
 

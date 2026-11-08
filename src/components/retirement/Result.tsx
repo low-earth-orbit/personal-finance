@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Box, Card, Group, Stack, Text } from "@mantine/core";
+import { Alert, Box, Card, Center, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 import Headline from "./Headline";
 import ProjectionChart from "./ProjectionChart";
@@ -13,6 +13,8 @@ interface ResultProps {
   result: RetirementResult | null;
   /** Headline year-1 withdrawal rate (fraction); null when no feasible plan. */
   planSWR: number | null;
+  /** Inputs are valid but the first simulation hasn't returned yet. */
+  loading?: boolean;
 }
 
 const TEAL = "var(--mantine-color-teal-6)";
@@ -207,7 +209,16 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
   );
 }
 
-export default function Result({ input, result, planSWR }: ResultProps) {
+export default function Result({ input, result, planSWR, loading = false }: ResultProps) {
+  if (!result && loading) {
+    return (
+      <Card withBorder radius="md" padding="lg">
+        <Center mih={120}>
+          <Loader size="sm" aria-label="Simulating your plan" />
+        </Center>
+      </Card>
+    );
+  }
   if (!result) {
     return (
       <Alert variant="light" color="gray" icon={<IconInfoCircle />} title="Incomplete inputs">

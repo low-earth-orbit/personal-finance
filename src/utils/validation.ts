@@ -40,6 +40,7 @@ export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
   dividendYield: { min: 0, max: 10, step: 0.5 },
   dividendTaxRate: { min: 0, max: 50, step: 1 },
   capitalGainTaxRate: { min: 0, max: 50, step: 1 },
+  taxShelteredPct: { min: 0, max: 100, step: 10 },
   homePriceGrowthSigma: { min: 0, max: 10, step: 0.25 },
   investmentReturnSigma: { min: 0, max: 10, step: 0.25 },
   rentIncreaseSigma: { min: 0, max: 5, step: 0.25 },

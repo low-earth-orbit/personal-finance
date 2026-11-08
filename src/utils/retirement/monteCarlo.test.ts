@@ -3,6 +3,7 @@ import { DEFAULTS } from "./presets";
 import { accumulationBalances } from "./projection";
 import {
   NUM_SIMULATIONS,
+  computePlan,
   computePlanSWR,
   computeRetirement,
   safeWithdrawalRate,
@@ -256,5 +257,26 @@ describe("safeWithdrawalRate", () => {
     const realGeometric = 1.0567 / 1.021 - 1;
 
     expect(medianGrowth).toBeCloseTo(realGeometric, 3);
+  });
+});
+
+describe("cut rate and computePlan", () => {
+  it("never cuts spending at 0% flexibility", () => {
+    expect(computeRetirement(base({ spendingFlexibilityPct: 0 })).cutRate).toBe(0);
+  });
+
+  it("reports a cut rate in (0, 1] when spending is flexible", () => {
+    const r = computeRetirement(base({ spendingFlexibilityPct: 20 }));
+    expect(r.cutRate).toBeGreaterThan(0);
+    expect(r.cutRate).toBeLessThanOrEqual(1);
+  });
+
+  it("bundles the result with its year-1 withdrawal rate", () => {
+    const { result, planSWR } = computePlan(base());
+    expect(result.earliestRetirementAge).not.toBeNull();
+    expect(planSWR).toBeCloseTo(
+      computePlanSWR(base(), result.earliestRetirementAge!, result.portfolioAtRetirement!),
+      12,
+    );
   });
 });

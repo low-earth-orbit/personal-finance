@@ -77,7 +77,7 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 
 **Calc (`src/utils/`):** `math.ts`, `monteCarlo.ts` (`runMonteCarlo()` → P25/median/P75 + `renterWinPct`), `presets.ts`, `validation.ts`, `format.ts`, `storage.ts`.
 
-**Web Worker:** `src/workers/monteCarloWorker.ts`. `NetWorthChart` debounces 150ms, tracks `requestId` to drop stale responses.
+**Web Worker:** `src/workers/monteCarloWorker.ts`. `NetWorthChart` debounces 300ms, tracks `requestId` to drop stale responses. Retirement uses the same pattern (`src/workers/retirementWorker.ts`, 150ms debounce). All MC engines draw from the seeded `src/utils/rng.ts`.
 
 **React Compiler on.** No `useMemo`/`useCallback`/`React.memo` — compiler handles memoization.
 

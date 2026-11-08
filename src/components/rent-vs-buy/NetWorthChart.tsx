@@ -42,6 +42,7 @@ interface ChartPoint {
   ownerP75: number;
   ownerBandBase: number;
   ownerBandWidth: number;
+  medianGap: number;
   renterWinPct: number;
 }
 
@@ -59,6 +60,7 @@ const INPUT_LABELS = {
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",
+  taxShelteredPct: "Held in TFSA/RRSP (%)",
   propertyTaxRate: "Property tax rate (%)",
   maintPct: "Maintenance (%/yr)",
   maintAgingPct: "Building aging (%/yr)",
@@ -111,7 +113,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   );
 }
 
-function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPeriod: number }) {
+export function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPeriod: number }) {
   const decision = data.find((d) => d.year === holdingPeriod) ?? data[data.length - 1];
 
   if (decision.renterWinPct == null) {
@@ -137,13 +139,18 @@ function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPeriod: n
   }
 
   const sims = `${winner} comes out ahead in ${winnerPct}% of simulations at sale (year ${holdingPeriod}).`;
-
-  let body;
-  if (winnerPct < 60) {
-    body = `${sims} Small changes in your assumptions could flip the outcome.`;
-  } else {
-    body = sims;
-  }
+  // The median of the per-simulation gap has the same sign as the majority winner.
+  const gap = `In the median simulation, ${winner.toLowerCase()} is ahead by ${formatCAD(Math.abs(decision.medianGap))}.`;
+  // First year buying is ahead in most simulations (the break-even point).
+  const firstBuyLead = data.find((d) => d.renterWinPct < 0.5)?.year ?? null;
+  const breakEven =
+    firstBuyLead == null
+      ? `Buying doesn't pull ahead in most simulations within ${data.length} years.`
+      : firstBuyLead === 1
+        ? "Buying is ahead in most simulations from year 1."
+        : `Buying first pulls ahead in most simulations in year ${firstBuyLead}.`;
+  const close = winnerPct < 60 ? " Small changes in your assumptions could flip the outcome." : "";
+  const body = `${sims} ${gap} ${breakEven}${close}`;
 
   return (
     <Alert
@@ -197,6 +204,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         ownerP75: mc.ownerP75,
         ownerBandBase: mc.ownerP25,
         ownerBandWidth: mc.ownerP75 - mc.ownerP25,
+        medianGap: mc.medianGap,
         renterWinPct: mc.renterWinPct,
       }))
     : null;
@@ -241,6 +249,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         "Buy median",
         "Buy P25",
         "Buy P75",
+        "Median gap (rent − buy)",
         "Renter win %",
       ],
       ...points.map((d) => [
@@ -251,6 +260,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         Math.round(d.ownerMedian ?? 0),
         Math.round(d.ownerP25 ?? 0),
         Math.round(d.ownerP75 ?? 0),
+        Math.round(d.medianGap ?? 0),
         d.renterWinPct != null ? `${Math.round(d.renterWinPct * 100)}%` : "",
       ]),
     ];

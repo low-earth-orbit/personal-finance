@@ -1,11 +1,10 @@
-import { describe, test, expect, vi, afterEach } from "vitest";
+import { describe, test, expect } from "vitest";
 import { DEFAULTS } from "./presets";
 import { validateUserInput } from "./validation";
 import { runMonteCarlo } from "./monteCarlo";
 
-afterEach(() => {
-  vi.restoreAllMocks();
-});
+const SIMS = 300;
+const year = DEFAULTS.holdingPeriod;
 
 describe("maintenance aging", () => {
   test("defaults stay valid with maintAgingPct", () => {
@@ -13,27 +12,55 @@ describe("maintenance aging", () => {
   });
 
   test("higher aging raises renter net worth, leaves owner equity unchanged", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
-    const sims = 30;
-    const base = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 0 }, sims);
-    const aged = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 5 }, sims);
-    const year = DEFAULTS.holdingPeriod;
+    const base = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 0 }, SIMS);
+    const aged = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 5 }, SIMS);
 
-    // Owner net worth is home equity only — unaffected by maintenance.
+    // Owning costs more than renting through the holding period, so the owner invests
+    // nothing and owner net worth is home equity only — unaffected by maintenance.
     expect(aged[year - 1].ownerMedian).toBe(base[year - 1].ownerMedian);
-    // Higher maintenance raises owner cash outflow, so the renter invests
-    // a larger surplus each year.
+    // Higher maintenance raises owner cash outflow, so the renter invests a larger surplus.
     expect(aged[year - 1].renterMedian).toBeGreaterThan(base[year - 1].renterMedian);
   });
 
   test("aging uplift also applies to condo fees", () => {
-    vi.spyOn(Math, "random").mockReturnValue(0.5);
-    const sims = 30;
-    const base = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 0 }, sims);
-    const aged = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 5 }, sims);
-    const year = DEFAULTS.holdingPeriod;
+    const base = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 0 }, SIMS);
+    const aged = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 5 }, SIMS);
 
     expect(aged[year - 1].ownerMedian).toBe(base[year - 1].ownerMedian);
     expect(aged[year - 1].renterMedian).toBeGreaterThan(base[year - 1].renterMedian);
+  });
+});
+
+describe("runMonteCarlo", () => {
+  test("is deterministic: identical inputs give identical results", () => {
+    expect(runMonteCarlo(DEFAULTS, SIMS)).toEqual(runMonteCarlo(DEFAULTS, SIMS));
+  });
+
+  test("median gap has the same sign as the majority winner", () => {
+    for (const y of runMonteCarlo(DEFAULTS, SIMS)) {
+      if (Math.abs(y.renterWinPct - 0.5) < 0.02) continue;
+      expect(y.medianGap > 0).toBe(y.renterWinPct > 0.5);
+    }
+  });
+
+  test("a tax-sheltered share lifts the renter's after-tax wealth", () => {
+    const taxed = runMonteCarlo({ ...DEFAULTS, taxShelteredPct: 0 }, SIMS);
+    const sheltered = runMonteCarlo({ ...DEFAULTS, taxShelteredPct: 100 }, SIMS);
+    expect(sheltered[year - 1].renterMedian).toBeGreaterThan(taxed[year - 1].renterMedian);
+    // Fully sheltered with zero tax rates is the same as fully taxable at zero rates.
+    const noTax = { ...DEFAULTS, dividendTaxRate: 0, capitalGainTaxRate: 0 };
+    expect(
+      runMonteCarlo({ ...noTax, taxShelteredPct: 100 }, SIMS)[year - 1].renterMedian,
+    ).toBeCloseTo(runMonteCarlo({ ...noTax, taxShelteredPct: 0 }, SIMS)[year - 1].renterMedian, 6);
+  });
+
+  test("the owner invests the difference once owning is cheaper, and no portfolio goes negative", () => {
+    // All cash: no mortgage, so owner costs (tax + maintenance) sit far below rent.
+    const allCash = { ...DEFAULTS, downPaymentPercentage: 100, monthlyRent: 5000 };
+    const withSavings = runMonteCarlo(allCash, SIMS);
+    const noRent = runMonteCarlo({ ...allCash, monthlyRent: 1 }, SIMS);
+    // Rent above owner costs: the owner banks the difference on top of home equity.
+    expect(withSavings[year - 1].ownerMedian).toBeGreaterThan(noRent[year - 1].ownerMedian);
+    for (const y of withSavings) expect(y.renterP25).toBeGreaterThan(0);
   });
 });

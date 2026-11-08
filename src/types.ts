@@ -40,6 +40,8 @@ export interface MonteCarloYear {
   ownerP25: number;
   ownerMedian: number;
   ownerP75: number;
+  /** Median over simulations of renter − owner net worth (positive = renting ahead). */
+  medianGap: number;
   renterWinPct: number;
 }
 
