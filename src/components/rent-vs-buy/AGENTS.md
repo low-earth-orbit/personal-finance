@@ -17,4 +17,4 @@ Year-by-year net worth comparison, MC confidence bands, win probability. Methodo
 
 ## Summary tiers
 
-≥70% → "clearly leads" | 60–70% → "likely leads" | <60% → "too close to call". The body adds the median gap at sale and the break-even year (first year buying leads in most simulations).
+≥70% → "clearly leads" | 60–70% → "likely leads" | <60% → "too close to call". The body adds the median gap at sale and when buying leads, read relative to the sale year (since when, if buying leads at sale; otherwise the first later year it would, noting an earlier lead that was lost).

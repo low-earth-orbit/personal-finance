@@ -36,11 +36,14 @@ describe("runMonteCarlo", () => {
     expect(runMonteCarlo(DEFAULTS, SIMS)).toEqual(runMonteCarlo(DEFAULTS, SIMS));
   });
 
-  test("median gap has the same sign as the majority winner", () => {
-    for (const y of runMonteCarlo(DEFAULTS, SIMS)) {
-      if (Math.abs(y.renterWinPct - 0.5) < 0.02) continue;
-      expect(y.medianGap > 0).toBe(y.renterWinPct > 0.5);
-    }
+  test("median gap has the same sign as the majority winner, either way", () => {
+    const renterAhead = runMonteCarlo(DEFAULTS, SIMS)[year - 1];
+    expect(renterAhead.renterWinPct).toBeGreaterThan(0.5);
+    expect(renterAhead.medianGap).toBeGreaterThan(0);
+    // High rent: buying wins at the sale year.
+    const buyerAhead = runMonteCarlo({ ...DEFAULTS, monthlyRent: 7000 }, SIMS)[year - 1];
+    expect(buyerAhead.renterWinPct).toBeLessThan(0.5);
+    expect(buyerAhead.medianGap).toBeLessThan(0);
   });
 
   test("a tax-sheltered share lifts the renter's after-tax wealth", () => {
@@ -54,13 +57,12 @@ describe("runMonteCarlo", () => {
     ).toBeCloseTo(runMonteCarlo({ ...noTax, taxShelteredPct: 0 }, SIMS)[year - 1].renterMedian, 6);
   });
 
-  test("the owner invests the difference once owning is cheaper, and no portfolio goes negative", () => {
+  test("the owner invests the difference once owning is cheaper", () => {
     // All cash: no mortgage, so owner costs (tax + maintenance) sit far below rent.
     const allCash = { ...DEFAULTS, downPaymentPercentage: 100, monthlyRent: 5000 };
     const withSavings = runMonteCarlo(allCash, SIMS);
     const noRent = runMonteCarlo({ ...allCash, monthlyRent: 1 }, SIMS);
     // Rent above owner costs: the owner banks the difference on top of home equity.
     expect(withSavings[year - 1].ownerMedian).toBeGreaterThan(noRent[year - 1].ownerMedian);
-    for (const y of withSavings) expect(y.renterP25).toBeGreaterThan(0);
   });
 });

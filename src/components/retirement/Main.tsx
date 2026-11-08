@@ -30,6 +30,7 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const [workerPlan, setWorkerPlan] = useState<Plan | null>(null);
+  const [workerFailed, setWorkerFailed] = useState(false);
 
   const errors = validateRetirementInput(input);
 
@@ -38,6 +39,14 @@ export default function Main() {
   const [debouncedInput] = useDebouncedValue(input, 150);
   const debouncedValid = Object.keys(validateRetirementInput(debouncedInput)).length === 0;
 
+  // Drop the last plan when inputs turn invalid, so a later valid edit shows the loader
+  // rather than a plan computed for older inputs (render-time state adjustment).
+  const [prevValid, setPrevValid] = useState(debouncedValid);
+  if (prevValid !== debouncedValid) {
+    setPrevValid(debouncedValid);
+    if (!debouncedValid) setWorkerPlan(null);
+  }
+
   useEffect(() => {
     if (!hasWorker) return;
     const worker = new Worker(new URL("../../workers/retirementWorker.ts", import.meta.url));
@@ -45,18 +54,22 @@ export default function Main() {
       const { requestId, result, planSWR } = event.data;
       if (requestId === requestIdRef.current) setWorkerPlan({ result, planSWR });
     };
+    // A worker that fails to load or throws falls back to the main thread.
+    worker.onerror = () => setWorkerFailed(true);
     workerRef.current = worker;
     return () => worker.terminate();
   }, []);
 
   useEffect(() => {
-    if (!workerRef.current || !debouncedValid) return;
+    // Bumping the id on invalid input also drops any reply still in flight.
     requestIdRef.current += 1;
+    if (!workerRef.current || !debouncedValid) return;
     workerRef.current.postMessage({ requestId: requestIdRef.current, input: debouncedInput });
   }, [debouncedInput, debouncedValid]);
 
   // While a newer request is in flight the previous plan stays on screen.
-  const plan = !debouncedValid ? null : hasWorker ? workerPlan : computePlan(debouncedInput);
+  const onMainThread = !hasWorker || workerFailed;
+  const plan = !debouncedValid ? null : onMainThread ? computePlan(debouncedInput) : workerPlan;
   const loading = debouncedValid && plan == null;
 
   function handleChange(key: RetirementInputKey, value: FieldValue) {

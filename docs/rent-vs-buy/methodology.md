@@ -43,7 +43,9 @@ Two-layer uncertainty model:
 
 **Renter/owner share same scenario path** — enables fair pairwise comparison. Draws come from a fixed seed (`src/utils/rng.ts`), so identical inputs give identical results and the 60/70% tier boundaries don't flicker between renders.
 
-**Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and the break-even year — the first year buying is ahead in most simulations, or none within the 50-year horizon.
+**Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and when buying leads in most simulations, read relative to the sale year: since which year (if it leads at sale), otherwise the first later year it would, flagging an earlier lead that was lost. The lead can change hands more than once (e.g. buying pulls ahead, then building aging lets renting back in front).
+
+**Tax-sheltered share limits:** `taxShelteredPct` also shelters the starting savings (down payment + closing costs), and the model doesn't enforce TFSA/RRSP room or the FHSA's $40k lifetime cap and closure on purchase — keep the share within the user's real room.
 
 ## Maintenance Aging Calibration
 

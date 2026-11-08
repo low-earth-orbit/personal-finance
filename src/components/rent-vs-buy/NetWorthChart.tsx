@@ -113,6 +113,33 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   );
 }
 
+/**
+ * When buying takes the lead, read relative to the sale year. The lead can change hands more
+ * than once (e.g. buying pulls ahead, then building aging lets renting back in front), so a
+ * plain "first year buying leads" can contradict the headline.
+ */
+function breakEvenText(data: ChartPoint[], saleYear: number): string {
+  const buyLeads = (d: ChartPoint) => d.renterWinPct < 0.5;
+  const saleIdx = data.findIndex((d) => d.year === saleYear);
+  const atSale = data[saleIdx];
+  if (atSale && buyLeads(atSale)) {
+    // Start of the buying-lead run that contains the sale year.
+    let i = saleIdx;
+    while (i > 0 && buyLeads(data[i - 1])) i--;
+    return data[i].year === 1
+      ? "Buying is ahead in most simulations from year 1."
+      : `Buying has been ahead in most simulations since year ${data[i].year}.`;
+  }
+  const ledEarlier = data.slice(0, Math.max(saleIdx, 0)).some(buyLeads);
+  const earlier = ledEarlier
+    ? "Buying was ahead in most simulations in some earlier years, but not at the sale. "
+    : "";
+  const later = data.slice(saleIdx + 1).find(buyLeads);
+  return later
+    ? `${earlier}Holding longer, buying would pull ahead in most simulations in year ${later.year}.`
+    : `${earlier}Buying doesn't pull ahead in most simulations by year ${data[data.length - 1].year}.`;
+}
+
 export function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPeriod: number }) {
   const decision = data.find((d) => d.year === holdingPeriod) ?? data[data.length - 1];
 
@@ -141,14 +168,7 @@ export function Summary({ data, holdingPeriod }: { data: ChartPoint[]; holdingPe
   const sims = `${winner} comes out ahead in ${winnerPct}% of simulations at sale (year ${holdingPeriod}).`;
   // The median of the per-simulation gap has the same sign as the majority winner.
   const gap = `In the median simulation, ${winner.toLowerCase()} is ahead by ${formatCAD(Math.abs(decision.medianGap))}.`;
-  // First year buying is ahead in most simulations (the break-even point).
-  const firstBuyLead = data.find((d) => d.renterWinPct < 0.5)?.year ?? null;
-  const breakEven =
-    firstBuyLead == null
-      ? `Buying doesn't pull ahead in most simulations within ${data.length} years.`
-      : firstBuyLead === 1
-        ? "Buying is ahead in most simulations from year 1."
-        : `Buying first pulls ahead in most simulations in year ${firstBuyLead}.`;
+  const breakEven = breakEvenText(data, decision.year);
   const close = winnerPct < 60 ? " Small changes in your assumptions could flip the outcome." : "";
   const body = `${sims} ${gap} ${breakEven}${close}`;
 
