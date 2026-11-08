@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULTS, DEFAULT_ALLOC_CURVE } from "./presets";
-import { buildEquityGrid, recommendGlidePath } from "./engine";
+import { buildEquityGrid, recommendGlidePath, tieMiddleArgmax } from "./engine";
 import type { GlidePathInput } from "./types";
 
 // Fast settings for tests: few paths; the default glide-step interval is 5 years.
@@ -121,14 +121,58 @@ describe("recommendGlidePath", () => {
     expect(bounded.ceIncome).toBe(minimum.ceIncome);
   });
 
-  it("pays guaranteed income every retirement year (no bridge)", () => {
-    // Guaranteed income starts at retirement, so no year funds the full target alone.
+  it("pays guaranteed income from retirement when it starts at or before retirement", () => {
     const r = recommendGlidePath(
-      base({ retirementAge: 55, planningAge: 95, guaranteedIncome: 25000 }),
+      base({
+        retirementAge: 55,
+        guaranteedStartAge: 50,
+        planningAge: 95,
+        guaranteedIncome: 25000,
+      }),
     );
     expect(r.params.accumYears).toBe(20);
     expect(r.params.retireYears).toBe(40);
     expect(r.params.guaranteed).toBeCloseTo(25000, 0);
+    expect(r.params.guaranteedDelay).toBe(0);
+    expect(r.initialTargetDraw).toBeCloseTo(DEFAULTS.targetIncome - 25000, 0);
+  });
+
+  it("funds the whole target from the portfolio during a guaranteed-income bridge", () => {
+    const noBridge = recommendGlidePath(base({ retirementAge: 60, guaranteedStartAge: 60 }));
+    const bridge = recommendGlidePath(base({ retirementAge: 60, guaranteedStartAge: 65 }));
+    expect(bridge.params.guaranteedDelay).toBe(5);
+    expect(bridge.initialTargetDraw).toBeCloseTo(DEFAULTS.targetIncome, 0);
+    expect(bridge.ceIncome).toBeLessThan(noBridge.ceIncome);
+  });
+
+  it("reports welfare CE equal to CE income without a bequest weight", () => {
+    const r = recommendGlidePath(base());
+    expect(r.params.bequestWeight).toBe(0);
+    expect(r.welfareCe).toBeCloseTo(r.ceIncome, 6);
+    expect(r.medianBequest).toBeGreaterThan(0);
+  });
+
+  it("adds the bequest term to welfare CE when a bequest weight is set", () => {
+    const r = recommendGlidePath(base({ bequestWeight: 0.5 }));
+    expect(r.params.bequestWeight).toBe(0.5);
+    expect(r.welfareCe).not.toBeNull();
+    expect(r.welfareCe!).toBeGreaterThan(r.ceIncome);
+    expect(r.overFunded).toBe(false);
+  });
+
+  it("flags an over-funded plan and breaks the flat tie at the middle, not 0%", () => {
+    const r = recommendGlidePath(base({ startSavings: 5_000_000 }));
+    expect(r.overFunded).toBe(true);
+    expect(r.flatEquityPct).toBeGreaterThan(0);
+    expect(r.flatCeIncome).toBeCloseTo(DEFAULTS.targetIncome, -2);
+    // A bequest weight gives the surplus a use, so the plan is no longer a tie.
+    expect(
+      recommendGlidePath(base({ startSavings: 5_000_000, bequestWeight: 0.25 })).overFunded,
+    ).toBe(false);
+  });
+
+  it("does not flag the default plan as over-funded", () => {
+    expect(recommendGlidePath(base({ startSavings: 0 })).overFunded).toBe(false);
   });
 
   it("uses the guaranteed income amount directly", () => {
@@ -190,5 +234,15 @@ describe("recommendGlidePath", () => {
     expect(Math.max(...r.equityByYear.slice(0, retireStart))).toBeGreaterThan(0.5);
     expect(r.schedule.find((block) => block.yearStart === retireStart)?.phase).toBe("retire");
     expect(r.params.retirementMaxLeverage).toBe(0.5);
+  });
+});
+
+describe("tieMiddleArgmax", () => {
+  it("returns the unique maximum", () => {
+    expect(tieMiddleArgmax([1, 3, 2])).toBe(1);
+  });
+  it("takes the middle of a tied run", () => {
+    expect(tieMiddleArgmax([5, 5, 5, 5, 5])).toBe(2);
+    expect(tieMiddleArgmax([1, 4, 4, 4, 4])).toBe(3);
   });
 });

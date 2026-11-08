@@ -179,7 +179,7 @@ These follow from the shared JST data ([glide-path methodology §6](../glide-pat
 
 - **Survivorship.** JST covers 16 developed markets that survived with usable data; the world floor and the within-country recoveries behind §G partly reflect that.
 - **Tiny effective sample.** ~120 overlapping 30-year windows per series contain only 4–5 independent windows per country, heavily correlated across countries (the same wars, the same inflation waves). No column difference has a confidence interval.
-- **Era dependence.** §G ≈ §H is a full-sample (1871–2020) statement. In the 1990–2020 inflation-targeting era bonds mean-revert instead of persisting, so historical sequencing there would sit above iid. The two eras bracket iid from both sides.
+- **Era dependence.** §G ≈ §H is a full-sample (1871–2020) statement. In the 1990–2020 inflation-targeting era bond persistence disappears (VR(10y) 0.58, within the iid range once cross-country co-movement is allowed for), so historical sequencing there would sit at or above iid. The two eras bracket iid.
 - **Normal vs fat-tailed marginals.** The engine draws normal returns, while §G carries history's fat tails. The ≤ 0.07pp gap nets this against the sequencing effect, and the two cannot be separated.
 
 ---

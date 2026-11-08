@@ -16,7 +16,7 @@ Downloaded JST data is cached in gitignored `analysis/.data/`. Generated figures
 - `glide_path/` — see its [README](./glide_path/README.md): `markets.py` (return models), `simulate.py` (lifecycle + utility), `recommender.py` (public API + optimizer), `report.py` / `interactive.py`.
 - `glide_path/cli.py` owns flag parsing and terminal output; `recommend_glide.py` is only a stable launcher.
 - `glide_path/research.py` is the larger iid-only research sweep used by the methodology note.
-- `glide_path/research_history.py` is the historical-vs-iid sweep (factorial × world/pooled dataset, block-length and γ sweeps, CE-vs-constant curves, variance-ratio diagnostic, bond-persistence decomposition `bond-decomp`, bond menu with short-TIPS sensitivity `tips-etf` / `tips-stress`, nominal/real sleeve blend `sleeve-blend`, regime-mixture regret `regime-mix`, US-vs-Canadian CPI basis `cpi-basis`, XSTH/ZGB/GIC-ladder sleeve `gic-ladder`, regret and funding); it reports the raw optimized glide (no simplicity bias).
+- `glide_path/research_history.py` is the historical-vs-iid sweep (factorial × world/pooled dataset, block-length and γ sweeps, variance-ratio diagnostic, bond-persistence decomposition `bond-decomp`, bond menu with short-TIPS sensitivity `tips-etf` / `tips-stress`, nominal/real sleeve blend `sleeve-blend`, regime-mixture regret `regime-mix`, US-vs-Canadian CPI basis `cpi-basis`, XSTH/ZGB/GIC-ladder sleeve `gic-ladder`, regret and funding); it reports the raw optimized glide (no simplicity bias).
 - `glide_path/doc_figures.py` draws the methodology figures (variance ratio, bond-persistence decomposition, block bootstrap) as light/dark SVGs into `docs/glide-path/img/` (needs matplotlib).
 - `shared/jst_history.py` is the only place that should load, deflate, aggregate, or bootstrap JST return history.
 - `retirement/jst_swr_bootstrap.py` validates retirement SWR behavior against JST history.
@@ -27,8 +27,8 @@ Downloaded JST data is cached in gitignored `analysis/.data/`. Generated figures
 # Stable glide-path CLI
 python3 analysis/recommend_glide.py --help
 
-# Interactive glide-path recommender
-python3 -m analysis.glide_path.recommender
+# Interactive glide-path recommender (prompts, runs, prints the equivalent command)
+python3 analysis/recommend_glide.py -i
 
 # Glide-path research sweep (iid-only)
 python3 -m analysis.glide_path.research

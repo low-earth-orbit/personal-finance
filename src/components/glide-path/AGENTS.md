@@ -21,4 +21,4 @@ MC coordinate ascent → welfare-maximizing equity allocation curve (accumulatio
 
 ## Simplicity bias
 
-`src/utils/glide-path/recommendation.ts` `SIMPLICITY_*` constants: constant allocation wins when CE income outright OR within 3% CE + within 0.5pp/1.5pp shortfall rates (CE gaps <3% are within model uncertainty; the shortfall gates carry the veto).
+`src/utils/glide-path/recommendation.ts` `SIMPLICITY_*` constants: the constant allocation is recommended unless the glide beats it by more than 3% on CE income (spending CE even with a bequest weight; welfare CE is unstable for rich plans) or by more than 1 point on full-path shortfall (CE gaps <3% are within model uncertainty). Over-funded plans (`result.overFunded`) tie on income, so the constant wins there too.

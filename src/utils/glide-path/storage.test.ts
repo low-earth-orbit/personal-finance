@@ -33,6 +33,16 @@ describe("glide-path storage", () => {
     expect(input).not.toHaveProperty("preRetirementIncome");
   });
 
+  it("starts guaranteed income at the saved retirement age for older saved inputs", () => {
+    const { guaranteedStartAge: _omit, ...legacy } = { ...DEFAULTS, retirementAge: 58 };
+    void _omit;
+    window.localStorage.setItem("glide_input", JSON.stringify(legacy));
+
+    const input = loadInput();
+    expect(input.guaranteedStartAge).toBe(58);
+    expect(input.bequestWeight).toBe(0);
+  });
+
   it("loads a saved glide-step interval", () => {
     window.localStorage.setItem("glide_input", JSON.stringify({ ...DEFAULTS, interval: 10 }));
 

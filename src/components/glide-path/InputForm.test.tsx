@@ -46,7 +46,12 @@ describe("glide-path InputForm guidance", () => {
 
     expect(
       screen.getByRole("button", {
-        name: /more information about guaranteed income/i,
+        name: /more information about guaranteed income$/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", {
+        name: /more information about guaranteed income starts at/i,
       }),
     ).toBeInTheDocument();
 
@@ -78,6 +83,26 @@ describe("glide-path InputForm guidance", () => {
     fireEvent.click(custom);
 
     expect(await screen.findByRole("textbox", { name: "Custom risk aversion" })).toHaveValue("4.5");
+  });
+
+  it("sets the bequest weight from the heirs control", () => {
+    const onChange = vi.fn();
+    renderWithMantine(
+      <InputForm
+        input={DEFAULTS}
+        errors={{}}
+        returnMode="iid-mc"
+        onChange={onChange}
+        onReturnModeChange={vi.fn()}
+        onReset={vi.fn()}
+        onGenerate={vi.fn()}
+        generating={false}
+      />,
+    );
+
+    expect(screen.getByRole("radio", { name: "None" })).toBeChecked();
+    fireEvent.click(screen.getByRole("radio", { name: "Some" }));
+    expect(onChange).toHaveBeenCalledWith("bequestWeight", 0.25);
   });
 
   it("disables the generate button and shows loading while computing", () => {

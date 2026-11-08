@@ -1,4 +1,0 @@
-interface:
-  display_name: "Route Codex Task"
-  short_description: "Choose a cost-efficient Codex task tier"
-  default_prompt: "Use $route-codex-task to classify this task and recommend the appropriate Codex tier."

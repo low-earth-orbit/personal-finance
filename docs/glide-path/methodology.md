@@ -12,6 +12,7 @@ It assumes you know personal-finance basics (asset allocation, safe withdrawal r
 ## Contents
 
 - [Summary](#summary)
+- [Applying this](#applying-this)
 - [Key terms](#key-terms)
 - [1. Model](#1-model)
 - [2. Results under iid returns](#2-results-under-iid-returns-the-default)
@@ -37,7 +38,19 @@ Default household: age 35, $200k saved, $20k/yr contributions for 30 years, a $6
 7. **Guessing the regime wrong costs little.** Any constant weight from 70% to 100% costs at most ~2% of CE in any era tested (§3d).
 8. **γ barely matters with constant-dollar spending.** Consumption is then almost always the full target or the guaranteed floor, so every γ ranks allocations the same way (§2d).
 
-The app recommends what the selected model's simulation produces: the optimized glide, or the best constant weight when it comes close enough (§1.5).
+The app recommends what the selected model's simulation produces: the optimized glide, or the best constant weight unless the glide is clearly better (§1.5).
+
+---
+
+## Applying this
+
+- **Choose the return model before the shape.** The two models can disagree on the equity level by 30pp, while the shape within either is worth ≤ ~0.5% of CE (§2e, §3a). Run both (`--compare-modes` in the CLI, or the app's Simulation toggle).
+- **When the models disagree, pick a constant weight between their answers.** Any constant weight from 70% to 100% costs at most ~2% of CE in any era tested (§3d), so you do not need to know which regime is coming.
+- **Leverage earns little.** In a young-saver case (age 30, $100k saved, $20k/yr for 30 years, $70k target), allowing up to 150% equity raised CE by under 1% ($250–450/yr) in both models, and the optimizer used it only in the first decade. That is inside the model's own uncertainty and ignores margin calls, rate changes and behaviour. Treat equity above ~110% as unrewarded.
+- **An over-funded plan has no best allocation.** When every constant weight already delivers the target (both engines flag this), the allocation does not change income and the reported weight is the middle of a tie. Decide what the surplus is for: leave it (set a bequest weight) or use it (retire earlier or spend more).
+- **Bequest input.** "Leave money to heirs" none / some / strong sets θ = 0 / 0.25 / 0.5 on u(money left + one year of target spending) (§1.4). With γ = 4 a large estate adds little utility, so θ barely moves a plan that needs its money; in an over-funded plan it replaces the tie with a real choice (55–70% equity instead of a ~50% tie midpoint in our test).
+- **Guaranteed-income start age.** A start age after retirement models a bridge: the portfolio funds the whole target until CPP/OAS/DB begins (§1.1). Retiring at 60 with $20k from 65 cost about 6% of CE ($52.5k → $49.3k) against the same income from 60.
+- **The app's bonds are nominal.** Its bond asset is the forward curve's bond (iid) or JST long government bonds (forward-block). The real-bond results in §4 are research, not an app option; if your sleeve is mostly real return bonds or XSTH, §4f's lower equity weights apply instead.
 
 ---
 
@@ -99,7 +112,8 @@ The app recommends what the selected model's simulation produces: the optimized 
 ### 1.1 Household and phases
 
 - **Accumulation:** the starting balance plus fixed real contributions, made mid-year. Consumption while working does not depend on the allocation, so the accumulation allocation matters only through the wealth it hands to retirement.
-- **Retirement:** a fixed horizon, with no mortality weighting and no bequest (wealth left at the end is worth nothing). Guaranteed income is paid every year; the portfolio funds the gap, withdrawn mid-year. A _pre-pension bridge_ (retired, but guaranteed income not yet started) is out of scope (§1.6).
+- **Retirement:** a fixed horizon, with no mortality weighting. The portfolio funds the gap between the target and guaranteed income, withdrawn mid-year. Wealth left at the end is worth nothing unless a bequest weight is set (§1.4).
+- **Guaranteed-income start age:** guaranteed income starts at retirement by default. A later start models a _pre-pension bridge_: the guaranteed income is 0 until it starts and the portfolio funds the whole (gross) target. During the bridge, consumption is scored at no less than the guaranteed amount, so a portfolio that runs dry before the pension starts costs utility like a depleted year after it, not −∞; the shortfall is still counted. Because of that floor, guaranteed income at or above the target with flexibility 0 and no bequest weight leaves every allocation tied, bridge or not, and both the app and the CLI reject it. The app's ≥ $10k guaranteed-income requirement applies from the start age.
 
 ### 1.2 Spending rule
 
@@ -108,8 +122,10 @@ Each retirement year the withdrawal targets a blend of a constant-dollar rule an
 ```
 targetₜ      = (1 − flex)·gap + flex·(withdrawal_rate · start-of-year balanceₜ)
 withdrawalₜ  = min(targetₜ, what the portfolio can afford)
-consumptionₜ = guaranteed income + withdrawalₜ
+consumptionₜ = guaranteed incomeₜ + withdrawalₜ    (≥ the guaranteed amount during a bridge)
 ```
+
+`gap` is the target minus that year's guaranteed income, so it is the full target during a bridge.
 
 - **flex = 0 (constant dollar):** withdraw the full gap every year until the money runs out, then live on guaranteed income. This is the setting of `/retirement`.
 - **flex = 1 (fully flexible):** spend `withdrawal_rate` (default 4%) of the current balance. Income moves with the market, the portfolio never runs out, and the target is not used.
@@ -154,7 +170,7 @@ The historical modes are annual sequencing checks, not an ACO replication (ACO b
 
 ### 1.4 Objective and optimizer
 
-- **Objective:** maximize expected Σ βᵗ·u(consumptionₜ) over retirement, with CRRA utility `u(c) = c^(1−γ)/(1−γ)` (log at γ = 1). CE income converts that expected utility back into dollars.
+- **Objective:** maximize expected Σ βᵗ·u(consumptionₜ) + θ·u(W_T + k) over retirement, with CRRA utility `u(c) = c^(1−γ)/(1−γ)` (log at γ = 1). The optional bequest term values final wealth W_T with the same γ, offset by k (default: one year of target spending, so a zero estate is finite) and undiscounted. θ = 0 by default (no bequest). CE income converts the consumption part back into dollars; with θ > 0 a **welfare CE** also includes the bequest term, measured against an empty estate. Both engines report the median money left at the end.
 - **Decision variable:** the equity weight for each step, a run of years held at one weight: 1 year in §2 and §3a; 5 years in the `research_history` sections (§2f, §3b–§4) and by default in the app (adjustable 1–10). Weights sit on a 5pp grid (10pp in §2).
 - **Coordinate ascent:** starting from the best constant weight, the optimizer tries every weight for one step with the others fixed, keeps the best, and cycles through the steps until nothing moves (at most 10–12 passes in Python, 6 in the app). No shape is imposed. The result is a coordinate-wise optimum, not a guaranteed global one.
 - **Common random numbers:** all candidates are scored on the same simulated paths, so differences between them are not sampling noise.
@@ -165,13 +181,15 @@ Grids and step lengths differ between sections, so tent depths from §2 (10pp, 1
 
 Three independent sets of simulated paths keep the comparison honest: the glide is fitted on an **optimization sample**, the best constant weight is picked on a **selection sample**, and both are scored on an **evaluation sample**. Every CE and shortfall figure in this note is out of sample in this sense.
 
-**Simplicity rule (web app).** The app recommends the constant weight when it wins on CE outright, or when it is within 3% on CE, 0.5pp on drawdown shortfall and 1.5pp on full-path shortfall (`SIMPLICITY_*` in [`recommendation.ts`](../../src/utils/glide-path/recommendation.ts)). CE gaps under ~3% are inside the model's own uncertainty: glide edge ≤ ~0.5%, Monte Carlo noise ~0.3%, era regret ≤ ~2%. Across 72 input combinations, every threshold of 2% or more gave the same seed-stable picks (calibration notes in the source). The shortfall gates stop the simpler pick from adding tail risk. The Python CLI flags the constant weight when its CE beats the glide's by more than 5%. Both always report the raw optimized glide.
+**Simplicity rule (web app).** The app recommends the constant weight unless the glide beats it by more than 3% on CE income or by more than 1 point on full-path shortfall (`SIMPLICITY_*` in [`recommendation.ts`](../../src/utils/glide-path/recommendation.ts)). With a bequest weight the gate still compares spending CE: the bequest already shapes both allocations through the objective, and welfare CE is ill-conditioned for well-funded plans (it inverts u near the CRRA bound, so a 0.1% spending-CE gap can show as a 4–5% welfare-CE gap). CE gaps under ~3% are inside the model's own uncertainty: glide edge ≤ ~0.5%, Monte Carlo noise ~0.3%, era regret ≤ ~2%. Across 72 input combinations, every threshold of 2% or more gave the same seed-stable picks, and the constant never added more than 0.3pp of full-path shortfall (calibration notes in the source). The Python CLI has no simplicity rule; it flags the constant weight when its CE beats the glide's by more than 5%. Both always report the raw optimized glide.
+
+**Over-funded plans and ties.** When θ = 0 and every constant weight on the selection sample delivers the target (CE within 0.5% and shortfall under 0.5%), both engines flag the plan as over-funded: the allocation does not change income. Ties among equally good weights (exact or within 1e-12) go to the middle of the tied range, for the optimizer's starting weight and for the best constant weight; they used to go to 0% equity.
 
 ### 1.6 Scope limits
 
-- **Guaranteed income is required.** Without it, a depleted year drives consumption to ~$0, where CRRA utility plunges toward −∞ and a handful of ruined paths decide the comparison. Raising the floor would invent income; scoring only surviving paths would make every γ agree. The app therefore requires ≥ $10,000 of guaranteed income; Python accepts zero but reports the comparison as inconclusive. A pre-pension bridge has the same problem.
-- **Undetermined allocation.** With flex = 0 and guaranteed income ≥ the target, the portfolio funds nothing and every allocation ties; both engines reject this input.
-- **Final retirement year.** With no bequest, the last year's allocation barely matters. It is reported (the `end` column) but excluded from the tent and slope; read it loosely.
+- **Guaranteed income is required.** Without it, a depleted year drives consumption to ~$0, where CRRA utility plunges toward −∞ and a handful of ruined paths decide the comparison. Raising the floor would invent income; scoring only surviving paths would make every γ agree. The app therefore requires ≥ $10,000 of guaranteed income; Python accepts zero but reports the comparison as inconclusive. A bridge is handled by the consumption floor in §1.1.
+- **Undetermined allocation.** With flex = 0, guaranteed income ≥ the target from retirement and no bequest weight, the portfolio funds nothing and every allocation ties; both engines reject this input.
+- **Final retirement year.** With no bequest weight, the last year's allocation barely matters. It is reported (the `end` column) but excluded from the tent and slope; read it loosely.
 
 ---
 
@@ -279,7 +297,7 @@ For semi-flexible and flexible spending, every column ties at 100% equity in all
 | $120k / $12k           | 3.3%          | 100% | 100%          | $47,710 | 14.3%               |
 | $100k / $10k           | 3.9%          | 100% | 100%          | $43,013 | 22.1%               |
 
-A spender capped at the target gains nothing from extra wealth (there is no bequest) but loses heavily from shortfalls. The more over-funded the plan, the more the optimizer protects the floor.
+A spender capped at the target gains nothing from extra wealth (with no bequest weight) but loses heavily from shortfalls. The more over-funded the plan, the more the optimizer protects the floor.
 
 **Compare spending rules at the same spending level.** At 4%, the flexible rule's first-year draw is ~$83k (4% of its ~$2.07M median balance), double the constant rule's $40k. Most of §2b's CE gap is therefore **spending more**, not spending flexibly. The matched-draw rows set the rate to 1.93%, which gives the same $40k first-year draw.
 
@@ -372,20 +390,22 @@ iid-mc gives 70%. Forward-block reaches 100% on either dataset, so pooling is no
 
 ### 3c. Era and country cuts
 
-Each cut restricts the history before rescaling, so only the sequencing changes. VRs are on arithmetic returns (what the engine samples). `bond iid null` is the mean and 5th–95th percentile of bond VR(10y) after shuffling years within each country, since short samples bias VR below 1 even for iid data. Bills (short-term government paper) are shown for comparison.
+Each cut restricts the history before rescaling, so only the sequencing changes. VRs are on arithmetic returns (what the engine samples). `bond iid null` is the mean and 5th–95th percentile of bond VR(10y) after shuffling years within each country, since short samples bias VR below 1 even for iid data. That shuffle treats the 16 countries as independent. Where the panel is balanced (post-1950, 1990–2020), a **common-year null** applies the same shuffle of calendar years to every country, which keeps their co-movement and gives the honest width. Bills (short-term government paper) are shown for comparison.
 
 | History | bond VR(10y) | bond iid null | bill VR(10y) | equity VR(10y) | best constant | CE gain vs 100% |
 | --- | --- | --- | --- | --- | --- | --- |
 | full 1871–2020 | 2.66 | 1.00 [0.87, 1.15] | 3.29 | 0.91 | 100% | — |
-| post-1950 | 2.21 | 0.94 [0.78, 1.09] | 4.97 | 0.91 | 100% | — |
+| post-1950 | 2.21 | 0.94 [0.78, 1.09]; common-year 0.93 [0.65, 1.28] | 4.97 | 0.91 | 100% | — |
 | ex Germany + Japan | 2.54 | 0.99 [0.85, 1.13] | 3.63 | 0.94 | 100% | — |
 | stable six¹ | 1.92 | 0.96 [0.77, 1.19] | 3.23 | 0.73 | 90% | +0.1% |
-| 1990–2020 | **0.58** | 0.82 [0.61, 1.08] | 3.85 | 0.69 | **50%** | +0.4% |
+| 1990–2020 | **0.58** | 0.82 [0.61, 1.08]; common-year 0.79 [0.44, 1.35] | 3.85 | 0.69 | **50%** | +0.4% |
 
-¹ USA, UK, Canada, Australia, Switzerland, Sweden.
+¹ USA, UK, Canada, Australia, Switzerland, Sweden. JST has no return data for Canada, so five countries contribute.
 
 - **Not a disaster artifact.** Dropping Germany and Japan leaves bond persistence about the same (2.54 vs 2.66).
-- **Era-dependent for bonds.** In 1990–2020 bonds mean-revert (VR 0.58, near the null's 5th percentile), stock/bond correlation falls to ≈0, and the interior tent returns. That is one 31-year regime (about three independent decades), and it ends before the 2021–22 inflation shock. §4b explains why.
+- **Era-dependent for bonds.** In 1990–2020 bond persistence disappears and stock/bond correlation falls to ≈0 (0.06), and the interior optimum returns. That is one 31-year regime (about three independent decades), and it ends before the 2021–22 inflation shock. §4b explains why.
+- **The 1990–2020 bond VR is consistent with iid, not evidence of mean reversion.** 0.58 sits at the 2nd percentile of the within-country null but only the ~23rd of the common-year null, because the 16 countries' bond markets moved together. It is below 1 in all 16 countries (0.13–0.86) and in every nearby window (0.41–0.74 for 1980/1985/1995 starts or 2010/2015 ends), so the loss of persistence is robust; the reversion beyond iid is not. The full-history and post-1950 persistence (2.66, 2.21) lie far outside either null.
+- **The 50% optimum comes from correlation, not sequencing.** Drawing the same 1990–2020 years independently instead of in blocks still gives 50% (`--sections era-seq`); block sequencing only flattens the curve (100% costs 0.4% of CE with blocks, 2.6% without). In the full history the same switch moves the optimum from 100% to 80%.
 - **Bills stay persistent in every era** (VR 3.2–5.0), through lagging inflation in the long samples and the policy-rate cycle in 1990–2020 (§4b). Short duration removes neither.
 
 ### 3d. Welfare regret across regimes (robustness check)
@@ -452,13 +472,13 @@ _Figure 3. Contributions to bond VR(10y) by history cut. The bars add up to each
 - **Bills** split the same way. Inflation is 75–87% of bill persistence in the long samples, and the bill rate alone is nearly a random walk (VR(10y) ≈ 8). In 1990–2020 the rate term is 124% and inflation −24%: policy rates fell toward zero while inflation held near target. That is a **real-rate cycle**, which inflation linkage does not remove.
 - **Limits:** this is variance accounting, not a causal split, and the price term is a noisy proxy for yield moves (JST yields are annual averages; the implied duration is only ~3.4).
 
-**Why long bonds mean-revert in 1990–2020.**
+**Why long bonds lose their persistence in 1990–2020.**
 
 - **Inflation stopped mattering** (1.81 → −0.05). Inflation was still persistent, but its swings were small and yields moved with it, so carry offset most of it.
 - **Rate moves unwound.** The price term's own VR(10y) is ≈ 0.24, against ≈ 1.0 in every other cut. Rate spikes (1994, 1999, 2013, 2018) reversed within a few years, and with stock/bond correlation ≈ 0, bonds rallied in equity crises (2000–02, 2008, 2020) and gave some back in recoveries.
 - **Not duration matching or falling yields.** Carry and price co-move slightly positively, so higher income did not earn back price losses. A steady fall in yields raises the mean return; it does not create reversion.
 
-Inflation targeting is therefore the likely **condition** for bond VR < 1, not a demonstrated cause; 31 years cannot separate it from the falling-rate backdrop.
+Inflation targeting is therefore the likely **condition** for bond VR ≈ 1 or below, not a demonstrated cause; 31 years cannot separate it from the falling-rate backdrop.
 
 ### 4c. How robust is the short-TIPS result?
 
@@ -577,13 +597,13 @@ Mixes step by 25%; CE at the best constant weight:
 - **As the nominal slot, a GIC ladder at least ties ZGB** (equal at 1.25% real, better at 2.0%).
 - **The model is generous to GICs.** It rebalances the whole sleeve annually at market value; non-redeemable GICs free only the maturing rung (~20% a year), so in a crash they cannot fund equity purchases.
 
-**Reading.** For a permanent sleeve the model favours mostly or fully real bonds: worth 1.5–3% of CE if inflation regimes recur, close to free if 1990–2020 continues. Lower the equity weight to match. Any nominal slice is better held in GICs than long bonds when GICs pay a premium. The synthetic real leg is an assumption, not a fund, and §4c's harsh row shows its edge can shrink to noise.
+**Reading.** The model favours a mostly or fully real sleeve, with a lower equity weight to match. That edge rests on an assumed synthetic real series, not a fund with a track record, and §4c's harsh row shows it can shrink to noise, so read it as insurance against a return of inflation regimes rather than an expected gain; if 1990–2020 continues it costs close to nothing. If GICs pay a premium over long bonds, any nominal slice is better held in a GIC ladder than in long bonds.
 
 ---
 
 ## 5. Comparison with ACO and ERN
 
-- **ACO**: Anarkulova, Cederburg & O'Doherty, _Beyond the Status Quo_ ([SSRN 4590406](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4590406)). A 38-country block bootstrap finds ~100% equity held flat over the lifecycle, with a shallow tent at retirement for constant spending.
+- **ACO**: Anarkulova, Cederburg & O'Doherty, _Beyond the Status Quo_ ([SSRN 4590406](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4590406), version of August 2026). A block bootstrap of a monthly 39-country panel (Global Financial Data, 1890–2023; domestic stocks, international stocks, bonds, bills) finds ~100% equity held flat over the lifecycle, with a shallow tent at retirement for constant spending.
 - **ERN**: [earlyretirementnow.com, Part 20](https://earlyretirementnow.com/2017/09/20/the-ultimate-guide-to-safe-withdrawal-rates-part-20-more-thoughts-on-equity-glidepaths/). A US backtest finds a rising retirement glide (e.g. 60%→100%) adds ~0.1–0.3pp to the SWR, but only when CAPE > 20.
 - **Kitces & Pfau** (2014): a rising equity glide through retirement beats a constant or declining one on success rate, by reducing exposure in the early, sequence-sensitive years.
 
@@ -593,7 +613,11 @@ Mixes step by 25%; CE at the best constant weight:
 | ERN / Kitces–Pfau: rising retirement glide | The derisk-then-rise shape appears under iid with rigid spending, and largely vanishes under forward-block. ERN's SWR boost does **not** reproduce under iid (§2a): the rising glide only ties the best constant weight. |
 | Both: beat a declining (target-date) retirement glide | Direction agreed, magnitude tiny: the glide shape is worth ≤ ~0.5% of CE. |
 
-**Why our iid path differs from ACO's.** ACO stays at ~100% through accumulation; our iid constant-dollar path falls into the tent. Two levers each close the gap on their own: historical sequencing (§3) and less over-funding (§2f). The third difference is the objective: ACO also values terminal wealth, which removes the "wasted upside" of a capped spender. JST and ACO draw on largely the same history, so reproducing ACO is a consistency check, not independent confirmation.
+**Why our iid path differs from ACO's.** ACO stays at ~100% through accumulation; our iid constant-dollar path falls into the tent. Two levers each close the gap on their own: historical sequencing (§3) and less over-funding (§2f). The third difference is the objective: ACO also values terminal wealth, which removes the "wasted upside" of a capped spender. ACO uses Global Financial Data rather than JST, but the two cover largely the same markets and events, so reproducing ACO is a consistency check, not independent confirmation.
+
+**Persistence and the 1990–2020 regime in ACO.** ACO reports bond VR(10) of 1.88 in the actual data and 2.16 in its 10-year-block bootstrap (international stocks 0.86 / 0.89, domestic stocks 0.79 / 0.90, bills 2.49 / 2.70), the same direction as our full-history 2.66 (bonds), 0.91 (equity) and 3.29 (bills). Excluding war and hyperinflation years, our full-history bond VR(10y) of 2.06 (1.77 demeaned) is close to ACO's 1.88 / 2.16. Its only era cut is post-WWII (1945–2023), which still gives 100% equity. It does not test an inflation-targeting or post-1990 period, so our 1990–2020 result has no counterpart there.
+
+**Real bonds in ACO.** A footnote (untabulated) adds TIPS, simulated as fitted values from a regression of a TIPS fund (VIPSX, 2000–2023, R² 66%) on ACO's four assets plus noise, and finds zero weight. That proxy is built from nominal bonds and stocks, so it inherits their inflation exposure; it does not test an asset whose real value is fixed, which is what §4a's idealized and §4c's realistic real legs model.
 
 ---
 
@@ -606,7 +630,7 @@ Mixes step by 25%; CE at the best constant weight:
 - **Sequencing is assumed independent of the return level.** Forward-block applies history's crash-and-recovery patterns to a lower forward equity premium. If those patterns came partly from history's higher returns, forward-block overstates them.
 - **One equity asset, two-asset menu.** No domestic/international split.
 - **iid bonds** have a fixed 0.48 stock correlation (bond-unfriendly versus history's 0.29) and no inflation risk or persistence (bond-friendly).
-- **Fixed horizon, no mortality weighting, no bequest, fixed contributions, no taxes or fees, annual rebalancing, discrete grid.** Read the direction and rough size, not basis points.
+- **Fixed horizon, no mortality weighting, bequest optional and off by default, fixed contributions, no taxes or fees, annual rebalancing, discrete grid.** Read the direction and rough size, not basis points.
 
 ---
 
@@ -614,7 +638,9 @@ Mixes step by 25%; CE at the best constant weight:
 
 **Python** (`analysis/glide_path/`): module roles, API and run commands are in its [README](../../analysis/glide_path/README.md). Research code can pass `history=` (a custom or cut return series) and `sampler=` (a custom index sampler) to `recommend_glide_path`.
 
-**Web** (`src/utils/glide-path/`): `engine.ts` (the same model, one simulation kernel for iid and forward-block), `recommendation.ts` (simplicity rule), `jstData.ts` (generated bundle). The app defaults to 5-year steps (adjustable 1–10), offers iid-mc and forward-block, and requires ≥ $10k of guaranteed income.
+**Web** (`src/utils/glide-path/`): `engine.ts` (the same model, one simulation kernel for iid and forward-block), `recommendation.ts` (simplicity rule), `jstData.ts` (generated bundle). The app defaults to 5-year steps (adjustable 1–10), offers iid-mc and forward-block, and requires ≥ $10k of guaranteed income from its start age. Its "Leave money to heirs" input maps none / some / strong to θ = 0 / 0.25 / 0.5.
+
+**CLI.** `python3 analysis/recommend_glide.py -i` prompts for every input and prints the equivalent command. `--guaranteed-start-age AGE` (with `--start-age`) sets the bridge, `--bequest-weight θ` and `--bequest-offset k` the bequest term, and `--compare-modes` prints one table across iid-mc, forward-block, historical-block and historical-block on 1990–2020.
 
 Where each result comes from (`research_history` sections are passed as `--sections <name> ...`):
 
@@ -624,7 +650,7 @@ Where each result comes from (`research_history` sections are passed as `--secti
 | §2f | `research_history` `funding` |
 | §3a | `recommend_glide_path(..., interval=1, return_mode="forward-block", n_paths=15_000)` |
 | §3b | `matrix`, `blocks`, `channels` |
-| §3c | `vr` (variance ratios and nulls), `regret` (best constant per cut) |
+| §3c | `vr` (variance ratios and nulls), `regret` (best constant per cut), `era-seq` (block vs iid draws) |
 | §3d | `regret` |
 | §4a, §4d | `menu`, `tips-etf`, `bills-block` |
 | §4b | `bond-decomp` |
@@ -635,8 +661,8 @@ Where each result comes from (`research_history` sections are passed as `--secti
 ```bash
 python3 -m analysis.glide_path.research               # §2 tables + figures (~5 min)
 python3 -m analysis.glide_path.research_history --sections matrix blocks channels menu \
-    tips-etf tips-stress sleeve-blend regime-mix cpi-basis gic-ladder bills-block gamma curves vr \
-    bond-decomp regret funding \
+    tips-etf tips-stress sleeve-blend regime-mix cpi-basis gic-ladder bills-block gamma vr \
+    bond-decomp regret funding era-seq \
     --accum 30 --retire 30 --savings 200000 --contrib 20000 --interval 5 --paths 8000
 python3 -m analysis.glide_path.doc_figures             # Figures 1–3 (light + dark SVG)
 python3 -m analysis.glide_path.generate_bundle         # regenerate src/utils/glide-path/jstData.ts

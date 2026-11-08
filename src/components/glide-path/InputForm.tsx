@@ -14,7 +14,7 @@ import {
 import { IconChartLine } from "@tabler/icons-react";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import FieldHeader from "@/components/shared/FieldHeader";
-import { GAMMA_PRESETS } from "@/utils/glide-path/presets";
+import { BEQUEST_PRESETS, GAMMA_PRESETS } from "@/utils/glide-path/presets";
 import { FIELD_CONSTRAINTS } from "@/utils/glide-path/validation";
 import type {
   GlidePathErrors,
@@ -119,9 +119,15 @@ export default function InputForm({
               <UserInputFormItem
                 {...num("guaranteedIncome")}
                 label="Guaranteed income"
-                labelHelperText="Annual CPP, OAS, DB pension, and other income paid every retirement year, in today's dollars."
+                labelHelperText="Annual CPP, OAS, DB pension, and other lifetime income once it starts, in today's dollars."
                 prefix="$"
                 thousandSeparator
+              />
+              <UserInputFormItem
+                {...num("guaranteedStartAge")}
+                label="Guaranteed income starts at"
+                labelHelperText="If this is after your retirement age, the portfolio funds your whole target until then (a bridge). At or before retirement means it is paid from retirement."
+                suffix=" yrs"
               />
             </SimpleGrid>
           </Accordion.Panel>
@@ -202,6 +208,19 @@ export default function InputForm({
                 description="How much you value spending later in retirement compared with earlier years. 1.0 = value every year equally, 0.985 = balanced, 0.97 = strongly favour earlier years."
                 step={0.005}
               />
+              <Stack gap={4}>
+                <FieldHeader
+                  label="Leave money to heirs"
+                  description="None = money left at the end of the plan is worth nothing to the optimizer. Some or Strong give what you leave a value (bequest weight 0.25 or 0.5). It mostly matters when your plan is over-funded: it then picks the allocation for your heirs instead of an arbitrary tie."
+                />
+                <SegmentedControl
+                  value={String(input.bequestWeight)}
+                  onChange={(v) => onChange("bequestWeight", Number(v))}
+                  data={BEQUEST_PRESETS.map((p) => ({ value: String(p.value), label: p.label }))}
+                  aria-label="Leave money to heirs"
+                  size="sm"
+                />
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

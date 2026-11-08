@@ -60,12 +60,13 @@ export default function Methodology() {
         <Text size="sm" c="dimmed">
           It maximizes welfare, not success rate: where no stock/bond mix can close a funding gap,
           the fix lives in your inputs (retire later, spend less, save more), not the allocation.
-          Guaranteed income is assumed to start at retirement and be paid every year — a pre-pension
-          &ldquo;bridge&rdquo; is out of scope (use the retirement tool for that funding question).
-          Income shortfall — a year the portfolio can&apos;t fund your targeted spending — is
-          reported two ways: drawdown-only (from the expected retirement balance) and full-path
-          (which also includes pre-retirement market luck). See the analysis note below for how γ
-          and β enter the objective and typical values for each.
+          Guaranteed income starts at the age you set; before then (a &ldquo;bridge&rdquo; after an
+          earlier retirement) the portfolio funds your whole target. Money left at the end of the
+          plan counts only if you choose to leave money to heirs. Income shortfall — a year the
+          portfolio can&apos;t fund your targeted spending — is reported two ways: drawdown-only
+          (from the expected retirement balance) and full-path (which also includes pre-retirement
+          market luck). See the analysis note below for how γ and β enter the objective and typical
+          values for each.
         </Text>
 
         <Title order={3} fz="md">
@@ -137,6 +138,42 @@ export default function Methodology() {
           recommendation. If guaranteed income covers your whole target and spending is fixed, the
           portfolio funds nothing and no allocation is better than another, so the tool asks you to
           adjust the inputs.
+        </Point>
+
+        <Title order={3} fz="md">
+          Applying this
+        </Title>
+        <Point heading="Choose the return model before the shape.">
+          The two return models can disagree on the right equity level by 30 percentage points,
+          while the glide shape within either is worth about 0.5% of income. Try both settings of
+          the Simulation toggle.
+        </Point>
+        <Point heading="When they disagree, pick a constant weight between their answers.">
+          Any constant weight from 70% to 100% equity cost at most about 2% of certainty-equivalent
+          income in every historical era we tested, so you don&apos;t need to know which regime is
+          coming.
+        </Point>
+        <Point heading="Leverage earns little.">
+          For a young saver, allowing up to 150% equity raised certainty-equivalent income by under
+          1% in both models, and only in the first decade of saving — before margin calls, rate
+          changes or nerves. Treat equity above about 110% as unrewarded.
+        </Point>
+        <Point heading="An over-funded plan has no best allocation.">
+          If every allocation already delivers your target, the tool says so: the weight shown is
+          the middle of a tie. Decide what the surplus is for — leave it (set &ldquo;Leave money to
+          heirs&rdquo;) or use it (retire earlier or spend more).
+        </Point>
+        <Point heading="What the bequest and start-age inputs do.">
+          &ldquo;Leave money to heirs&rdquo; gives money left at the end a value (none, some or
+          strong); with typical risk aversion a large estate adds little, so it mostly matters for
+          over-funded plans. A guaranteed-income start age after retirement makes the portfolio
+          carry the full target until the pension starts, which lowers income — retiring at 60 with
+          CPP/OAS from 65 cost about 6% in our example.
+        </Point>
+        <Point heading="Bonds here are nominal.">
+          The app&apos;s bond asset is an ordinary (nominal) bond. Our research finds that a mostly
+          real-return bond sleeve pairs with a lower equity weight, but that rests on an assumed
+          real-bond series and is not an option in the app — see the analysis note.
         </Point>
 
         <Text size="sm" c="dimmed">

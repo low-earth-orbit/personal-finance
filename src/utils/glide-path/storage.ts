@@ -26,7 +26,12 @@ export function loadInput(): GlidePathInput {
           ? (parsed.pensionPct / 100) *
             (typeof parsed.preRetirementIncome === "number" ? parsed.preRetirementIncome : 100000)
           : DEFAULTS.guaranteedIncome;
-    return { ...DEFAULTS, ...current, guaranteedIncome };
+    // Saved before the start-age input existed: guaranteed income began at retirement.
+    const guaranteedStartAge =
+      typeof current.guaranteedStartAge === "number"
+        ? current.guaranteedStartAge
+        : (current.retirementAge ?? DEFAULTS.retirementAge);
+    return { ...DEFAULTS, ...current, guaranteedIncome, guaranteedStartAge };
   } catch {
     return { ...DEFAULTS };
   }

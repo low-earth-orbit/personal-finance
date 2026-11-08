@@ -53,6 +53,26 @@ describe("validateGlidePathInput", () => {
     ).toEqual({});
   });
 
+  it("allows fully covered spending with a bequest weight, but not via a bridge", () => {
+    const covered = { flexibility: 0, targetIncome: 60000, guaranteedIncome: 60000 };
+    // Bridge years are floored at the guaranteed amount, so every allocation still ties.
+    expect(
+      validateGlidePathInput(base({ ...covered, retirementAge: 60, guaranteedStartAge: 65 }))
+        .targetIncome,
+    ).toMatch(/must exceed guaranteed income/i);
+    expect(validateGlidePathInput(base({ ...covered, bequestWeight: 0.25 }))).toEqual({});
+  });
+
+  it("requires guaranteed income to start before the plan ends", () => {
+    const errors = validateGlidePathInput(base({ guaranteedStartAge: 95 }));
+    expect(errors.guaranteedStartAge).toMatch(/before your plan-until age/i);
+  });
+
+  it("limits the bequest weight to the strong preset", () => {
+    expect(validateGlidePathInput(base({ bequestWeight: 0.5 }))).toEqual({});
+    expect(validateGlidePathInput(base({ bequestWeight: 0.6 })).bequestWeight).toBeTruthy();
+  });
+
   it("limits the glide-step interval to one through ten years", () => {
     expect(validateGlidePathInput(base({ interval: 1 }))).toEqual({});
     expect(validateGlidePathInput(base({ interval: 10 }))).toEqual({});

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 import io
 import os
 import runpy
@@ -12,7 +12,7 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-from analysis.glide_path.interactive import _ask_choice, format_reproduction_command
+from analysis.glide_path.interactive import _ask_choice, collect_argv, format_reproduction_command
 from analysis.glide_path.markets import (
     PWL_CURVE,
     HistoricalMarket,
@@ -22,6 +22,7 @@ from analysis.glide_path.markets import (
     forward_anchors,
 )
 from analysis.glide_path.recommender import recommend_glide_path
+from analysis.glide_path.simulate import Lifecycle, tie_middle_argmax
 from analysis.shared.returns import arithmetic_to_geometric, geometric_to_arithmetic
 from analysis.shared.jst_history import (
     ReturnHistory,
@@ -30,7 +31,7 @@ from analysis.shared.jst_history import (
     sample_indices,
     sample_return_paths,
 )
-from analysis.glide_path.cli import main as cli_main, parse_year_windows
+from analysis.glide_path.cli import build_parser, main as cli_main, parse_year_windows
 
 
 def synthetic_history() -> ReturnHistory:
@@ -182,68 +183,81 @@ class GlidePathMarketTests(unittest.TestCase):
         np.testing.assert_allclose(means, [(1.03 / 1.02) - 1, (1.08 / 1.02) - 1])
         np.testing.assert_allclose(vols, [0.05 / 1.02, 0.12 / 1.02])
 
-    def test_reproduction_command_includes_resolved_interactive_inputs(self):
-        command = format_reproduction_command(
-            accum_years=25,
-            retire_years=35,
-            flexibility=0.5,
-            guaranteed_income=30_000.0,
-            interval=5,
-            gamma=6.0,
-            beta=0.97,
-            max_leverage=1.5,
-            borrow_cost=1.5,
-            current_savings=500_000.0,
-            annual_contribution=30_000.0,
-            target_income=70_000.0,
-            withdrawal_rate=0.04,
-            start_age=40,
-            return_mode="historical-block",
-            block_years=8,
-            n_paths=30_000,
-        )
-
+    def test_interactive_prompts_build_cli_argv(self):
+        answers = [
+            "40", "60", "95", "500000", "30000",      # about you
+            "70000", "30000", "65",                     # target, guaranteed, start age
+            "0.5", "0.035",                             # flex, withdrawal rate
+            "6", "0.97", "b",                           # gamma, beta, bequest "some"
+            "150", "100", "1.5",                        # max equity, retirement max, borrow
+            "c", "",                                    # historical-block, pooled
+            "8", "5", "30000", "out",                   # block years, interval, paths, plot
+        ]
+        with patch("builtins.input", side_effect=answers), redirect_stdout(io.StringIO()):
+            argv = collect_argv()
+        self.assertEqual(argv, [
+            "--start-age", "40", "--accum", "20", "--retire", "35", "--savings", "500000",
+            "--contrib", "30000", "--target-income", "70000", "--guaranteed-income", "30000",
+            "--flex", "0.5", "--gamma", "6", "--beta", "0.97", "--max-leverage", "1.5",
+            "--interval", "5", "--paths", "30000", "--guaranteed-start-age", "65",
+            "--withdrawal-rate", "0.035", "--bequest-weight", "0.25",
+            "--retirement-max-equity", "1", "--borrow-cost", "1.5",
+            "--mode", "historical-block", "--block-years", "8", "--plot", "out.png",
+        ])
         self.assertEqual(
-            shlex.split(command),
-            [
-                "python3",
-                "analysis/recommend_glide.py",
-                "--accum",
-                "25",
-                "--retire",
-                "35",
-                "--flex",
-                "0.5",
-                "--guaranteed-income",
-                "30000",
-                "--interval",
-                "5",
-                "--gamma",
-                "6",
-                "--beta",
-                "0.97",
-                "--start-age",
-                "40",
-                "--savings",
-                "500000",
-                "--contrib",
-                "30000",
-                "--target-income",
-                "70000",
-                "--withdrawal-rate",
-                "0.04",
-                "--mode",
-                "historical-block",
-                "--max-leverage",
-                "1.5",
-                "--paths",
-                "30000",
-                "--borrow-cost",
-                "1.5",
-                "--block-years",
-                "8",
-            ],
+            shlex.split(format_reproduction_command(argv)),
+            ["python3", "analysis/recommend_glide.py", *argv],
         )
+        # Every emitted flag parses in the CLI.
+        args = build_parser().parse_args(argv)
+        self.assertEqual(args.guaranteed_start_age, 65)
+        self.assertEqual(args.bequest_weight, 0.25)
+
+    def test_interactive_defaults_emit_compare_and_skip_optional_flags(self):
+        answers = [""] * 9 + ["", "", ""] + ["", "", "e", "", "", "", ""]
+        # defaults: no flex rate prompt, no borrow prompt; "e" picks compare (block years asked)
+        with patch("builtins.input", side_effect=answers), redirect_stdout(io.StringIO()):
+            argv = collect_argv()
+        self.assertIn("--compare-modes", argv)
+        for flag in ("--mode", "--guaranteed-start-age", "--bequest-weight", "--withdrawal-rate",
+                     "--retirement-max-equity", "--borrow-cost", "--dataset", "--plot"):
+            self.assertNotIn(flag, argv)
+        build_parser().parse_args(argv)
+
+    def test_cli_interactive_flag_runs_prompt_flow(self):
+        with patch("analysis.glide_path.interactive.run_interactive") as run:
+            cli_main(["-i"])
+        run.assert_called_once_with()
+
+    def test_cli_guaranteed_start_age_becomes_delay(self):
+        with patch(
+            "analysis.glide_path.cli.recommend_glide_path", return_value={}
+        ) as recommend, patch("analysis.glide_path.cli.print_rec"):
+            cli_main(["--start-age", "40", "--accum", "20", "--guaranteed-start-age", "65",
+                      "--bequest-weight", "0.5"])
+        kwargs = recommend.call_args.kwargs
+        self.assertEqual(kwargs["guaranteed_delay"], 5)
+        self.assertEqual(kwargs["bequest_weight"], 0.5)
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit):
+            cli_main(["--guaranteed-start-age", "65"])
+        self.assertIn("requires --start-age", stderr.getvalue())
+
+    def test_cli_compare_modes_runs_four_models(self):
+        rec = {"schedule": [{"year_start": 0, "phase": "accum", "equity_pct": 50.0}],
+               "ce_income": 1.0, "depletion": 0.0, "flat_equity_pct": 50.0,
+               "flat_ce_income": 1.0, "over_funded": False}
+        with patch(
+            "analysis.glide_path.cli.recommend_glide_path", return_value=rec
+        ) as recommend, redirect_stdout(io.StringIO()) as out:
+            cli_main(["--compare-modes"])
+        modes = [c.kwargs["return_mode"] for c in recommend.call_args_list]
+        self.assertEqual(modes, ["iid-mc", "forward-block", "historical-block", "historical-block"])
+        self.assertEqual(recommend.call_args_list[-1].kwargs["exclude_years"], [(1871, 1989)])
+        self.assertIn("hist-block 1990-2020", out.getvalue())
+        stderr = io.StringIO()
+        with redirect_stderr(stderr), self.assertRaises(SystemExit):
+            cli_main(["--compare-modes", "--mode", "iid-mc"])
 
     def test_cli_forwards_beta_and_path_count(self):
         with patch(
@@ -407,33 +421,6 @@ class GlidePathMarketTests(unittest.TestCase):
         with patch("builtins.input", side_effect=["z", "b"]):
             self.assertEqual(_ask_choice("Mode", "iid-mc", choices), "historical-iid")
 
-    def test_reproduction_command_emits_dataset_only_when_not_pooled(self):
-        base = dict(
-            accum_years=0, retire_years=30, flexibility=0.0, guaranteed_income=20_000.0,
-            interval=5, gamma=4.0, beta=0.985, max_leverage=1.0, borrow_cost=2.0,
-            current_savings=1_000_000.0, annual_contribution=0.0, target_income=60_000.0,
-            withdrawal_rate=0.04, start_age=None, return_mode="forward-block",
-            block_years=10, n_paths=5_000,
-        )
-        # pooled is the new default — should be omitted from the command
-        self.assertNotIn("--dataset", shlex.split(format_reproduction_command(dataset="pooled", **base)))
-        # world is non-default — should be emitted
-        world = shlex.split(format_reproduction_command(dataset="world", **base))
-        self.assertEqual(world[world.index("--dataset") + 1], "world")
-
-    def test_reproduction_command_forward_block_emits_block_years(self):
-        command = format_reproduction_command(
-            accum_years=0, retire_years=30, flexibility=0.0, guaranteed_income=20_000.0,
-            interval=5, gamma=4.0, beta=0.985, max_leverage=1.0,
-            borrow_cost=2.0, current_savings=1_000_000.0, annual_contribution=0.0,
-            target_income=60_000.0, withdrawal_rate=0.04, start_age=None,
-            return_mode="forward-block", block_years=7,
-            n_paths=5_000,
-        )
-        tokens = shlex.split(command)
-        self.assertIn("forward-block", tokens)
-        self.assertEqual(tokens[tokens.index("--block-years") + 1], "7")
-
     def test_cli_rejects_exclusions_with_world_dataset(self):
         stderr = io.StringIO()
         with redirect_stderr(stderr), self.assertRaises(SystemExit):
@@ -520,6 +507,55 @@ class GlidePathMarketTests(unittest.TestCase):
     def test_fully_covered_constant_spending_is_undetermined(self):
         with self.assertRaisesRegex(ValueError, "allocation undetermined"):
             self._recommend(flexibility=0.0, target_income=40_000, guaranteed_income=40_000)
+        # A bridge does not help (bridge years are floored at the guaranteed amount)...
+        with self.assertRaisesRegex(ValueError, "allocation undetermined"):
+            self._recommend(flexibility=0.0, target_income=40_000, guaranteed_income=40_000,
+                            retire_years=3, guaranteed_delay=1)
+        # ...but a bequest motive makes the allocation matter again.
+        self._recommend(flexibility=0.0, target_income=40_000, guaranteed_income=40_000,
+                        bequest_weight=0.25)
+
+    def test_defaults_reproduce_no_bequest_no_bridge(self):
+        base = self._recommend()
+        explicit = self._recommend(bequest_weight=0.0, guaranteed_delay=0)
+        self.assertEqual(base, explicit)
+        self.assertEqual(base["welfare_ce"], base["ce_income"])
+        self.assertGreater(base["median_bequest"], 0)
+        self.assertTrue(base["over_funded"])  # the tiny test household is over-funded
+        self.assertFalse(self._recommend(current_savings=0)["over_funded"])
+
+    def test_guaranteed_delay_zeroes_income_during_bridge(self):
+        life = Lifecycle.build(accum_years=0, retire_years=4, current_savings=1e6,
+                               annual_contribution=0, target_income=60_000,
+                               guaranteed_income=20_000, flexibility=0.0, withdrawal_rate=0.04,
+                               gamma=4.0, beta=1.0, guaranteed_delay=2)
+        np.testing.assert_array_equal(life.guaranteed, [0, 0, 20_000, 20_000])
+        np.testing.assert_array_equal(life.gap, [60_000, 60_000, 40_000, 40_000])
+        np.testing.assert_array_equal(life.consumption_floor, [20_000, 20_000, 0, 0])
+        no_bridge = self._recommend(retire_years=4)
+        bridge = self._recommend(retire_years=4, guaranteed_delay=2)
+        self.assertGreater(bridge["initial_target_draw"], no_bridge["initial_target_draw"])
+        self.assertEqual(bridge["params"]["guaranteed_delay"], 2)
+
+    def test_bequest_weight_raises_welfare_and_rewards_money_left(self):
+        rec = self._recommend(bequest_weight=0.5)
+        self.assertGreater(rec["welfare_ce"], rec["ce_income"])
+        self.assertEqual(rec["params"]["bequest_offset"], 40_000)
+        with self.assertRaisesRegex(ValueError, "bequest_offset"):
+            self._recommend(bequest_weight=0.5, bequest_offset=0)
+
+    def test_over_funded_plan_is_flagged_and_ties_take_the_middle(self):
+        rec = self._recommend(current_savings=5_000_000, grid_step=0.25)
+        self.assertTrue(rec["over_funded"])
+        # Every weight ties exactly: the flat comparator is the middle of 0..100%, not 0%.
+        self.assertEqual(rec["flat_equity_pct"], 50.0)
+        self.assertFalse(self._recommend(current_savings=5_000_000, grid_step=0.25,
+                                         bequest_weight=0.25)["over_funded"])
+
+    def test_tie_middle_argmax(self):
+        self.assertEqual(tie_middle_argmax([1.0, 1.0, 1.0, 1.0, 1.0]), 2)
+        self.assertEqual(tie_middle_argmax([0.0, 3.0, 1.0]), 1)
+        self.assertEqual(tie_middle_argmax([-2.0, -1.0, -1.0, -3.0]), 2)
 
     @staticmethod
     def _recommend(**overrides):

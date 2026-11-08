@@ -13,6 +13,8 @@ function makeResult(o: ResultOverrides = {}): GlidePathResult {
     accumYears: 30,
     retireYears: 30,
     guaranteed: 20000,
+    guaranteedDelay: 0,
+    bequestWeight: 0,
     maxLeverage: 1,
     retirementMaxLeverage: 1,
     borrowCost: 2,
@@ -56,6 +58,11 @@ function makeResult(o: ResultOverrides = {}): GlidePathResult {
     flatDepletion: 0.06,
     flatDrawdownDepletion: 0.04,
     incomeCv: 0.2,
+    welfareCe: null,
+    flatWelfareCe: null,
+    medianBequest: 750000,
+    flatMedianBequest: 640000,
+    overFunded: false,
     ...o,
     params,
   };
@@ -117,7 +124,7 @@ describe("glide-path Result", () => {
     ).toHaveLength(0);
   });
 
-  it("prefers the constant when drawdown depletion is within half a point", () => {
+  it("ignores a drawdown-only shortfall gap", () => {
     renderResult(
       makeResult({
         ceIncome: 60000,
@@ -132,17 +139,15 @@ describe("glide-path Result", () => {
     expect(screen.getByText(/The constant allocation is preferred/i)).toBeInTheDocument();
   });
 
-  it("prefers the glide when the constant's drawdown shortfall is meaningfully higher", () => {
-    // Same CE story, but the constant adds >0.5pp of drawdown shortfall — the
-    // tightened gate vetoes the simplicity pick.
+  it("prefers the glide when the constant adds more than 1 point of full-path shortfall", () => {
     renderResult(
       makeResult({
         ceIncome: 60000,
         flatCeIncome: 59400,
         drawdownDepletion: 0.05,
-        flatDrawdownDepletion: 0.06,
+        flatDrawdownDepletion: 0.05,
         depletion: 0.1,
-        flatDepletion: 0.1,
+        flatDepletion: 0.111,
       }),
     );
     expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
@@ -344,6 +349,52 @@ describe("glide-path Result", () => {
     expect(screen.queryByText(/Recommended allocation/i)).toBeNull();
     expect(screen.getAllByText("Optimized glide path")).not.toHaveLength(0);
     expect(screen.getAllByText("Constant 60% equity")).not.toHaveLength(0);
+  });
+
+  it("shows median money left at the end for both options", () => {
+    renderResult(makeResult());
+    expect(screen.getByText("Money left at end")).toBeInTheDocument();
+    expect(screen.getByText("$640,000")).toBeInTheDocument();
+    expect(screen.getByText("$750,000")).toBeInTheDocument();
+  });
+
+  it("flags an over-funded plan and recommends the constant", () => {
+    renderResult(
+      makeResult({
+        overFunded: true,
+        ceIncome: 60000,
+        flatCeIncome: 60000,
+        depletion: 0,
+        flatDepletion: 0,
+        drawdownDepletion: 0,
+        flatDrawdownDepletion: 0,
+      }),
+    );
+    expect(screen.getByText(/Your plan is over-funded/i)).toBeInTheDocument();
+    expect(screen.getByText(/Add a bequest weight or retire earlier/i)).toBeInTheDocument();
+    expect(screen.getByText(/middle of that tie/i)).toBeInTheDocument();
+    expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
+  });
+
+  it("shows welfare CE with a bequest weight but gates on spending CE", () => {
+    renderResult(
+      makeResult({
+        ceIncome: 50000,
+        flatCeIncome: 50000,
+        welfareCe: 54000,
+        flatWelfareCe: 51000,
+        depletion: 0.05,
+        flatDepletion: 0.05,
+        params: { bequestWeight: 0.25 },
+      }),
+    );
+    expect(screen.queryByText(/The glide path is preferred/i)).toBeNull();
+    expect(screen.getByText(/\$51,000\/yr including what you leave/)).toBeInTheDocument();
+  });
+
+  it("does not show welfare CE without a bequest weight", () => {
+    renderResult(makeResult({ welfareCe: 50000, flatWelfareCe: 49000 }));
+    expect(screen.queryByText(/including what you leave/)).toBeNull();
   });
 
   it("renders an error state when the worker fails", () => {

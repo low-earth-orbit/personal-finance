@@ -5,8 +5,10 @@
  * common random numbers, maximizing expected discounted CRRA utility of retirement
  * consumption. Real (today's) dollars; nominal geometric curve means are converted to real
  * arithmetic means before sampling; mid-year cash flow earns a half-year; a depleted
- * portfolio absorbs at zero. Guaranteed income is paid every retirement year. Supports
- * leverage (equity weight > 1, borrowing at a real cost).
+ * portfolio absorbs at zero. Guaranteed income starts at `guaranteedStartAge` (the portfolio
+ * funds the whole target before then; inside u(c) bridge consumption is floored at the
+ * guaranteed amount). An optional bequest term θ·u(final balance + k) uses the same γ.
+ * Supports leverage (equity weight > 1, borrowing at a real cost).
  *
  * Two sampling modes:
  *   "iid-mc" — iid normal returns from the forward-CMA curve (default; the no-recovery
@@ -32,7 +34,8 @@ import type {
 } from "./types";
 
 const FLOOR = 1.0; // numerical floor on consumption (real $); a numerical guard, not a
-// spending-floor assumption (consumption can't approach it while guaranteed income is paid)
+// spending-floor assumption (bridge years use floorArr instead)
+const OVER_FUNDED_TOL = 0.005; // every constant within 0.5% of target CE and < 0.5% shortfall
 const FLAT_BAND = 0.1; // |Δ equity| within this is "Flat"
 const SEED = 0x9e3779b9;
 const STATS_SEED = 0x85ebca6b;
@@ -58,7 +61,24 @@ function interp(x: number, xs: number[], ys: number[]): number {
 
 function ceFromUtil(u: number, gamma: number): number {
   if (Math.abs(gamma - 1) < 1e-9) return Math.exp(u);
-  return Math.pow((1 - gamma) * u, 1 / (1 - gamma));
+  const x = (1 - gamma) * u;
+  // Only reachable when a bequest gain pushes utility past the CRRA bound.
+  if (x <= 0) return Infinity;
+  return Math.pow(x, 1 / (1 - gamma));
+}
+
+/**
+ * Index of the maximum; among (near-)exact ties, the middle one. An over-funded plan makes
+ * every weight score identically, and a first-wins argmax would then report 0% equity.
+ */
+export function tieMiddleArgmax(values: ArrayLike<number>, rtol = 1e-12): number {
+  let best = -Infinity;
+  for (let i = 0; i < values.length; i++) if (values[i] > best) best = values[i];
+  const tied: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] >= best - rtol * Math.abs(best)) tied.push(i);
+  }
+  return tied[Math.floor(tied.length / 2)];
 }
 
 // ── return curve → per-grid (real arithmetic mean, vol) ───────────────────────
@@ -123,7 +143,10 @@ interface SimCtx {
   retireYears: number;
   disc: Float64Array; // beta^t, length retireYears
   gapArr: Float64Array; // portfolio-funded gap per retirement year
-  guarArr: Float64Array; // guaranteed income per retirement year
+  guarArr: Float64Array; // guaranteed income per retirement year (0 before it starts)
+  floorArr: Float64Array; // consumption floor inside u(c) per retirement year (bridge years)
+  bequestWeight: number; // θ; 0 = money left at death is worth nothing
+  bequestOffset: number; // k > 0 in u(final balance + k)
   flex: number;
   wr: number; // proportional withdrawal rate (fraction)
   contrib: number;
@@ -162,8 +185,10 @@ function accumulate(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number
 }
 
 interface PathTotals {
-  /** Σ over paths of discounted retirement utility. */
+  /** Σ over paths of total utility (discounted consumption utility + bequest term). */
   utility: number;
+  /** Σ over paths of discounted consumption utility only. */
+  consUtility: number;
   /** Σ over paths of each path's coefficient of variation of retirement spending. */
   incomeCv: number;
   /** Paths with an income shortfall (a year the portfolio can't fund the target draw). */
@@ -176,8 +201,9 @@ interface PathTotals {
  * `null` = accumulate each path from today.
  *
  * Each retirement year targets (1−flex)·gap + flex·wr·start-of-year balance, capped at what
- * the portfolio can afford; consumption = guaranteed income + withdrawal, scored by CRRA.
- * At flex=1 the target is a fraction of the live balance and always affordable, so shortfall
+ * the portfolio can afford; consumption = guaranteed income + withdrawal (floored at the
+ * bridge floor before guaranteed income starts), scored by CRRA, plus θ·u(final balance + k).
+ * `finals`, when given, receives each path's final balance. At flex=1 the target is a fraction of the live balance and always affordable, so shortfall
  * is ~0 by construction — judge tail risk there by CE income / income CV.
  */
 function simulatePaths(
@@ -186,10 +212,13 @@ function simulatePaths(
   Z: Float64Array,
   n: number,
   fixedStart: number | null,
+  finals: Float64Array | null = null,
 ): PathTotals {
-  const { accumYears, retireYears, disc, gapArr, guarArr, flex, wr } = ctx;
-  const { isLog, oneMinusGamma, invOneMinusGamma } = ctx;
+  const { accumYears, retireYears, disc, gapArr, guarArr, floorArr, flex, wr } = ctx;
+  const { isLog, oneMinusGamma, invOneMinusGamma, bequestWeight, bequestOffset } = ctx;
+  const crra = (c: number) => (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
   let utilitySum = 0;
+  let consSum = 0;
   let cvSum = 0;
   let shortfalls = 0;
   for (let p = 0; p < n; p++) {
@@ -208,28 +237,35 @@ function simulatePaths(
       const wdr = target < afford ? target : afford;
       bal = grown - wdr * (1 + r / 2);
       let c = guarArr[t] + wdr;
+      if (c < floorArr[t]) c = floorArr[t];
       if (c < FLOOR) c = FLOOR;
-      u += disc[t] * (isLog ? Math.log(c) : Math.pow(c, oneMinusGamma) * invOneMinusGamma);
+      u += disc[t] * crra(c);
       sumC += c;
       sumC2 += c * c;
       if (wdr < target) shortfall = true;
     }
-    utilitySum += u;
+    consSum += u;
+    utilitySum += bequestWeight > 0 ? u + bequestWeight * crra(bal + bequestOffset) : u;
+    if (finals) finals[p] = bal;
     const mean = sumC / retireYears;
     const variance = sumC2 / retireYears - mean * mean;
     cvSum += (variance > 0 ? Math.sqrt(variance) : 0) / mean;
     if (shortfall) shortfalls++;
   }
-  return { utility: utilitySum, incomeCv: cvSum, shortfalls };
+  return { utility: utilitySum, consUtility: consSum, incomeCv: cvSum, shortfalls };
 }
 
-/** Mean discounted utility — the optimizer's objective. */
+/** Mean total utility (consumption + bequest) — the optimizer's objective. */
 function meanUtility(yearIdx: Int32Array, ctx: SimCtx, Z: Float64Array, n: number): number {
   return simulatePaths(yearIdx, ctx, Z, n, null).utility / n;
 }
 
 interface PathStats {
   ceIncome: number;
+  /** CE including the bequest gain over leaving nothing (= ceIncome when θ = 0). */
+  welfareCe: number;
+  /** Mean total utility, the objective the flat comparator is chosen on. */
+  meanUtility: number;
   /** Fraction of paths with an income shortfall. */
   depletion: number;
   incomeCv: number;
@@ -238,8 +274,15 @@ interface PathStats {
 function toStats(totals: PathTotals, ctx: SimCtx, n: number, gamma: number): PathStats {
   let discSum = 0;
   for (let t = 0; t < ctx.retireYears; t++) discSum += ctx.disc[t];
+  const { bequestWeight: theta, bequestOffset: k } = ctx;
+  const leaveNothing =
+    theta > 0
+      ? theta * (ctx.isLog ? Math.log(k) : Math.pow(k, ctx.oneMinusGamma) * ctx.invOneMinusGamma)
+      : 0;
   return {
-    ceIncome: ceFromUtil(totals.utility / n / discSum, gamma),
+    ceIncome: ceFromUtil(totals.consUtility / n / discSum, gamma),
+    welfareCe: ceFromUtil((totals.utility / n - leaveNothing) / discSum, gamma),
+    meanUtility: totals.utility / n,
     depletion: totals.shortfalls / n,
     incomeCv: totals.incomeCv / n,
   };
@@ -254,6 +297,22 @@ function computeStats(
   gamma: number,
 ): PathStats {
   return toStats(simulatePaths(yearIdx, ctx, Z, n, null), ctx, n, gamma);
+}
+
+/** `computeStats` plus the median balance left at the end of the plan. */
+function computeStatsWithBequest(
+  yearIdx: Int32Array,
+  ctx: SimCtx,
+  Z: Float64Array,
+  n: number,
+  gamma: number,
+): PathStats & { medianBequest: number } {
+  const finals = new Float64Array(n);
+  const stats = toStats(simulatePaths(yearIdx, ctx, Z, n, null, finals), ctx, n, gamma);
+  finals.sort();
+  const mid = n >> 1;
+  const medianBequest = n % 2 ? finals[mid] : (finals[mid - 1] + finals[mid]) / 2;
+  return { ...stats, medianBequest };
 }
 
 /** Median-path balance at retirement: compounds each year's geometric return. */
@@ -314,18 +373,15 @@ function optimize(
   const nBlocks = blockStart.length;
   const yearIdx = new Int32Array(nYears);
 
-  // Flat init: the best single weight applied to every year (shape-neutral start).
-  let bestFlat = -Infinity;
-  let bestFlatG = 0;
+  // Flat init: the best single weight applied to every year (shape-neutral start); exact
+  // ties take the middle tied weight.
   const maxFlatG = Math.min(...Array.from(maxGridByBlock));
+  const flatU = new Float64Array(maxFlatG + 1);
   for (let g = 0; g <= maxFlatG; g++) {
     yearIdx.fill(g);
-    const u = meanUtility(yearIdx, ctx, Z, n);
-    if (u > bestFlat) {
-      bestFlat = u;
-      bestFlatG = g;
-    }
+    flatU[g] = meanUtility(yearIdx, ctx, Z, n);
   }
+  const bestFlatG = tieMiddleArgmax(flatU);
   const blockIdx = new Int32Array(nBlocks).fill(bestFlatG);
   for (let i = 0; i < nYears; i++) yearIdx[i] = blockIdx[blockOfYear[i]];
 
@@ -424,11 +480,24 @@ export function recommendGlidePath(
   const G = grid.length;
   const { gridMean, gridVol } = buildGridStats(grid, curve, input.inflation, input.borrowCost);
 
-  // Guaranteed income is paid every retirement year; the portfolio funds the gap.
+  // Guaranteed income starts `guaranteedDelay` years into retirement; the target is gross, so
+  // the portfolio funds the whole target before then and the gap after. Bridge consumption
+  // inside u(c) is floored at the guaranteed amount (shortfall is still counted).
   const guaranteed = input.guaranteedIncome;
-  const gap = Math.max(input.targetIncome - guaranteed, 0);
-  const guarArr = new Float64Array(retireYears).fill(guaranteed);
-  const gapArr = new Float64Array(retireYears).fill(gap);
+  const guaranteedDelay = Math.max(
+    0,
+    Math.round((input.guaranteedStartAge ?? input.retirementAge) - input.retirementAge),
+  );
+  const guarArr = new Float64Array(retireYears);
+  const gapArr = new Float64Array(retireYears);
+  const floorArr = new Float64Array(retireYears);
+  for (let t = 0; t < retireYears; t++) {
+    const started = t >= guaranteedDelay;
+    guarArr[t] = started ? guaranteed : 0;
+    floorArr[t] = started ? 0 : guaranteed;
+    gapArr[t] = Math.max(input.targetIncome - guarArr[t], 0);
+  }
+  const bequestWeight = Math.max(0, input.bequestWeight ?? 0);
   const disc = new Float64Array(retireYears);
   for (let t = 0; t < retireYears; t++) disc[t] = Math.pow(input.beta, t);
 
@@ -524,6 +593,10 @@ export function recommendGlidePath(
     disc,
     gapArr,
     guarArr,
+    floorArr,
+    bequestWeight,
+    // k ≈ one year of target spending keeps u finite when nothing is left.
+    bequestOffset: Math.max(1, input.targetIncome),
     flex: input.flexibility,
     wr: input.withdrawalRate / 100,
     contrib: input.annualContribution,
@@ -563,7 +636,7 @@ export function recommendGlidePath(
   const weights: number[] = [];
   for (let i = 0; i < nYears; i++) weights.push(grid[yearIdx[i]]);
 
-  const st = computeStats(yearIdx, ctxStats, Zf, nStats, gamma);
+  const st = computeStatsWithBequest(yearIdx, ctxStats, Zf, nStats, gamma);
   const drawdownSt = computeDrawdownStats(yearIdx, ctxStats, Zf, nStats, gamma);
 
   // ── best single constant (flat) equity weight ────────────────────────────────
@@ -575,23 +648,28 @@ export function recommendGlidePath(
   // over candidates on the scoring draw would hand the flat comparator a selection
   // advantage over the fixed glide). The winner is then scored on the same stats sample
   // as the glide. The raw optimized glide is still returned and charted; the UI can
-  // recommend this flatter comparator when it is materially better.
+  // recommend this flatter comparator when it is materially better. Exact ties (an
+  // over-funded plan) take the middle tied weight rather than 0%.
   const flatIdx = new Int32Array(nYears);
-  let bestFlatG = 0;
-  let bestFlatCe = computeStats(flatIdx, ctxSelect, Zs, nStats, gamma).ceIncome;
-  for (let g = 1; g <= retirementMaxGrid; g++) {
+  const flatU = new Float64Array(retirementMaxGrid + 1);
+  let overFunded = bequestWeight === 0;
+  for (let g = 0; g <= retirementMaxGrid; g++) {
     flatIdx.fill(g);
     const candidate = computeStats(flatIdx, ctxSelect, Zs, nStats, gamma);
-    if (candidate.ceIncome > bestFlatCe) {
-      bestFlatCe = candidate.ceIncome;
-      bestFlatG = g;
+    flatU[g] = candidate.meanUtility;
+    if (
+      Math.abs(candidate.ceIncome / input.targetIncome - 1) > OVER_FUNDED_TOL ||
+      candidate.depletion >= OVER_FUNDED_TOL
+    ) {
+      overFunded = false;
     }
   }
+  const bestFlatG = tieMiddleArgmax(flatU);
   flatIdx.fill(bestFlatG);
-  const flatStats = computeStats(flatIdx, ctxStats, Zf, nStats, gamma);
+  const flatStats = computeStatsWithBequest(flatIdx, ctxStats, Zf, nStats, gamma);
   const flatDrawdownStats = computeDrawdownStats(flatIdx, ctxStats, Zf, nStats, gamma);
   const initialTargetDraw =
-    (1 - input.flexibility) * gap +
+    (1 - input.flexibility) * gapArr[0] +
     input.flexibility * (input.withdrawalRate / 100) * drawdownSt.startBalance;
   const fundingRatio =
     drawdownSt.startBalance > 0 ? initialTargetDraw / drawdownSt.startBalance : null;
@@ -618,7 +696,7 @@ export function recommendGlidePath(
   for (let i = 1; i < twin; i++) if (ret[i] < ret[tentI]) tentI = i;
   // Classify a phase by its first-to-last change. At flex=1 the last-year allocation does not
   // affect the objective; ties are kept at the incoming value. At flex<1 the end value is a
-  // genuine optimum of a no-bequest horizon. Keep the final-year trim for slope classification.
+  // genuine optimum of the horizon. Keep the final-year trim for slope classification.
   const slope = (w: number[], trimLast: boolean): SlopeDir => {
     const eff = trimLast && w.length >= 3 ? w.slice(0, -1) : w;
     return eff.length >= 2 ? classify(eff[eff.length - 1] - eff[0]) : "n/a";
@@ -636,6 +714,11 @@ export function recommendGlidePath(
     ceIncome: Math.round(st.ceIncome),
     flatEquityPct: Math.round(grid[bestFlatG] * 1000) / 10,
     flatCeIncome: Math.round(flatStats.ceIncome),
+    welfareCe: Number.isFinite(st.welfareCe) ? Math.round(st.welfareCe) : null,
+    flatWelfareCe: Number.isFinite(flatStats.welfareCe) ? Math.round(flatStats.welfareCe) : null,
+    medianBequest: Math.round(st.medianBequest),
+    flatMedianBequest: Math.round(flatStats.medianBequest),
+    overFunded,
     depletion: Math.round(st.depletion * 1e4) / 1e4,
     drawdownDepletion: Math.round(drawdownSt.depletion * 1e4) / 1e4,
     expectedRetirementBalance: Math.round(drawdownSt.startBalance),
@@ -648,6 +731,8 @@ export function recommendGlidePath(
       accumYears,
       retireYears,
       guaranteed,
+      guaranteedDelay,
+      bequestWeight,
       maxLeverage,
       retirementMaxLeverage,
       borrowCost: input.borrowCost,
