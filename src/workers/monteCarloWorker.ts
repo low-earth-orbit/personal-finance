@@ -6,7 +6,7 @@ const ctx = self as unknown as Worker;
 
 ctx.onmessage = (event: MessageEvent<MonteCarloRequest>) => {
   const { userInput, numSimulations, requestId } = event.data;
-  const result = runMonteCarlo(userInput, numSimulations);
-  const breakEven = findBreakEven(userInput);
-  ctx.postMessage({ requestId, result, breakEven });
+  // Post the chart first; the break-even solve (same paths, ~1 s) follows for the same request.
+  ctx.postMessage({ requestId, result: runMonteCarlo(userInput, numSimulations) });
+  ctx.postMessage({ requestId, breakEven: findBreakEven(userInput, numSimulations) });
 };

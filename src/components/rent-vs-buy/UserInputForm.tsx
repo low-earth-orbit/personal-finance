@@ -140,7 +140,10 @@ export default function UserInputForm({
     userInput.amortization,
   );
   const premiumText =
-    premiumRate > 0 && userInput.initialHomePrice > 0
+    premiumRate > 0 &&
+    userInput.initialHomePrice > 0 &&
+    Number.isFinite(userInput.downPaymentPercentage) &&
+    String(userInput.downPaymentPercentage) !== ""
       ? ` Mortgage insurance premium ${formatCAD(
           calculateMortgagePrincipal(userInput.initialHomePrice, userInput.downPaymentPercentage) *
             premiumRate,

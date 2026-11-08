@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { DEFAULTS } from "./presets";
 import { validateUserInput } from "./validation";
-import { findBreakEven, runMonteCarlo } from "./monteCarlo";
+import { findBreakEven, maxPriceForDownPayment, runMonteCarlo } from "./monteCarlo";
 
 const SIMS = 300;
 const year = DEFAULTS.holdingPeriod;
@@ -78,30 +78,42 @@ describe("insured mortgages", () => {
 });
 
 describe("findBreakEven", () => {
-  test("finds the rent and price at which the sale-year call is about 50/50", () => {
-    const be = findBreakEven(DEFAULTS);
-    expect(be.year).toBe(DEFAULTS.holdingPeriod);
-    expect(be.monthlyRent).not.toBeNull();
-    expect(be.homePrice).not.toBeNull();
-    const atRent = runMonteCarlo({ ...DEFAULTS, monthlyRent: be.monthlyRent! }, 4000)[year - 1];
-    const atPrice = runMonteCarlo({ ...DEFAULTS, initialHomePrice: be.homePrice! }, 4000)[year - 1];
-    expect(atRent.renterWinPct).toBeGreaterThan(0.45);
-    expect(atRent.renterWinPct).toBeLessThan(0.55);
-    expect(atPrice.renterWinPct).toBeGreaterThan(0.45);
-    expect(atPrice.renterWinPct).toBeLessThan(0.55);
+  const BE_SIMS = 2000;
+
+  test("finds the rent and price at which the sale-year call is 50/50 on the same paths", () => {
+    const be = findBreakEven(DEFAULTS, BE_SIMS);
+    expect(be).toMatchObject({ year: DEFAULTS.holdingPeriod, currentRent: 3500 });
+    // Same seed and paths as runMonteCarlo, so the tie holds there to within the $10 / $1,000
+    // search tolerance.
+    const atRent = runMonteCarlo({ ...DEFAULTS, monthlyRent: be.monthlyRent! }, BE_SIMS);
+    const atPrice = runMonteCarlo({ ...DEFAULTS, initialHomePrice: be.homePrice! }, BE_SIMS);
+    expect(Math.abs(atRent[year - 1].renterWinPct - 0.5)).toBeLessThan(0.01);
+    expect(Math.abs(atPrice[year - 1].renterWinPct - 0.5)).toBeLessThan(0.01);
     // Renting leads at the defaults, so a tie needs a higher rent or a lower price.
     expect(be.monthlyRent!).toBeGreaterThan(DEFAULTS.monthlyRent);
     expect(be.homePrice!).toBeLessThan(DEFAULTS.initialHomePrice);
   });
 
-  test("keeps the price search within what the down payment can buy", () => {
-    // 5% down caps the price at $500k; renting still wins at that cap with a low rent.
-    const be = findBreakEven({
-      ...DEFAULTS,
-      initialHomePrice: 450_000,
-      downPaymentPercentage: 5,
-      monthlyRent: 800,
-    });
-    expect(be.homePrice == null || be.homePrice <= 500_000).toBe(true);
+  test("never points the wrong way near a tie", () => {
+    for (const monthlyRent of [4400, 4440, 4460, 4480, 4520]) {
+      const input = { ...DEFAULTS, monthlyRent };
+      const gap = runMonteCarlo(input, BE_SIMS)[year - 1].medianGap;
+      const be = findBreakEven(input, BE_SIMS);
+      if (be.monthlyRent == null || gap === 0) continue;
+      // Renting ahead → buying needs more rent to tie; buying ahead → less.
+      expect(be.monthlyRent > monthlyRent - 10).toBe(gap > 0);
+    }
+  });
+
+  test("caps the price search at what the down payment can buy", () => {
+    expect(maxPriceForDownPayment(5)).toBe(500_000);
+    expect(maxPriceForDownPayment(8)).toBeCloseTo(1_250_000, 6);
+    // Above 8.33% the formula passes $1.5M, where 20% down is required.
+    expect(maxPriceForDownPayment(9)).toBe(1_499_999);
+    expect(maxPriceForDownPayment(15)).toBe(1_499_999);
+    expect(maxPriceForDownPayment(20)).toBe(Infinity);
+    // The uncapped tie here is ~$1.7M, beyond what 9% down can buy.
+    const be = findBreakEven({ ...DEFAULTS, downPaymentPercentage: 9, monthlyRent: 8000 }, BE_SIMS);
+    expect(be.homePrice == null || be.homePrice < 1_500_000).toBe(true);
   });
 });

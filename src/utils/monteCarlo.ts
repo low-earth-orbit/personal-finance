@@ -346,34 +346,30 @@ export function runMonteCarlo(userInput: UserInput, numSimulations: number): Mon
   });
 }
 
-export const BREAK_EVEN_SIMULATIONS = 2000;
-
-/**
- * Highest price this down payment % can buy: insured mortgages need 5% of the first $500k plus
- * 10% of the rest, and none are available from $1.5M.
- */
-function maxPriceForDownPayment(downPct: number): number {
+export function maxPriceForDownPayment(downPct: number): number {
   if (downPct >= 20) return Infinity;
   if (downPct >= 10) return INSURED_PRICE_CAP - 1;
-  if (downPct > 5) return 25_000 / (0.1 - downPct / 100);
+  // Solves 5% × 500k + 10% × (P − 500k) = d × P; above 8.33% that passes the $1.5M cap.
+  if (downPct > 5) return Math.min(25_000 / (0.1 - downPct / 100), INSURED_PRICE_CAP - 1);
   return 500_000;
 }
 
 /**
  * Solve for the monthly rent and the purchase price at which the median renter − owner gap at
- * the sale year is zero. The market draws don't depend on rent or price, so one set of
- * `numSims` seeded paths is reused for every bisection step.
+ * the sale year is zero. The market draws don't depend on rent or price, so one set of seeded
+ * paths is reused for every bisection step. They are the same paths as
+ * `runMonteCarlo(userInput, numSims)` (same seed, full-horizon draws, truncated to the sale
+ * year), so the solver's gap at the current inputs equals the headline's median gap and the
+ * tie can't point the wrong way.
  */
-export function findBreakEven(
-  userInput: UserInput,
-  numSims: number = BREAK_EVEN_SIMULATIONS,
-): BreakEven {
+export function findBreakEven(userInput: UserInput, numSims: number): BreakEven {
   const year = Math.min(Math.max(1, Math.round(userInput.holdingPeriod)), SIMULATION_HORIZON_YEARS);
   const rand = mulberry32(SEED);
   const normalRandom = () => standardNormal(rand);
   const draws = Array.from({ length: numSims }, () => {
     const scenario = drawScenario(userInput, normalRandom);
-    return { scenario, ...drawPath(scenario, year, normalRandom) };
+    const { annual, mortgageRates } = drawPath(scenario, SIMULATION_HORIZON_YEARS, normalRandom);
+    return { scenario, annual: annual.slice(0, year), mortgageRates: mortgageRates.slice(0, year) };
   });
   const gaps = new Array<number>(numSims);
   const medianGap = (input: UserInput): number => {
@@ -408,15 +404,17 @@ export function findBreakEven(
 
   const rent = userInput.monthlyRent;
   const price = userInput.initialHomePrice;
-  const monthlyRent = solve("monthlyRent", 1, Math.max(rent * 10, 10_000), 5);
+  const monthlyRent = solve("monthlyRent", 1, Math.max(rent * 10, 10_000), 10);
   const homePrice = solve(
     "initialHomePrice",
     10_000,
     Math.min(price * 10, maxPriceForDownPayment(userInput.downPaymentPercentage)),
-    500,
+    1000,
   );
   return {
     year,
+    currentRent: rent,
+    currentPrice: price,
     monthlyRent: monthlyRent == null ? null : Math.round(monthlyRent / 10) * 10,
     homePrice: homePrice == null ? null : Math.round(homePrice / 1000) * 1000,
   };

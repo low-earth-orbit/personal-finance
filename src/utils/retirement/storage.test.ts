@@ -24,3 +24,10 @@ describe("retirement storage", () => {
     expect(loadInput()).toEqual(saved);
   });
 });
+
+describe("retirement storage partial saves", () => {
+  it("never fills a missing CPP or OAS amount with the default", () => {
+    localStorage.setItem("ret_input", JSON.stringify({ ...DEFAULTS, oasAt65: undefined }));
+    expect(loadInput().oasAt65).toBe(0);
+  });
+});

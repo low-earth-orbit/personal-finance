@@ -147,13 +147,13 @@ function breakEvenText(data: ChartPoint[], saleYear: number): string {
 }
 
 /** "Tie at a rent of $X/mo or a price of $Y" — the inputs that make it a 50/50 call. */
-function breakEvenInputsText(be: BreakEven, rent: number, price: number): string | null {
+function breakEvenInputsText(be: BreakEven): string | null {
   const parts: string[] = [];
   if (be.monthlyRent != null) {
-    parts.push(`a rent of ${formatCAD(be.monthlyRent)}/mo (now ${formatCAD(rent)})`);
+    parts.push(`a rent of ${formatCAD(be.monthlyRent)}/mo (now ${formatCAD(be.currentRent)})`);
   }
   if (be.homePrice != null) {
-    parts.push(`a price of ${formatCAD(be.homePrice)} (now ${formatCAD(price)})`);
+    parts.push(`a price of ${formatCAD(be.homePrice)} (now ${formatCAD(be.currentPrice)})`);
   }
   if (parts.length === 0) return null;
   return `It would be a 50/50 call at year ${be.year} with ${parts.join(" or ")}, other inputs unchanged.`;
@@ -163,15 +163,11 @@ export function Summary({
   data,
   holdingPeriod,
   breakEven = null,
-  monthlyRent = 0,
-  homePrice = 0,
 }: {
   data: ChartPoint[];
   holdingPeriod: number;
-  /** Tie-point inputs from the worker; omitted while they are computing. */
+  /** Tie-point inputs for the same request as `data`; null while they are computing. */
   breakEven?: BreakEven | null;
-  monthlyRent?: number;
-  homePrice?: number;
 }) {
   const decision = data.find((d) => d.year === holdingPeriod) ?? data[data.length - 1];
 
@@ -201,7 +197,7 @@ export function Summary({
   // The median of the per-simulation gap has the same sign as the majority winner.
   const gap = `In the median simulation, ${winner.toLowerCase()} is ahead by ${formatCAD(Math.abs(decision.medianGap))}.`;
   const breakEvenLine = breakEvenText(data, decision.year);
-  const breakEvenInput = breakEven ? breakEvenInputsText(breakEven, monthlyRent, homePrice) : null;
+  const breakEvenInput = breakEven ? breakEvenInputsText(breakEven) : null;
   const close = winnerPct < 60 ? " Small changes in your assumptions could flip the outcome." : "";
   const tie = breakEvenInput ? ` ${breakEvenInput}` : "";
   const body = `${sims} ${gap} ${breakEvenLine}${close}${tie}`;
@@ -229,10 +225,13 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   useEffect(() => {
     workerRef.current = new Worker(new URL("../../workers/monteCarloWorker.ts", import.meta.url));
     workerRef.current.onmessage = (event: MessageEvent<MonteCarloResponse>) => {
-      const { requestId, result } = event.data;
-      if (requestId === requestIdRef.current) {
-        setMcData(result);
-        setBreakEven(event.data.breakEven);
+      const data = event.data;
+      if (data.requestId !== requestIdRef.current) return;
+      if ("result" in data) {
+        setMcData(data.result);
+        setBreakEven(null); // the previous tie belongs to older inputs
+      } else {
+        setBreakEven(data.breakEven);
       }
     };
     return () => workerRef.current?.terminate();
@@ -334,13 +333,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
 
   return (
     <Stack gap="xs">
-      <Summary
-        data={chartData}
-        holdingPeriod={userInput.holdingPeriod}
-        breakEven={breakEven}
-        monthlyRent={debouncedInput.monthlyRent}
-        homePrice={debouncedInput.initialHomePrice}
-      />
+      <Summary data={chartData} holdingPeriod={userInput.holdingPeriod} breakEven={breakEven} />
       <div
         role="img"
         aria-label={`Net worth projection chart comparing renting versus buying over 50 years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}

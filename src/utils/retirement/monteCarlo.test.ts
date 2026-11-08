@@ -286,3 +286,43 @@ describe("cut rate and computePlan", () => {
     );
   });
 });
+
+describe("CPP and OAS in the simulation", () => {
+  const streams = (overrides: Partial<RetirementInput> = {}) =>
+    base({ guaranteedIncomePct: 0, cppAt65: 12_000, oasAt65: 9_000, ...overrides });
+
+  it("saves CPP that starts while still working", () => {
+    const early = accumulationBalances(streams({ currentAge: 55, cppStartAge: 60 }));
+    const late = accumulationBalances(streams({ currentAge: 55, cppStartAge: 65 }));
+    // By 63, CPP from 60 has added three years of (reduced) income to savings.
+    expect(early[8].balance).toBeGreaterThan(late[8].balance);
+  });
+
+  it("funds the bridge before CPP starts: year-1 draw is the whole target", () => {
+    const input = streams({ cppStartAge: 70, oasStartAge: 67 });
+    expect(computePlanSWR(input, 62, 1_000_000)).toBeCloseTo(0.06, 6);
+    // At 70 both have started: 60k − 9k×1.144 − 12k×1.42.
+    expect(computePlanSWR(input, 70, 1_000_000)).toBeCloseTo(
+      (60_000 - 9_000 * 1.144 - 12_000 * 1.42) / 1_000_000,
+      6,
+    );
+  });
+
+  it("counts OAS from its start age in the drawdown", () => {
+    const withOas = simulateRetirementPhase(streams(), 60, 700_000).successRate;
+    const noOas = simulateRetirementPhase(streams({ oasAt65: 0 }), 60, 700_000).successRate;
+    const deferred = simulateRetirementPhase(streams({ oasStartAge: 70 }), 60, 700_000);
+    expect(withOas).toBeGreaterThan(noOas);
+    // Deferring to 70 means five more years of full bridge draws from savings.
+    expect(deferred.bands[10].p50).toBeLessThan(
+      simulateRetirementPhase(streams(), 60, 700_000).bands[10].p50,
+    );
+  });
+
+  it("puts the age range around the point estimate with staggered streams", () => {
+    const r = computeRetirement(streams({ cppStartAge: 70, oasStartAge: 67 }));
+    expect(r.earliestRetirementAge).not.toBeNull();
+    expect(r.retirementAgeRange!.p25).toBeLessThanOrEqual(r.earliestRetirementAge!);
+    expect(r.retirementAgeRange!.p75).toBeGreaterThanOrEqual(r.earliestRetirementAge! - 1);
+  });
+});

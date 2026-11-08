@@ -58,9 +58,13 @@ describe("rent-vs-buy Summary", () => {
       <Summary
         data={data}
         holdingPeriod={2}
-        breakEven={{ year: 2, monthlyRent: 4460, homePrice: 784000 }}
-        monthlyRent={3500}
-        homePrice={1000000}
+        breakEven={{
+          year: 2,
+          currentRent: 3500,
+          currentPrice: 1000000,
+          monthlyRent: 4460,
+          homePrice: 784000,
+        }}
       />,
     );
     expect(
@@ -76,9 +80,13 @@ describe("rent-vs-buy Summary", () => {
       <Summary
         data={data}
         holdingPeriod={1}
-        breakEven={{ year: 1, monthlyRent: null, homePrice: 600000 }}
-        monthlyRent={3500}
-        homePrice={1000000}
+        breakEven={{
+          year: 1,
+          currentRent: 3500,
+          currentPrice: 1000000,
+          monthlyRent: null,
+          homePrice: 600000,
+        }}
       />,
     );
     expect(screen.queryByText(/a rent of/)).toBeNull();

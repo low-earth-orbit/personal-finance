@@ -86,6 +86,13 @@ export function validateRetirementInput(input: RetirementInput): RetirementError
     errors.planningAge = "Planning age must be greater than your current age.";
   }
 
+  // Benefits start on a birthday in the annual model, so start ages are whole years.
+  for (const key of ["cppStartAge", "oasStartAge", "pensionStartAge"] as const) {
+    if (!errors[key] && typeof input[key] === "number" && !Number.isInteger(input[key])) {
+      errors[key] = "Must be a whole number of years.";
+    }
+  }
+
   // Cross-field: a pension you set but would never receive (starts after the plan ends).
   if (
     !errors.pensionStartAge &&
