@@ -37,6 +37,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     step: 10000,
     label: "Guaranteed income",
   },
+  guaranteedStartAge: { min: 30, max: 110, step: 1, label: "Guaranteed income start age" },
   flexibility: { min: 0, max: 1, step: 0.05, label: "Spending flexibility" },
   withdrawalRate: { min: 1, max: 10, step: 0.1, label: "Withdrawal rate" },
   gamma: {
@@ -51,6 +52,7 @@ export const FIELD_CONSTRAINTS: Record<GlidePathInputKey, Constraint> = {
     step: 0.005,
     label: "Retirement time preference (β)",
   },
+  bequestWeight: { min: 0, max: 0.5, step: 0.25, label: "Leave money to heirs" },
   maxEquityPct: { min: 100, max: 200, step: 5, label: "Max equity %" },
   retirementMaxEquityPct: { min: 0, max: 200, step: 5, label: "Retirement max equity %" },
   borrowCost: { min: 0, max: 10, step: 0.25, label: "Borrow cost" },
@@ -102,6 +104,13 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
     errors.planningAge = "Plan-until age must be after retirement.";
   }
   if (
+    !errors.guaranteedStartAge &&
+    !errors.planningAge &&
+    input.guaranteedStartAge >= input.planningAge
+  ) {
+    errors.guaranteedStartAge = "Must be before your plan-until age.";
+  }
+  if (
     !errors.retirementMaxEquityPct &&
     !errors.maxEquityPct &&
     input.retirementMaxEquityPct > input.maxEquityPct
@@ -109,17 +118,19 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
     errors.retirementMaxEquityPct = "Must not exceed max equity.";
   }
 
-  // With no spending flexibility, guaranteed income covering the target leaves every
-  // allocation tied, so there is no meaningful optimizer answer.
+  // With no spending flexibility and no bequest motive, guaranteed income covering the target
+  // leaves every allocation tied, so there is no meaningful optimizer answer. A bridge does not
+  // help: bridge years are scored at no less than the guaranteed amount (engine.ts).
   if (
     !errors.flexibility &&
     !errors.targetIncome &&
     !errors.guaranteedIncome &&
     input.flexibility === 0 &&
+    input.bequestWeight === 0 &&
     input.targetIncome <= input.guaranteedIncome
   ) {
     errors.targetIncome =
-      "Target income must exceed guaranteed income when flexibility is 0; raise the target or set flexibility > 0.";
+      "Target income must exceed guaranteed income when flexibility is 0; raise the target, set flexibility > 0, or add a bequest.";
   }
 
   return errors;

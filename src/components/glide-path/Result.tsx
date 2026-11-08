@@ -60,6 +60,8 @@ const METRIC_HELP = {
     "Share of simulated retirements with at least one year the portfolio can't fully fund your target spending — measured from the expected balance at retirement. With high spending flexibility this reads near 0 by design: flexible spending scales the target down to whatever the balance allows, so it rarely 'falls short' — the risk shows up as income variability (CE income) instead, not shortfall.",
   fullPath:
     "The same shortfall measure taken over the whole path from today, so it also reflects the luck of markets in the years before you retire.",
+  bequest:
+    "Median real balance left at the end of the plan, in today's dollars. Unless you choose to leave money to heirs, the optimizer gives this money no value.",
 } as const;
 
 const DIR_COLOR: Record<SlopeDir, string> = {
@@ -213,8 +215,11 @@ function CompactStat({
 interface OptionStats {
   ceIncome: number;
   ceDegenerate: boolean;
+  /** CE including the bequest term; shown only when a bequest weight is set. */
+  welfareCe: number | null;
   drawdownDepletion: number;
   fullPathShortfall: number;
+  medianBequest: number;
 }
 
 /** The three outcome metrics for one option, as a full grid or a compact inline row. */
@@ -222,6 +227,7 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
   const ceValue = stats.ceDegenerate ? "Tail-dominated" : `${formatCAD(stats.ceIncome)}/yr`;
   const drawValue = `${(stats.drawdownDepletion * 100).toFixed(1)}%`;
   const fullValue = `${(stats.fullPathShortfall * 100).toFixed(1)}%`;
+  const bequestValue = formatCAD(stats.medianBequest);
   const drawFlag = stats.drawdownDepletion >= DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD;
   const fullFlag = stats.fullPathShortfall >= FULLPATH_RISK_HIGHLIGHT_THRESHOLD;
 
@@ -231,18 +237,23 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
         <CompactStat label="CE income" value={ceValue} flagged={stats.ceDegenerate} />
         <CompactStat label="Drawdown" value={drawValue} flagged={drawFlag} />
         <CompactStat label="Full-path" value={fullValue} flagged={fullFlag} />
+        <CompactStat label="Left at end" value={bequestValue} />
       </Group>
     );
   }
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="sm">
+    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm">
       <MetricItem
         label="CE income"
         help={METRIC_HELP.ce}
         value={ceValue}
         note={
-          stats.ceDegenerate ? "bad tails overwhelm the score" : "risk-adjusted lifetime income"
+          stats.ceDegenerate
+            ? "bad tails overwhelm the score"
+            : stats.welfareCe != null
+              ? `${formatCAD(stats.welfareCe)}/yr including what you leave`
+              : "risk-adjusted lifetime income"
         }
         flagged={stats.ceDegenerate}
       />
@@ -259,6 +270,12 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
         value={fullValue}
         note="includes pre-retirement markets"
         flagged={fullFlag}
+      />
+      <MetricItem
+        label="Money left at end"
+        help={METRIC_HELP.bequest}
+        value={bequestValue}
+        note="median, today's dollars"
       />
     </SimpleGrid>
   );
@@ -333,6 +350,7 @@ export default function Result({
   const flatPct = Math.round(result.flatEquityPct);
   const incomeDegenerate = ceIsDegenerate(result.ceIncome, input.targetIncome);
   const flatDegenerate = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
+  const showWelfare = result.params.bequestWeight > 0;
 
   const glide = {
     kind: "glide" as const,
@@ -340,8 +358,10 @@ export default function Result({
     stats: {
       ceIncome: result.ceIncome,
       ceDegenerate: incomeDegenerate,
+      welfareCe: showWelfare ? result.welfareCe : null,
       drawdownDepletion: result.drawdownDepletion,
       fullPathShortfall: result.depletion,
+      medianBequest: result.medianBequest,
     },
   };
   const constant = {
@@ -350,8 +370,10 @@ export default function Result({
     stats: {
       ceIncome: result.flatCeIncome,
       ceDegenerate: flatDegenerate,
+      welfareCe: showWelfare ? result.flatWelfareCe : null,
       drawdownDepletion: result.flatDrawdownDepletion,
       fullPathShortfall: result.flatDepletion,
+      medianBequest: result.flatMedianBequest,
     },
   };
   const primary = reco.preferConstant ? constant : glide;
@@ -367,6 +389,7 @@ export default function Result({
   const flexibility = typeof input.flexibility === "number" ? input.flexibility : 0;
   const shortfallIsMeaningful = flexibility < 0.5;
   const hasRoomToAdjustPlan =
+    !result.overFunded &&
     shortfallIsMeaningful &&
     !reco.inconclusive &&
     primary.stats.drawdownDepletion < LOW_DRAWDOWN_SHORTFALL_THRESHOLD &&
@@ -376,7 +399,9 @@ export default function Result({
   const reasonText = reco.preferConstant
     ? reco.glideBad
       ? "The constant allocation is preferred because the glide path's CE income is tail-dominated."
-      : "The constant allocation is preferred because the optimized glide path is only marginally better."
+      : result.overFunded
+        ? "The constant allocation is preferred because every allocation gives about the same income; this weight is the middle of that tie."
+        : "The constant allocation is preferred because the optimized glide path is not clearly better (within 3% on CE income and 1 point on shortfall)."
     : reco.flatBad
       ? "The glide path is preferred because the constant allocation's CE income is tail-dominated."
       : "The glide path is preferred because the constant allocation trails it.";
@@ -431,6 +456,23 @@ export default function Result({
                   pre-retirement market luck has a meaningful effect.
                 </Text>
               )}
+            </Stack>
+          </Group>
+        </Card>
+      )}
+
+      {result.overFunded && (
+        <Card withBorder radius="md" padding="md">
+          <Group gap="sm" wrap="nowrap" align="flex-start">
+            <ThemeIcon color="blue" variant="light" size={34} radius="xl">
+              <IconInfoCircle size={19} />
+            </ThemeIcon>
+            <Stack gap={2}>
+              <Text fw={600}>Your plan is over-funded</Text>
+              <Text size="sm" c="dimmed">
+                The allocation doesn&apos;t change your income. Add a bequest weight or retire
+                earlier.
+              </Text>
             </Stack>
           </Group>
         </Card>

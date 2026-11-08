@@ -18,7 +18,6 @@ Sections (choose with --sections; default all):
   tips-stress: cell (b) with one assumption changed at a time (correlation, phi, mean, vol)
   bills-block: a real-bill leg that keeps its own historical persistence
   gamma   : risk-aversion sweep across the key modes
-  curves  : CE vs constant equity weight (how peaked is "100% equity"?)
   vr      : variance-ratio diagnostic (mean reversion) for world vs pooled
   bond-decomp: bond VR(10) split into carry, rate-cycle (price) and inflation terms by era
   sleeve-blend: fixed nominal/real bond sleeve — CE by real share and equity weight, per regime
@@ -305,36 +304,6 @@ def run_gamma_sweep(args):
         for label, overrides in modes:
             rec = recommend_glide_path(**base_kwargs(args, gamma=gamma, **overrides))
             print(summary_row(label, rec))
-
-
-def run_flat_curves(args):
-    print("\n" + "=" * 100)
-    print("CE vs CONSTANT EQUITY WEIGHT  (how peaked is the optimum? near-flat → simplicity bias OK)")
-    print("=" * 100)
-    cells = [
-        ("iid-mc", dict(return_mode="iid-mc")),
-        ("historical-block (world)", dict(return_mode="historical-block", dataset="world", block_years=args.block_years)),
-        ("historical-block (pooled)",
-         dict(return_mode="historical-block", dataset="pooled", block_years=args.block_years)),
-        ("forward-block (pooled)",
-         dict(return_mode="forward-block", dataset="pooled", block_years=args.block_years)),
-    ]
-    weights_shown = [0, 20, 40, 50, 60, 70, 80, 90, 100]
-    header = "  ".join(f"{w:>5}%" for w in weights_shown)
-    print(f"\n  {'mode':<28} {header}   (CE $000/yr; * = argmax)")
-    for label, overrides in cells:
-        rec = recommend_glide_path(**base_kwargs(args, return_flat_curve=True, **overrides))
-        by_weight = {round(p["equity_pct"]): p["ce_income"] for p in rec["flat_curve"]}
-        best = max(by_weight, key=lambda k: by_weight[k])
-        cells_out = []
-        for w in weights_shown:
-            ce = by_weight.get(w)
-            if ce is None:
-                cells_out.append(f"{'—':>6}")
-            else:
-                mark = "*" if w == best else " "
-                cells_out.append(f"{ce / 1000:>5.1f}{mark}")
-        print(f"  {label:<28} {'  '.join(cells_out)}")
 
 
 def _history_cuts():
@@ -1112,7 +1081,6 @@ SECTIONS = {
     "bills-block": run_bills_block,
     "tips-etf": run_tips_etf,
     "gamma": run_gamma_sweep,
-    "curves": run_flat_curves,
     "vr": run_variance_ratios,
     "bond-decomp": run_bond_decomposition,
     "regret": run_regret,

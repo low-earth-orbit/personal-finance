@@ -44,6 +44,20 @@ export interface GlidePathResult {
   flatEquityPct: number;
   /** CE income of holding `flatEquityPct` equity at all ages ($/yr). */
   flatCeIncome: number;
+  /** CE including the bequest term (= ceIncome when bequestWeight is 0); null if unbounded. */
+  welfareCe: number | null;
+  /** Welfare CE of the best constant allocation. */
+  flatWelfareCe: number | null;
+  /** Median balance left at the end of the plan (real $). */
+  medianBequest: number;
+  /** Median balance left at the end of the plan for the best constant allocation. */
+  flatMedianBequest: number;
+  /**
+   * No bequest weight and every constant allocation already delivers the target (CE within
+   * 0.5%, < 0.5% shortfall): the allocation does not change income. The reported weights are
+   * then the middle of a tie, not an optimum.
+   */
+  overFunded: boolean;
   /** Full-path fraction depleted before the planning age, including pre-retirement market luck. */
   depletion: number;
   /** Drawdown-only depletion from the deterministic expected balance at retirement. */
@@ -69,6 +83,9 @@ export interface ResolvedParams {
   accumYears: number;
   retireYears: number;
   guaranteed: number;
+  /** Years between retirement and the first guaranteed-income payment. */
+  guaranteedDelay: number;
+  bequestWeight: number;
   maxLeverage: number;
   retirementMaxLeverage: number;
   borrowCost: number;

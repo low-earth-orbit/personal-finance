@@ -1,7 +1,11 @@
 """Interactive prompt flow for the glide-path recommender.
 
-  python3 -m analysis.glide_path.interactive            # prompts for your inputs
-  python3 -m analysis.glide_path.interactive --demo     # lever sweep (writes figures)
+The prompts only build a flag list for the CLI (``cli.main``), so an interactive run and its
+printed reproduction command are the same code path.
+
+  python3 analysis/recommend_glide.py -i                 # prompts for your inputs
+  python3 -m analysis.glide_path.interactive             # same
+  python3 -m analysis.glide_path.interactive --demo      # lever sweep (writes figures)
 """
 
 from __future__ import annotations
@@ -10,9 +14,11 @@ import os
 import shlex
 import sys
 
-from analysis.glide_path.markets import BLOCK_MODES as _BLOCK_MODES, DATASETS, PWL_CURVE, RETURN_MODES
-from analysis.glide_path.recommender import recommend_glide_path
-from analysis.glide_path.report import plot_glide_path, run_demo
+from analysis.glide_path.markets import BLOCK_MODES, DATASETS, RETURN_MODES
+from analysis.glide_path.report import run_demo
+
+COMPARE = "compare"  # pseudo return mode: run all four models side by side
+BEQUEST_WEIGHTS = {"none": 0.0, "some": 0.25, "strong": 0.5}
 
 
 def _ask(prompt, default, cast=float, example=None):
@@ -28,7 +34,7 @@ def _ask(prompt, default, cast=float, example=None):
         try:
             return cast(raw)
         except ValueError:
-            print(f"  ! Invalid input — expected a number. Try again.\n")
+            print("  ! Invalid input — expected a number. Try again.\n")
 
 
 def _ask_choice(prompt, default, choices, labels=None):
@@ -61,298 +67,148 @@ def _section(title):
     print(f"{'─' * 50}")
 
 
+def _fmt(x):
+    # repr keeps every digit (f"{x:g}" rounded $1,234,567 to 1.23457e+06).
+    if isinstance(x, float):
+        return str(int(x)) if x.is_integer() else repr(x)
+    return str(x)
 
 
-def format_reproduction_command(
-    *,
-    accum_years,
-    retire_years,
-    flexibility,
-    guaranteed_income,
-    interval,
-    gamma,
-    beta,
-    max_leverage,
-    borrow_cost,
-    current_savings,
-    annual_contribution,
-    target_income,
-    withdrawal_rate,
-    start_age,
-    return_mode,
-    block_years,
-    n_paths,
-    dataset="pooled",
-    retirement_max_equity=None,
-    curve_mean_basis="geometric",
-):
-    """Build a shell-safe flag-CLI command matching an interactive run."""
-
-    def value(x):
-        return f"{x:g}" if isinstance(x, float) else str(x)
-
-    args = [
-        "python3",
-        "analysis/recommend_glide.py",
-        "--accum",
-        value(accum_years),
-        "--retire",
-        value(retire_years),
-        "--flex",
-        value(flexibility),
-        "--guaranteed-income",
-        value(guaranteed_income),
-        "--interval",
-        value(interval),
-        "--gamma",
-        value(gamma),
-        "--beta",
-        value(beta),
-        "--start-age",
-        value(start_age),
-        "--savings",
-        value(current_savings),
-        "--contrib",
-        value(annual_contribution),
-        "--target-income",
-        value(target_income),
-        "--withdrawal-rate",
-        value(withdrawal_rate),
-        "--mode",
-        return_mode,
-        "--max-leverage",
-        value(max_leverage),
-        "--paths",
-        value(int(n_paths)),
-    ]
-    if retirement_max_equity is not None:
-        args.extend(["--retirement-max-equity", value(retirement_max_equity)])
-    if max_leverage > 1:
-        args.extend(["--borrow-cost", value(borrow_cost)])
-    if return_mode in _BLOCK_MODES:
-        args.extend(["--block-years", value(block_years)])
-    if dataset != "pooled":
-        args.extend(["--dataset", dataset])
-    if curve_mean_basis != "geometric":
-        args.extend(["--curve-mean-basis", curve_mean_basis])
-    return shlex.join(args)
+def format_reproduction_command(argv):
+    """Shell-safe flag-CLI command for a CLI argument list."""
+    return shlex.join(["python3", "analysis/recommend_glide.py", *argv])
 
 
-
-
-# ── interactive CLI ───────────────────────────────────────────────────────────
-def _run_interactive():
-    """Walk the user through their inputs and print the recommended glide path."""
-    print("\n╔══════════════════════════════════════════════════╗")
-    print("║   Lifetime Allocation Optimizer — interactive    ║")
-    print("╚══════════════════════════════════════════════════╝")
-    print("  Press Enter to accept the default shown in (  ).")
-    print("  All dollar amounts are in today's real dollars.")
-
-    # ── About you ────────────────────────────────────────────────────────────
+def collect_argv():
+    """Walk the user through their inputs; return the equivalent CLI argument list."""
     _section("About you")
-    current_age     = _ask("Current age",                      35,  int)
-    retirement_age  = _ask("Planned retirement age",           65,  int,  "60 for early retirement")
-    planning_age    = _ask("Plan until age (life expectancy)", 95,  int,  "90–100 is typical")
-    current_savings = _ask("Current portfolio balance ($)",    200_000, float, "500000")
-    annual_contrib  = _ask("Annual savings / contribution ($)", 20_000, float, "30000")
+    current_age = _ask("Current age", 35, int)
+    retirement_age = _ask("Planned retirement age", 65, int, "60 for early retirement")
+    planning_age = _ask("Plan until age (life expectancy)", 95, int, "90–100 is typical")
+    savings = _ask("Current portfolio balance ($)", 200_000.0, float, "500000")
+    contrib = _ask("Annual savings / contribution ($)", 20_000.0, float, "30000")
+    accum_years = max(0, retirement_age - current_age)
+    retire_years = max(1, planning_age - max(retirement_age, current_age))
 
-    accum_years = max(1, retirement_age - current_age)
-    retire_years = max(1, planning_age - retirement_age)
-
-    # ── Retirement income ─────────────────────────────────────────────────────
     _section("Retirement income")
-    target_income = _ask(
-        "Target annual spending in retirement ($)",
-        60_000, float, "70000  (gross, in today's dollars)")
-    guaranteed_income = _ask(
-        "Guaranteed annual income (CPP + OAS + DB pension, $)",
-        20_000.0, float, "0 = none,  20000 = typical CPP/OAS")
+    target = _ask("Target annual spending in retirement ($)", 60_000.0, float,
+                  "70000  (gross, in today's dollars)")
+    guaranteed = _ask("Guaranteed annual income (CPP + OAS + DB pension, $)", 20_000.0, float,
+                      "0 = none,  20000 = typical CPP/OAS")
+    guaranteed_age = retirement_age
+    if guaranteed > 0:
+        guaranteed_age = _ask("  Age it starts (the portfolio funds the whole target before then)",
+                              retirement_age, int, "65 if you retire at 60 and start CPP/OAS at 65")
 
-    # ── Spending rule ─────────────────────────────────────────────────────────
     _section("Spending rule")
     print("  Flexibility = how much your spending follows the market:")
     print("    0   = fixed real $ every year (rigid; safest default)")
     print("    1   = fully proportional — a 20% portfolio drop ⇒ ~20% spending cut")
     print("    0.5 = half-and-half")
-    flexibility = _ask("Spending flexibility [0–1]", 0.0, float, "0 = no flexibility")
-    if flexibility > 0:
-        withdrawal_rate = _ask(
-            "  When spending flexibly, what % of the balance to draw each year?\n"
-            "  (the proportional draw rate — like the 4% rule)",
-            0.04, float, "0.04 = 4%")
-    else:
-        withdrawal_rate = 0.04  # unused when flexibility == 0
+    flex = _ask("Spending flexibility [0–1]", 0.0, float, "0 = no flexibility")
+    withdrawal_rate = 0.04
+    if flex > 0:
+        withdrawal_rate = _ask("  Share of the balance drawn each year when spending flexibly",
+                               0.04, float, "0.04 = 4%")
 
-    # ── Preferences ───────────────────────────────────────────────────────────
     _section("Preferences & risk")
-    print("  Risk aversion (γ): 1 = very aggressive, 2 = aggressive, 3 = moderate, 4 = cautious, 5+ = very cautious.")
+    print("  Risk aversion (γ): 1 = very aggressive, 2 = aggressive, 3 = moderate, "
+          "4 = cautious, 5+ = very cautious.")
     gamma = _ask("Risk aversion γ", 4.0, float, "4 = cautious base case")
-
-    beta = _ask(
-        "Time-discount factor β",
-        0.985, float, "(1.0 = equal weight, 0.985 = balanced, 0.97 = stronger early-years tilt)")
-
-    print("\n  Leverage: allow borrowing to invest more than 100% in equity?")
-    print("  Enter the max equity % (100 = no leverage, 150 = up to 1.5×).")
-    max_equity_pct = _ask("Max equity %", 100.0, float, "100 = none, 150 = max 1.5x leverage")
-    max_leverage = max(max_equity_pct / 100.0, 0.05)
-    retirement_max_equity = _ask(
-        "Retirement max equity %", min(max_equity_pct, 100.0), float,
-        "equity ceiling only after retirement; cannot exceed max equity") / 100.0
-    if max_leverage > 1.0:
+    beta = _ask("Time-discount factor β", 0.985, float,
+                "1.0 = equal weight, 0.985 = balanced, 0.97 = stronger early-years tilt")
+    bequest = _ask_choice(
+        "Leave money to heirs?", "none", list(BEQUEST_WEIGHTS),
+        labels={"none": "money left at the end is worth nothing (θ 0)",
+                "some": "θ 0.25", "strong": "θ 0.5"},
+    )
+    print("\n  Leverage: max equity % (100 = no leverage, 150 = up to 1.5× via borrowing).")
+    max_equity = _ask("Max equity %", 100.0, float, "100 = none, 150 = max 1.5x leverage")
+    while True:
+        retirement_max_equity = _ask("Retirement max equity %", min(max_equity, 100.0), float,
+                                     "equity ceiling only after retirement; cannot exceed max equity")
+        if retirement_max_equity <= max_equity:
+            break
+        print(f"  ! Must not exceed max equity ({_fmt(max_equity)}%). Try again.\n")
+    borrow_cost = None
+    if max_equity > 100:
         borrow_cost = _ask("  Real cost of borrowing (% per year)", 2.0, float,
                            "2 = margin/HELOC real rate")
-    else:
-        borrow_cost = 2.0  # unused when not leveraging
 
-    # ── Return paths ──────────────────────────────────────────────────────────
     _section("Return paths")
-    print("  iid-mc uses the app's forward capital-market assumptions;")
-    print("  historical modes bootstrap raw paired stock/bond returns from JST history.")
-    return_mode = _ask_choice(
-        "Return mode", "iid-mc", RETURN_MODES,
+    print("  iid-mc uses the app's forward capital-market assumptions; the historical modes")
+    print("  bootstrap paired stock/bond returns from JST history. The models disagree, so")
+    print("  'compare' runs all four and prints one table.")
+    mode = _ask_choice(
+        "Return mode", "iid-mc", [*RETURN_MODES, COMPARE],
         labels={
             "iid-mc": "forward-CMA normal Monte Carlo, no sequencing (default)",
             "historical-iid": "raw history, years sampled independently",
             "historical-block": "raw history, stationary circular blocks (keeps sequencing)",
-            "forward-block": "history rescaled to forward marginals, then block-bootstrapped (historical-sequencing scenario)",
+            "forward-block": "history rescaled to forward marginals, then block-bootstrapped",
+            COMPARE: "iid-mc, forward-block, historical-block and post-1990 historical-block",
         },
     )
-    dataset = (
-        _ask_choice(
+    dataset = "pooled"
+    if mode not in ("iid-mc", COMPARE):
+        dataset = _ask_choice(
             "Historical dataset", "pooled", DATASETS,
-            labels={
-                "world": "equal-weight cross-country average (one rebalanced portfolio)",
-                "pooled": "each country's own sequence — single-country sequence risk (recommended)",
-            },
+            labels={"pooled": "each country's own sequence (recommended)",
+                    "world": "equal-weight cross-country average"},
         )
-        if return_mode != "iid-mc"
-        else "world"
-    )
-    block_years = (
-        _ask("Average stationary-block length in years", 10, int,
-             "10")
-        if return_mode in _BLOCK_MODES
-        else 10
-    )
+    block_years = 10
+    if mode in BLOCK_MODES or mode == COMPARE:
+        block_years = _ask("Average stationary-block length in years", 10, int, "10")
 
-    # ── Optimizer ─────────────────────────────────────────────────────────────
-    _section("Optimizer settings")
-    interval = _ask(
-        "Glide-step interval in years (1 = per-age path, 5 = coarser but faster)",
-        5, int, "1 for smoothest result, 5 for quick run")
-    n_paths = _ask(
-        "Number of simulation paths (more = more stable, slower)",
-        15_000, int, "5000 for quick, 30000 for publication quality")
+    _section("Optimizer & output")
+    interval = _ask("Glide-step interval in years (1 = per-age path, 5 = coarser but faster)",
+                    5, int, "1 for smoothest result, 5 for quick run")
+    n_paths = _ask("Number of simulation paths (more = more stable, slower)", 15_000, int,
+                   "5000 for quick, 30000 for publication quality")
+    plot = input("  Save a chart? Enter a .png path (or press Enter to skip):\n> ").strip()
 
-    # ── Run ───────────────────────────────────────────────────────────────────
-    lev_note = f", leverage≤{max_leverage:g}× @{borrow_cost:g}% real" if max_leverage > 1 else ""
-    print(f"\n  Running optimiser ({return_mode}, {int(n_paths):,} paths, {interval}y steps, "
-          f"γ={gamma}, β={beta}{lev_note})…")
-    rec = recommend_glide_path(
-        accum_years=accum_years,
-        retire_years=retire_years,
-        flexibility=flexibility,
-        guaranteed_income=guaranteed_income,
-        interval=interval,
-        current_savings=current_savings,
-        annual_contribution=annual_contrib,
-        target_income=target_income,
-        withdrawal_rate=withdrawal_rate,
-        gamma=gamma,
-        beta=beta,
-        max_leverage=max_leverage,
-        retirement_max_equity=retirement_max_equity,
-        borrow_cost=borrow_cost,
-        n_paths=int(n_paths),
-        start_age=current_age,
-        alloc_curve=PWL_CURVE,
-        return_mode=return_mode,
-        block_years=block_years,
-        dataset=dataset,
-    )
-
-    # ── Results ───────────────────────────────────────────────────────────────
-    print(f"\n{'═' * 50}")
-    print(f"  OPTIMIZED GLIDE PATH")
-    print(f"{'═' * 50}")
-    print(f"  Accumulation ({current_age}→{retirement_age}): {rec['accum_dir']}")
-    print(f"  Retirement   ({retirement_age}→{planning_age}): {rec['retire_dir']}")
-    tent_label = "tent_age" if "tent_age" in rec else "tent_year"
-    print(f"  Equity trough: {rec['tent_pct']}% at age {rec[tent_label]}")
-    print(f"  Return mode: {rec['params']['return_mode']}")
-    print(f"  Curve mean basis: {rec['params'].get('curve_mean_basis', 'geometric')}")
-    if return_mode != "iid-mc":
-        p = rec["params"]
-        block = (
-            f", stationary circular blocks averaging {p['block_years']}y"
-            if p["block_years"]
-            else ""
-        )
-        print(f"  History: {p['history_source']} {p['history_start_year']}–{p['history_end_year']}"
-              f" ({p['history_observations']} years{block})")
-    print()
-    print(f"  Outcome stats (independent evaluation sample):")
-    print(f"    CE income     : ${rec['ce_income']:>10,.0f} /yr  (certainty-equivalent spending)")
-    if rec["flat_ce_income"] > rec["ce_income"] * 1.05:
-        print(f"    Robust pick   : {rec['flat_equity_pct']:>9.0f} % constant equity "
-              f"(CE ${rec['flat_ce_income']:,.0f}/yr)")
-    print(f"    Best constant : {rec['flat_equity_pct']:>9.0f} %   "
-          f"(CE ${rec['flat_ce_income']:,.0f}/yr — robust flat comparator)")
-    print(f"    Drawdown dep.  : {rec['drawdown_depletion']*100:>8.1f} %  "
-          f"(from expected retirement balance ${rec['expected_retirement_balance']:,.0f})")
-    ratio = rec["funding_ratio"]
-    ratio_text = f" ({ratio * 100:.1f}% of expected retirement balance)" if ratio is not None else ""
-    print(f"    Year-1 draw    : ${rec['initial_target_draw']:>10,.0f}{ratio_text}")
-    print(f"    Full-path dep. : {rec['depletion']*100:>8.1f} %  "
-          f"(includes pre-retirement markets)")
-    print(f"    Income CV     : {rec['income_cv']*100:>8.1f} %  (spending variability; lower = steadier)")
-    print()
-    print(f"  Schedule (equity % per block):")
-    for e in rec["schedule"]:
-        age_lbl = f"age {e['age_start']:>3}" if "age_start" in e else f"year {e['year_start']:>3}"
-        print(f"    {age_lbl}  [{e['phase']:<6}]  {e['equity_pct']:>5.1f}% equity")
-
-    # ── Plot ──────────────────────────────────────────────────────────────────
-    print()
-    save = input("  Save a chart? Enter a file path (or press Enter to skip):\n> ").strip()
-    if save:
-        if not save.endswith(".png"):
-            save += ".png"
-        lev_t = f", lev≤{max_leverage:g}×" if max_leverage > 1 else ""
-        out = plot_glide_path(rec, start_age=current_age, path=save,
-                              title=f"Recommended glide path  (γ={gamma}, "
-                                    f"β={beta}, guaranteed=${guaranteed_income:,.0f}, "
-                                    f"flex={flexibility}{lev_t})")
-        print(f"  Chart saved to: {out}")
-
-    command = format_reproduction_command(
-        accum_years=accum_years,
-        retire_years=retire_years,
-        flexibility=flexibility,
-        guaranteed_income=guaranteed_income,
-        interval=interval,
-        gamma=gamma,
-        beta=beta,
-        max_leverage=max_leverage,
-        retirement_max_equity=retirement_max_equity,
-        borrow_cost=borrow_cost,
-        current_savings=current_savings,
-        annual_contribution=annual_contrib,
-        target_income=target_income,
-        withdrawal_rate=withdrawal_rate,
-        start_age=current_age,
-        return_mode=return_mode,
-        block_years=block_years,
-        n_paths=n_paths,
-        dataset=dataset,
-        curve_mean_basis=rec["params"].get("curve_mean_basis", "geometric"),
-    )
-    print("\n  Run this simulation again or modify it with:")
-    print(f"  {command}")
+    argv = [
+        "--start-age", _fmt(current_age), "--accum", _fmt(accum_years),
+        "--retire", _fmt(retire_years), "--savings", _fmt(savings), "--contrib", _fmt(contrib),
+        "--target-income", _fmt(target), "--guaranteed-income", _fmt(guaranteed),
+        "--flex", _fmt(flex), "--gamma", _fmt(gamma), "--beta", _fmt(beta),
+        "--max-leverage", _fmt(max(max_equity, 5.0) / 100), "--interval", _fmt(interval),
+        "--paths", _fmt(n_paths),
+    ]
+    if guaranteed_age > max(retirement_age, current_age):
+        argv += ["--guaranteed-start-age", _fmt(guaranteed_age)]
+    if flex > 0:
+        argv += ["--withdrawal-rate", _fmt(withdrawal_rate)]
+    if BEQUEST_WEIGHTS[bequest]:
+        argv += ["--bequest-weight", _fmt(BEQUEST_WEIGHTS[bequest])]
+    if retirement_max_equity < max_equity:
+        argv += ["--retirement-max-equity", _fmt(retirement_max_equity / 100)]
+    if borrow_cost is not None:
+        argv += ["--borrow-cost", _fmt(borrow_cost)]
+    argv += ["--compare-modes"] if mode == COMPARE else ["--mode", mode]
+    if dataset != "pooled":
+        argv += ["--dataset", dataset]
+    if mode in BLOCK_MODES or mode == COMPARE:
+        argv += ["--block-years", _fmt(block_years)]
+    if plot:
+        argv += ["--plot", plot if plot.endswith(".png") else plot + ".png"]
+    return argv
 
 
+def run_interactive():
+    """Prompt, run through the flag CLI, then print the command that reproduces the run."""
+    from analysis.glide_path.cli import main as cli_main  # lazy: cli imports this module lazily
+
+    print("\n╔══════════════════════════════════════════════════╗")
+    print("║   Lifetime Allocation Optimizer — interactive    ║")
+    print("╚══════════════════════════════════════════════════╝")
+    print("  Press Enter to accept the default shown in (  ).")
+    print("  All dollar amounts are in today's real dollars.")
+    argv = collect_argv()
+    print("\n  Running the optimizer…\n")
+    cli_main(argv)
+    print("\n  Run this again or modify it with:")
+    print(f"  {format_reproduction_command(argv)}")
 
 
 def main(argv=None):
@@ -366,7 +222,7 @@ def main(argv=None):
                 demo_mode = arg.split("=", 1)[1]
         run_demo(os.path.join("analysis", "artifacts", "glide_path", "demo"), return_mode=demo_mode)
     else:
-        _run_interactive()
+        run_interactive()
 
 
 if __name__ == "__main__":

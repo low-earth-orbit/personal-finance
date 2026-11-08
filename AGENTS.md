@@ -19,7 +19,7 @@ Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 ## Agent Workflow
 
-**Default: Claude plans, executes, and verifies.** Codex is optional — the Codex subscription has lapsed, so do not plan around it. If a Codex run is attempted and fails (auth/plan/model error), do the work directly with Claude; never block on Codex. One writer at a time.
+**Claude plans, executes, and verifies.** One writer at a time.
 
 **Scope discipline:** Match the user's requested surface. For narrow copy/UI/mechanical tasks, do not refactor adjacent code, update unrelated docs, or "fix" nearby stale tests unless needed to complete the request. Report unrelated failures separately.
 
@@ -34,10 +34,6 @@ Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 | **complex**  | finance engine, new tool, architecture | full plan + risks before editing |
 
 No peer-review step: do not spawn reviewer/verifier subagents or second-opinion passes (token cost). Claude checks its own diff once and relies on the Definition of Done checks below; the user reviews the final diff.
-
-### Codex (optional, legacy)
-
-`scripts/codex-run.sh <auto|trivial|standard|complex> "<task>"` and the `$route-codex-task` skill remain for anyone with Codex access, but their model slugs may be stale. Raw form: `codex exec -m <model> -c model_reasoning_effort=<level> -s workspace-write -C <repo> "<task>" < /dev/null`. If it errors, fall back to Claude.
 
 ## Definition of Done
 

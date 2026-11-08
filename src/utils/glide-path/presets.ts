@@ -43,12 +43,13 @@ export const DEFAULTS = {
   // ── Retirement income ─────────────────────────────────────
   /** Target real annual spending in retirement. */
   targetIncome: 60000,
-  /**
-   * Guaranteed real annual income (CPP/OAS/DB) in retirement. Assumed to be paid every retirement
-   * year (the tool models allocation from the point income has started; a pre-pension "bridge" is
-   * out of scope — see Methodology).
-   */
+  /** Guaranteed real annual income (CPP/OAS/DB) once it starts. */
   guaranteedIncome: 20000,
+  /**
+   * Age guaranteed income starts. Before it (a "bridge" after an earlier retirement) the
+   * portfolio funds the whole target; an age at or before retirement means from retirement.
+   */
+  guaranteedStartAge: 65,
 
   // ── Spending & preferences ────────────────────────────────
   /** 0 = constant real $; 1 = fully proportional to the balance; blends between. */
@@ -59,6 +60,8 @@ export const DEFAULTS = {
   gamma: 4,
   /** Annual time-discount factor. */
   beta: 0.985,
+  /** Bequest weight θ on u(money left + one year of target spending); 0 = none. */
+  bequestWeight: 0,
 
   // ── Leverage ──────────────────────────────────────────────
   /** Max equity weight as a % (100 = no leverage; 150 = up to 1.5×). */
@@ -82,6 +85,13 @@ export const GRID_STEP = 0.05;
 
 /** Risk-aversion presets surfaced as quick buttons. */
 export const GAMMA_PRESETS = [2, 3, 4, 5] as const;
+
+/** "Leave money to heirs" presets: bequest weight θ (Python `--bequest-weight`). */
+export const BEQUEST_PRESETS = [
+  { value: 0, label: "None" },
+  { value: 0.25, label: "Some" },
+  { value: 0.5, label: "Strong" },
+] as const;
 
 /** Spending-flexibility presets (fraction). */
 export const FLEX_PRESETS = [
