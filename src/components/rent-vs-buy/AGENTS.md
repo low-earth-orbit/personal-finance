@@ -13,7 +13,7 @@ Year-by-year net worth comparison, MC confidence bands, win probability. Methodo
 
 ## Engine
 
-`src/utils/monteCarlo.ts` — `runMonteCarlo()` → P25/median/P75 + `medianGap` + `renterWinPct` `src/workers/monteCarloWorker.ts` — runs MC off main thread; debounced 300ms, `requestId` drops stale responses. Seeded (`src/utils/rng.ts`): identical inputs give identical results
+`src/utils/monteCarlo.ts` — `runMonteCarlo()` → P25/median/P75 + `medianGap` + `renterWinPct`; `findBreakEven()` → rent and price that tie at the sale year on the same seeded paths (worker posts the chart, then the tie, both tagged with `requestId`). Insured-mortgage rules (min down, premium, $1.5M cap) live in `src/utils/math.ts` `src/workers/monteCarloWorker.ts` — runs MC off main thread; debounced 300ms, `requestId` drops stale responses. Seeded (`src/utils/rng.ts`): identical inputs give identical results
 
 ## Summary tiers
 

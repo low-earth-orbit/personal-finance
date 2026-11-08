@@ -58,9 +58,15 @@ Code: engine [`src/utils/retirement/monteCarlo.ts`](../../src/utils/retirement/m
 - **Accumulation** (`accumulationBalances`) is deterministic for the headline. Savings grow at the accumulation phase's real **geometric** return plus annual contributions, which gives the median-path balance. A separate stochastic pass (`retirementAgeRange`) simulates market luck during the saving years and reports the 25th–75th percentile range of the earliest feasible retirement age.
 - **Drawdown** (`simulate`) is stochastic. From the balance at a candidate retirement age, each year:
   - draws a real return;
-  - withdraws the income gap mid-year, so the withdrawal earns half a year's return. The gap is the target minus guaranteed income, or the **full** target during a pre-pension bridge;
+  - withdraws the income gap mid-year, so the withdrawal earns half a year's return. The gap is the target minus the guaranteed income started by that age (`guaranteedAtAge`), so it is the **full** target during a pre-pension bridge;
   - stops if the portfolio is depleted.
 - **Spending guardrail** (`GUARDRAIL_TRIGGER = 1.2`). When spending flexibility is above 0, spending stays at the target until a weak sequence lifts the current withdrawal rate 20% above the rate at retirement; spending then drops to the floor (the target less the flexibility %). This is a simplified Guyton–Klinger rule: one binary cut, downside only, re-evaluated each year. At 0% flexibility it reduces to the fixed real withdrawal that the SWR tables below assume.
+
+- **Guaranteed income** (`guaranteedAtAge`): three streams in real dollars, each from its own start age.
+  - **CPP**, entered as the amount at 65 and adjusted for the start age (60–70): −0.6% per month before 65 (−36% at 60), +0.7% per month after (+42% at 70).
+  - **OAS**, entered at 65 and deferrable to 70 at +0.6% per month (+36%); it rises 10% from age 75. The clawback on high incomes is not modelled.
+  - **Workplace (DB) pension**, as a % of income or a dollar amount, from its own start age.
+  - The income summary groups retirement years into phases of equal guaranteed income (`incomePhases`). Guaranteed income that starts while still working is saved. Inputs saved before CPP/OAS had their own fields load with CPP/OAS at 0, keeping the old single pension.
 
 ### 1.2 Returns
 

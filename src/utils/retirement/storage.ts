@@ -9,7 +9,10 @@ export function loadInput(): RetirementInput {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return { ...DEFAULTS };
     const parsed = JSON.parse(raw) as Partial<RetirementInput>;
-    return { ...DEFAULTS, ...parsed };
+    // Saved before CPP and OAS had their own fields: the single "pension" field held all
+    // guaranteed income, so keep it as is and add no separate CPP/OAS (a missing amount is 0,
+    // never the default).
+    return { ...DEFAULTS, cppAt65: 0, oasAt65: 0, ...parsed };
   } catch {
     return { ...DEFAULTS };
   }

@@ -52,8 +52,20 @@ export interface MonteCarloRequest {
   requestId: number;
 }
 
-/** Message returned from the Monte Carlo Web Worker. */
-export interface MonteCarloResponse {
-  requestId: number;
-  result: MonteCarloYear[];
+/** Inputs at which renting and buying tie at the sale year (see `findBreakEven`). */
+export interface BreakEven {
+  year: number;
+  /** The rent and price of the request this was solved for (not the live inputs). */
+  currentRent: number;
+  currentPrice: number;
+  monthlyRent: number | null;
+  homePrice: number | null;
 }
+
+/**
+ * Messages returned from the Monte Carlo Web Worker: the simulation first, then the slower
+ * break-even solve for the same request.
+ */
+export type MonteCarloResponse =
+  | { requestId: number; result: MonteCarloYear[] }
+  | { requestId: number; breakEven: BreakEven };
