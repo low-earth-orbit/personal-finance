@@ -18,7 +18,12 @@ import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
 import { FIELD_CONSTRAINTS } from "@/utils/validation";
 import type { FieldErrors, FieldValue, Preset, SigmaKey, UserInput, UserInputKey } from "@/types";
 import { formatCAD, formatPercentage } from "@/utils/format";
-import { calculateMonthlyMortgagePayment, calculateMortgagePrincipal } from "@/utils/math";
+import {
+  calculateMonthlyMortgagePayment,
+  calculateMortgagePrincipal,
+  calculateOpeningMortgageBalance,
+  mortgageInsurancePremiumRate,
+} from "@/utils/math";
 
 interface UserInputFormProps {
   userInput: UserInput;
@@ -120,12 +125,27 @@ export default function UserInputForm({
     userInput.amortization > 0 && userInput.initialHomePrice > 0
       ? formatCAD(
           calculateMonthlyMortgagePayment(
-            calculateMortgagePrincipal(userInput.initialHomePrice, userInput.downPaymentPercentage),
+            calculateOpeningMortgageBalance(
+              userInput.initialHomePrice,
+              userInput.downPaymentPercentage,
+              userInput.amortization,
+            ),
             userInput.annualMortgageInterestRate,
             userInput.amortization,
           ),
         )
       : "—";
+  const premiumRate = mortgageInsurancePremiumRate(
+    userInput.downPaymentPercentage,
+    userInput.amortization,
+  );
+  const premiumText =
+    premiumRate > 0 && userInput.initialHomePrice > 0
+      ? ` Mortgage insurance premium ${formatCAD(
+          calculateMortgagePrincipal(userInput.initialHomePrice, userInput.downPaymentPercentage) *
+            premiumRate,
+        )} (${(premiumRate * 100).toFixed(2)}% of the loan), added to the mortgage.`
+      : "";
 
   return (
     <Stack>
@@ -333,13 +353,13 @@ export default function UserInputForm({
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
-                {`Down payment amount ${formatCAD((userInput.downPaymentPercentage / 100) * userInput.initialHomePrice)}. Est. mortgage payment: ${monthlyMortgage} /mo.`}
+                {`Down payment amount ${formatCAD((userInput.downPaymentPercentage / 100) * userInput.initialHomePrice)}. Est. mortgage payment: ${monthlyMortgage} /mo.${premiumText}`}
               </Text>
               <SimpleGrid cols={{ base: 1, sm: 2 }}>
                 <UserInputFormItem
                   id="downPaymentPercentage"
                   label="Down payment"
-                  labelHelperText="Minimum is 20%. This calculator only models conventional mortgages."
+                  labelHelperText="Under 20% down needs mortgage default insurance (CMHC, Sagen or Canada Guaranty), allowed on homes under $1.5M. Minimum: 5% of the first $500k plus 10% of the rest. The premium (2.8–4.0% of the loan) is added to the mortgage; Ontario, Quebec and Saskatchewan also charge sales tax on it at closing — add that to buyer closing costs."
                   value={userInput.downPaymentPercentage}
                   onChange={bind("downPaymentPercentage")}
                   error={errors.downPaymentPercentage}
@@ -349,7 +369,7 @@ export default function UserInputForm({
                 <UserInputFormItem
                   id="amortization"
                   label="Amortization period"
-                  labelHelperText="Total length of the mortgage. This calculator caps amortization at 25 years."
+                  labelHelperText="Total length of the mortgage, up to 30 years. With under 20% down, 30 years is only for first-time buyers or new builds and adds 0.20% to the insurance premium."
                   value={userInput.amortization}
                   onChange={bind("amortization")}
                   error={errors.amortization}

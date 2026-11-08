@@ -5,6 +5,7 @@ import { IconInfoCircle } from "@tabler/icons-react";
 import Headline from "./Headline";
 import ProjectionChart from "./ProjectionChart";
 import { formatCAD } from "@/utils/format";
+import { incomePhases, type IncomePhase } from "@/utils/retirement/projection";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 
 interface ResultProps {
@@ -128,13 +129,30 @@ function PhaseRow({
   );
 }
 
+function phaseLabel(phase: IncomePhase, isLast: boolean): string {
+  const range =
+    phase.fromAge === phase.toAge ? `age ${phase.fromAge}` : `age ${phase.fromAge}–${phase.toAge}`;
+  if (phase.guaranteed === 0) return `Before guaranteed income · ${range}`;
+  return isLast ? `From age ${phase.fromAge}` : `${range[0].toUpperCase()}${range.slice(1)}`;
+}
+
+function phaseNote(phase: IncomePhase, target: number): string {
+  if (phase.guaranteed === 0) return `${formatCAD(target)} all from savings`;
+  if (phase.portfolio === 0) return `${formatCAD(phase.guaranteed)} guaranteed covers it`;
+  return `${formatCAD(phase.guaranteed)} guaranteed + ${formatCAD(phase.portfolio)} portfolio`;
+}
+
 function IncomeSummary({ input, result }: { input: RetirementInput; result: RetirementResult }) {
-  const { targetGrossIncome, guaranteedIncome, portfolioWithdrawal } = result;
-  const retireAge = result.earliestRetirementAge;
-  const pensionAge = input.pensionStartAge;
-  const hasBridge = retireAge != null && retireAge < pensionAge;
-  const bridgeRange =
-    retireAge === pensionAge - 1 ? `age ${retireAge}` : `age ${retireAge}–${pensionAge - 1}`;
+  const { targetGrossIncome } = result;
+  const retireAge = result.earliestRetirementAge ?? input.currentAge;
+  const phases = incomePhases(input, retireAge);
+  const single = phases.length <= 1;
+  const only = phases[0] ?? {
+    fromAge: retireAge,
+    toAge: retireAge,
+    guaranteed: result.guaranteedIncome,
+    portfolio: result.portfolioWithdrawal,
+  };
 
   const flexPct = input.spendingFlexibilityPct;
   const isFlexible = flexPct > 0;
@@ -148,26 +166,19 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
         Retirement income {formatCAD(targetGrossIncome)} /yr
       </Text>
 
-      {hasBridge ? (
+      {!single ? (
         <Stack gap="md">
-          <PhaseRow
-            label={`Before pension · ${bridgeRange}`}
-            note={`${formatCAD(targetGrossIncome)} all from savings`}
-            guaranteed={0}
-            portfolio={targetGrossIncome}
-            total={targetGrossIncome}
-            flexPct={flexPct}
-          />
-          <PhaseRow
-            label={`From age ${pensionAge}`}
-            note={`${formatCAD(guaranteedIncome)} pension + ${formatCAD(
-              portfolioWithdrawal,
-            )} portfolio`}
-            guaranteed={guaranteedIncome}
-            portfolio={portfolioWithdrawal}
-            total={targetGrossIncome}
-            flexPct={flexPct}
-          />
+          {phases.map((phase, i) => (
+            <PhaseRow
+              key={phase.fromAge}
+              label={phaseLabel(phase, i === phases.length - 1)}
+              note={phaseNote(phase, targetGrossIncome)}
+              guaranteed={phase.guaranteed}
+              portfolio={phase.portfolio}
+              total={targetGrossIncome}
+              flexPct={flexPct}
+            />
+          ))}
           <Group gap="xl">
             <LegendItem color={TEAL} label="Guaranteed (CPP/OAS/pension)" />
             <LegendItem color={INDIGO} label="From your savings" />
@@ -177,8 +188,8 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
       ) : (
         <>
           <IncomeBar
-            guaranteed={guaranteedIncome}
-            portfolio={portfolioWithdrawal}
+            guaranteed={only.guaranteed}
+            portfolio={only.portfolio}
             total={targetGrossIncome}
             flexPct={flexPct}
           />
@@ -186,12 +197,12 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
             <LegendItem
               color={TEAL}
               label="Guaranteed (CPP/OAS/pension)"
-              value={formatCAD(guaranteedIncome)}
+              value={formatCAD(only.guaranteed)}
             />
             <LegendItem
               color={INDIGO}
               label="From your portfolio"
-              value={formatCAD(portfolioWithdrawal)}
+              value={formatCAD(only.portfolio)}
             />
             {isFlexible && <LegendItem hatch label={`Trimmed in weak markets (−${flexPct}%)`} />}
           </Group>

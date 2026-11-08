@@ -113,20 +113,48 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   }}
                 />
                 <UserInputFormItem
+                  {...num("cppAt65")}
+                  label="CPP at 65"
+                  labelHelperText="The CPP pension you'd get if it started at 65, in today's dollars per year. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together."
+                  prefix="$"
+                  suffix=" /yr"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("cppStartAge")}
+                  label="CPP start age"
+                  labelHelperText="60 to 70. Each year before 65 cuts CPP by 7.2% (−36% at 60); each year after adds 8.4% (+42% at 70), for life. If you retire before your first guaranteed income starts, your portfolio funds the full target until then (a 'bridge')."
+                  suffix=" yrs"
+                />
+                <UserInputFormItem
+                  {...num("oasAt65")}
+                  label="OAS at 65"
+                  labelHelperText="Old Age Security starting at 65, in today's dollars per year — about $8,900 with 40 years in Canada after age 18, less with fewer years. It rises 10% at 75. The model ignores the OAS clawback on high incomes."
+                  prefix="$"
+                  suffix=" /yr"
+                  thousandSeparator
+                />
+                <UserInputFormItem
+                  {...num("oasStartAge")}
+                  label="OAS start age"
+                  labelHelperText="65 to 70. Each year of deferral adds 7.2% (+36% at 70), for life."
+                  suffix=" yrs"
+                />
+                <UserInputFormItem
                   {...num("guaranteedIncomePct")}
-                  label="Pension amount"
-                  labelHelperText="Estimated annual CPP + OAS + workplace (DB) pension. Enter a dollar amount or a % of your current/pre-retirement income; it begins at the pension start age below."
+                  label="Workplace pension"
+                  labelHelperText="Annual defined-benefit (DB) or other guaranteed pension, as a dollar amount or a % of your current income. It begins at the pension start age."
                   percentToggle={{
                     base: +input.currentIncome || 0,
                     defaultUnit: "$",
                     amountStep: 1000,
-                    unitAriaLabel: "Guaranteed income input unit",
+                    unitAriaLabel: "Workplace pension input unit",
                   }}
                 />
                 <UserInputFormItem
                   {...num("pensionStartAge")}
                   label="Pension start age"
-                  labelHelperText="When your CPP/OAS/pension income begins — usually 65. If you retire before this, your portfolio funds the full target until then (a 'bridge')."
+                  labelHelperText="When your workplace pension begins."
                   suffix=" yrs"
                 />
                 <UserInputFormItem

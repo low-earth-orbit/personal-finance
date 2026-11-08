@@ -1,3 +1,4 @@
+import { minimumDownPaymentPct } from "./math";
 import type { FieldConstraint, FieldErrors, UserInput, UserInputKey } from "../types";
 
 export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
@@ -27,9 +28,9 @@ export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
   maintPct: { min: 0, max: 10, step: 0.1 },
   maintAgingPct: { min: 0, max: 5, step: 0.25 },
   condoFeesPerMonth: { min: 0, max: undefined, step: 50 },
-  downPaymentPercentage: { min: 20, max: 100, step: 5 },
+  downPaymentPercentage: { min: 5, max: 100, step: 5 },
   annualMortgageInterestRate: { min: -10, max: 20, step: 0.25 },
-  amortization: { min: 5, max: 25, step: 5 },
+  amortization: { min: 5, max: 30, step: 5 },
   holdingPeriod: { min: 1, max: 50, step: 1 },
   investmentReturnRate: {
     min: 0,
@@ -87,6 +88,19 @@ export function validateUserInput(input: UserInput): FieldErrors {
       } else {
         errors[field] = `Must be at most ${max}`;
       }
+    }
+  }
+
+  // Insured-mortgage minimum: 5% of the first $500k + 10% of the rest; 20% from $1.5M.
+  if (
+    !errors.downPaymentPercentage &&
+    !errors.initialHomePrice &&
+    !isEmpty(input.initialHomePrice) &&
+    !isEmpty(input.downPaymentPercentage)
+  ) {
+    const minimum = minimumDownPaymentPct(input.initialHomePrice);
+    if (input.downPaymentPercentage < minimum - 1e-9) {
+      errors.downPaymentPercentage = `Minimum is ${Math.ceil(minimum * 100) / 100}% at this price`;
     }
   }
 

@@ -11,8 +11,14 @@ import {
 } from "./monteCarlo";
 import type { RetirementInput } from "./types";
 
+// The pre-CPP/OAS default: all guaranteed income in one 20%-of-income pension at 65. Same
+// income as today's DEFAULTS (CPP 11,100 + OAS 8,900), but it keeps these tests' arithmetic
+// on a single stream.
 const base = (overrides: Partial<RetirementInput> = {}): RetirementInput => ({
   ...DEFAULTS,
+  cppAt65: 0,
+  oasAt65: 0,
+  guaranteedIncomePct: 20,
   ...overrides,
 });
 

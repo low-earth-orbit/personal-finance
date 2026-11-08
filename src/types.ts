@@ -52,8 +52,16 @@ export interface MonteCarloRequest {
   requestId: number;
 }
 
+/** Inputs at which renting and buying tie at the sale year (see `findBreakEven`). */
+export interface BreakEven {
+  year: number;
+  monthlyRent: number | null;
+  homePrice: number | null;
+}
+
 /** Message returned from the Monte Carlo Web Worker. */
 export interface MonteCarloResponse {
   requestId: number;
   result: MonteCarloYear[];
+  breakEven: BreakEven;
 }

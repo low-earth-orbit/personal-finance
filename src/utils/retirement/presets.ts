@@ -108,9 +108,20 @@ export const DEFAULTS = {
   contributionPct: 20,
   /** Target gross retirement income, as a % of current income (replacement ratio). */
   targetIncomePct: 60,
-  /** Guaranteed retirement income (CPP + OAS + DB pensions), as a % of income. Gross/taxable. */
-  guaranteedIncomePct: 20,
-  /** Age the guaranteed income starts. Before this, the portfolio funds the full target. */
+  /**
+   * CPP you'd receive starting at 65, real $/yr (from your My Service Canada statement).
+   * 11,100 + 8,900 OAS keeps the old $20k-at-65 default.
+   */
+  cppAt65: 11100,
+  /** CPP start age, 60–70; the amount is adjusted −7.2%/yr before 65 and +8.4%/yr after. */
+  cppStartAge: 65,
+  /** OAS at 65, real $/yr (roughly the full amount for 65–74, ~$8,900 in 2026). */
+  oasAt65: 8900,
+  /** OAS start age, 65–70; +7.2%/yr for each year deferred. */
+  oasStartAge: 65,
+  /** Workplace (DB) or other guaranteed pension, as a % of income. Gross/taxable. */
+  guaranteedIncomePct: 0,
+  /** Age the workplace pension starts. */
   pensionStartAge: 65,
   /** Expected nominal geometric (compound) return while working, % per year. */
   accumReturn: 6.29,

@@ -3,6 +3,7 @@ import { Alert, Card, Divider, Group, SimpleGrid, Stack, Text, Title } from "@ma
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { formatCADCompact } from "@/utils/format";
 import SwrTechnicalNote from "./SwrTechnicalNote";
+import { lastGuaranteedStartAge } from "@/utils/retirement/projection";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 
 interface HeadlineProps {
@@ -114,9 +115,9 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
           )}
           {result.guaranteedIncome > 0 && (
             <Metric
-              label="Pension income"
+              label="Guaranteed income"
               value={`${formatCADCompact(result.guaranteedIncome)} /yr`}
-              note={`from age ${input.pensionStartAge}`}
+              note={`all started by age ${lastGuaranteedStartAge(input)}`}
             />
           )}
           {planSWR != null && (

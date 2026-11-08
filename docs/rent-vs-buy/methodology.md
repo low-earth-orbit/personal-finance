@@ -3,7 +3,7 @@
 ## Key Modeling Assumptions
 
 1. **Cheaper side invests the difference**: while owner total cost > rent the renter invests the surplus; once owning is cheaper (e.g. after the mortgage is paid off) the owner invests rent − owner cost. Contributions land mid-year (half-year return); neither portfolio ever withdraws.
-2. **Mortgage**: conventional only, ≥20% down, ≤25yr amortization. No CMHC/high-ratio/30yr.
+2. **Mortgage**: conventional (≥20% down) or insured (high-ratio) under the rules effective Dec 15, 2024: homes under $1.5M, minimum down 5% of the first $500k + 10% of the rest (`minimumDownPaymentPct`). The insurance premium — 2.80% / 3.10% / 4.00% of the loan for LTV ≤85 / ≤90 / ≤95%, +0.20 points for a 30-year amortization — is added to the mortgage (`calculateOpeningMortgageBalance`). Amortization up to 30 years (insured: first-time buyers or new builds only; the app can't check eligibility). Not modelled: provincial sales tax on the premium (ON/QC/SK — users add it to buyer closing costs) and the lower rates insured mortgages often get.
 3. **Compounding**: semi-annual (Canadian convention). Renewal: 5yr terms, rate redrawn at MC.
 4. **Tax**: each portfolio splits into a sheltered sleeve (`taxShelteredPct`, default 0: TFSA/FHSA, or an RRSP at equal tax rates in and out — no tax on yield or gains) and a taxable sleeve (yield taxed annually, cost basis adjusted; capital gains at sale on `value − book`). Owner net worth = home equity after selling costs + owner portfolio after tax. Principal residence exempt.
 5. **Selling costs**: `homePrice × (1 − sellerClosingCostsPct) − mortgageBalance`
@@ -44,6 +44,8 @@ Two-layer uncertainty model:
 **Renter/owner share same scenario path** — enables fair pairwise comparison. Draws come from a fixed seed (`src/utils/rng.ts`), so identical inputs give identical results and the 60/70% tier boundaries don't flicker between renders.
 
 **Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and when buying leads in most simulations, read relative to the sale year: since which year (if it leads at sale), otherwise the first later year it would, flagging an earlier lead that was lost. The lead can change hands more than once (e.g. buying pulls ahead, then building aging lets renting back in front).
+
+**Break-even inputs** (`findBreakEven`, run in the worker after the main simulation): the monthly rent and the purchase price at which the median renter − owner gap at the sale year is zero (a 50/50 call), each solved by bisection with every other input fixed. Market draws don't depend on rent or price, so one set of 2,000 seeded paths is reused for every step (~150–250 ms). The rent search spans $1 to max(10× rent, $10k)/mo; the price search spans $10k to 10× price, capped at the highest price the down-payment % can buy under the insured-mortgage rules. Either value is omitted when no tie falls in range. The 2,000-path estimate lands within about ±1.5 points of 50% when checked with 10,000 paths.
 
 **Tax-sheltered share limits:** `taxShelteredPct` also shelters the starting savings (down payment + closing costs), and the model doesn't enforce TFSA/RRSP room or the FHSA's $40k lifetime cap and closure on purchase — keep the share within the user's real room.
 

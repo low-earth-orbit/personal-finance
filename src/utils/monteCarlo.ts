@@ -1,10 +1,11 @@
 import {
   calculateMonthlyMortgageInterestRate,
   calculateMonthlyMortgagePayment,
-  calculateMortgagePrincipal,
+  calculateOpeningMortgageBalance,
+  INSURED_PRICE_CAP,
 } from "./math";
 import { mulberry32, standardNormal } from "./rng";
-import type { MonteCarloYear, UserInput } from "../types";
+import type { BreakEven, MonteCarloYear, UserInput } from "../types";
 
 // Fixed seed: identical inputs give identical results (no jitter between renders), and every
 // run consumes the same random stream, so nudging one input moves the answer smoothly.
@@ -201,9 +202,11 @@ function simulatePath(
   const netOfSellingFees = 1 - userInput.sellerClosingCostsPct / 100;
   const shelteredFrac = Math.min(Math.max((userInput.taxShelteredPct ?? 0) / 100, 0), 1);
 
-  const initialPrincipal = calculateMortgagePrincipal(
+  // Under 20% down, the default-insurance premium is rolled into the mortgage.
+  const initialPrincipal = calculateOpeningMortgageBalance(
     userInput.initialHomePrice,
     userInput.downPaymentPercentage,
+    userInput.amortization,
   );
   const initialPortfolio =
     (userInput.initialHomePrice *
@@ -341,4 +344,80 @@ export function runMonteCarlo(userInput: UserInput, numSimulations: number): Mon
       renterWinPct: renterWinsByYear[i] / numSimulations,
     };
   });
+}
+
+export const BREAK_EVEN_SIMULATIONS = 2000;
+
+/**
+ * Highest price this down payment % can buy: insured mortgages need 5% of the first $500k plus
+ * 10% of the rest, and none are available from $1.5M.
+ */
+function maxPriceForDownPayment(downPct: number): number {
+  if (downPct >= 20) return Infinity;
+  if (downPct >= 10) return INSURED_PRICE_CAP - 1;
+  if (downPct > 5) return 25_000 / (0.1 - downPct / 100);
+  return 500_000;
+}
+
+/**
+ * Solve for the monthly rent and the purchase price at which the median renter − owner gap at
+ * the sale year is zero. The market draws don't depend on rent or price, so one set of
+ * `numSims` seeded paths is reused for every bisection step.
+ */
+export function findBreakEven(
+  userInput: UserInput,
+  numSims: number = BREAK_EVEN_SIMULATIONS,
+): BreakEven {
+  const year = Math.min(Math.max(1, Math.round(userInput.holdingPeriod)), SIMULATION_HORIZON_YEARS);
+  const rand = mulberry32(SEED);
+  const normalRandom = () => standardNormal(rand);
+  const draws = Array.from({ length: numSims }, () => {
+    const scenario = drawScenario(userInput, normalRandom);
+    return { scenario, ...drawPath(scenario, year, normalRandom) };
+  });
+  const gaps = new Array<number>(numSims);
+  const medianGap = (input: UserInput): number => {
+    for (let i = 0; i < numSims; i++) {
+      const d = draws[i];
+      const last = simulatePath(input, d.annual, d.mortgageRates, d.scenario)[year - 1];
+      gaps[i] = last.renterNetWorth - last.ownerNetWorth;
+    }
+    gaps.sort((a, b) => a - b);
+    return percentile(gaps, 0.5);
+  };
+
+  const solve = (key: "monthlyRent" | "initialHomePrice", lo: number, hi: number, tol: number) => {
+    if (!(hi > lo)) return null;
+    const at = (x: number) => medianGap({ ...userInput, [key]: x });
+    let fLo = at(lo);
+    const fHi = at(hi);
+    if (fLo === 0) return lo;
+    if (Math.sign(fLo) === Math.sign(fHi)) return null;
+    while (hi - lo > tol) {
+      const mid = (lo + hi) / 2;
+      const fMid = at(mid);
+      if (Math.sign(fMid) === Math.sign(fLo)) {
+        lo = mid;
+        fLo = fMid;
+      } else {
+        hi = mid;
+      }
+    }
+    return (lo + hi) / 2;
+  };
+
+  const rent = userInput.monthlyRent;
+  const price = userInput.initialHomePrice;
+  const monthlyRent = solve("monthlyRent", 1, Math.max(rent * 10, 10_000), 5);
+  const homePrice = solve(
+    "initialHomePrice",
+    10_000,
+    Math.min(price * 10, maxPriceForDownPayment(userInput.downPaymentPercentage)),
+    500,
+  );
+  return {
+    year,
+    monthlyRent: monthlyRent == null ? null : Math.round(monthlyRent / 10) * 10,
+    homePrice: homePrice == null ? null : Math.round(homePrice / 1000) * 1000,
+  };
 }

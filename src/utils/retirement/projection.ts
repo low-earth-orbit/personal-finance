@@ -16,13 +16,65 @@ export function phaseRealMean(input: RetirementInput, retirementAge: number, age
 }
 
 /**
- * Target gross income, guaranteed income, and the gap the portfolio must fund.
- * All taxable and in gross terms, so guaranteed income offsets the target
- * dollar-for-dollar and tax is implicit in the gross target.
+ * CPP start-age adjustment (Service Canada): −0.6% per month before 65 (−36% at 60),
+ * +0.7% per month after 65 (+42% at 70). Applied to the amount you'd get starting at 65.
+ */
+export function cppAdjustment(startAge: number): number {
+  const months = (startAge - 65) * 12;
+  return months < 0 ? 1 + 0.006 * months : 1 + 0.007 * months;
+}
+
+/** OAS deferral: +0.6% per month after 65 (+36% at 70). OAS can't start before 65. */
+export function oasAdjustment(startAge: number): number {
+  return 1 + 0.006 * Math.max(0, (startAge - 65) * 12);
+}
+
+/** OAS rises 10% from age 75 (July 2022 increase). */
+export const OAS_AGE_75_INCREASE = 0.1;
+
+/** Annual guaranteed income streams (real $/yr) once each has started. */
+export function guaranteedStreams(input: RetirementInput): {
+  cpp: number;
+  oas: number;
+  pension: number;
+} {
+  return {
+    cpp: input.cppAt65 * cppAdjustment(input.cppStartAge),
+    oas: input.oasAt65 * oasAdjustment(input.oasStartAge),
+    pension: (input.currentIncome * input.guaranteedIncomePct) / 100,
+  };
+}
+
+/** Total guaranteed income (real $/yr) received at a given age. */
+export function guaranteedAtAge(input: RetirementInput, age: number): number {
+  const { cpp, oas, pension } = guaranteedStreams(input);
+  return (
+    (age >= input.cppStartAge ? cpp : 0) +
+    (age >= input.oasStartAge ? oas * (age >= 75 ? 1 + OAS_AGE_75_INCREASE : 1) : 0) +
+    (age >= input.pensionStartAge ? pension : 0)
+  );
+}
+
+/** Latest age at which a (non-zero) guaranteed stream starts; the 75 OAS bump is excluded. */
+export function lastGuaranteedStartAge(input: RetirementInput): number | null {
+  const { cpp, oas, pension } = guaranteedStreams(input);
+  const ages = [
+    cpp > 0 ? input.cppStartAge : null,
+    oas > 0 ? input.oasStartAge : null,
+    pension > 0 ? input.pensionStartAge : null,
+  ].filter((a): a is number => a != null);
+  return ages.length > 0 ? Math.max(...ages) : null;
+}
+
+/**
+ * Target gross income, guaranteed income once every stream has started (before the OAS
+ * age-75 increase), and the gap the portfolio then funds. All taxable and in gross terms, so
+ * guaranteed income offsets the target dollar-for-dollar and tax is implicit in the target.
  */
 export function incomeBreakdown(input: RetirementInput): IncomeBreakdown {
   const targetGrossIncome = (input.currentIncome * input.targetIncomePct) / 100;
-  const guaranteedIncome = (input.currentIncome * input.guaranteedIncomePct) / 100;
+  const { cpp, oas, pension } = guaranteedStreams(input);
+  const guaranteedIncome = cpp + oas + pension;
   return {
     targetGrossIncome,
     guaranteedIncome,
@@ -31,16 +83,13 @@ export function incomeBreakdown(input: RetirementInput): IncomeBreakdown {
 }
 
 /**
- * The portfolio's required gross withdrawal at a given age. Before the pension
- * starts the portfolio funds the full target (the "bridge"); once guaranteed
- * income kicks in, only the remaining gap.
+ * The portfolio's required gross withdrawal at a given age: the target less whatever
+ * guaranteed income has started by then. Before any starts, the portfolio funds the full
+ * target (the "bridge").
  */
-export function withdrawalAtAge(
-  input: RetirementInput,
-  breakdown: IncomeBreakdown,
-  age: number,
-): number {
-  return age >= input.pensionStartAge ? breakdown.portfolioWithdrawal : breakdown.targetGrossIncome;
+export function withdrawalAtAge(input: RetirementInput, age: number): number {
+  const target = (input.currentIncome * input.targetIncomePct) / 100;
+  return Math.max(0, target - guaranteedAtAge(input, age));
 }
 
 interface PathResult {
@@ -57,7 +106,6 @@ interface PathResult {
  */
 export function projectPath(input: RetirementInput, retirementAge: number): PathResult {
   const contribution = (input.currentIncome * input.contributionPct) / 100;
-  const breakdown = incomeBreakdown(input);
 
   let balance = input.currentSavings;
   const points: ProjectionPoint[] = [{ age: input.currentAge, balance }];
@@ -67,8 +115,8 @@ export function projectPath(input: RetirementInput, retirementAge: number): Path
     const r = phaseRealMean(input, retirementAge, age);
     const flow =
       age < retirementAge
-        ? contribution + (age >= input.pensionStartAge ? breakdown.guaranteedIncome : 0)
-        : -withdrawalAtAge(input, breakdown, age);
+        ? contribution + guaranteedAtAge(input, age)
+        : -withdrawalAtAge(input, age);
     balance = balance * (1 + r) + flow * (1 + r / 2);
 
     const nextAge = age + 1;
@@ -89,16 +137,47 @@ export function projectPath(input: RetirementInput, retirementAge: number): Path
  */
 export function accumulationBalances(input: RetirementInput): ProjectionPoint[] {
   const contribution = (input.currentIncome * input.contributionPct) / 100;
-  const { guaranteedIncome } = incomeBreakdown(input);
   const r = realMean(input.accumReturn, input.inflationRate);
 
   let balance = input.currentSavings;
   const points: ProjectionPoint[] = [{ age: input.currentAge, balance }];
   for (let age = input.currentAge; age < input.planningAge; age++) {
-    // A pension that starts while still working is saved (added to the portfolio).
-    const inflow = contribution + (age >= input.pensionStartAge ? guaranteedIncome : 0);
+    // Guaranteed income that starts while still working is saved (added to the portfolio).
+    const inflow = contribution + guaranteedAtAge(input, age);
     balance = balance * (1 + r) + inflow * (1 + r / 2);
     points.push({ age: age + 1, balance });
   }
   return points;
+}
+
+/** A run of retirement years with the same guaranteed income. */
+export interface IncomePhase {
+  fromAge: number;
+  /** Last age in the phase (inclusive); planningAge − 1 for the final phase. */
+  toAge: number;
+  guaranteed: number;
+  portfolio: number;
+}
+
+/**
+ * Retirement years from `retireAge` to the plan end, grouped by guaranteed income: e.g. an
+ * all-savings bridge, then CPP only, then CPP + OAS, then the OAS increase at 75.
+ */
+export function incomePhases(input: RetirementInput, retireAge: number): IncomePhase[] {
+  const phases: IncomePhase[] = [];
+  for (let age = retireAge; age < input.planningAge; age++) {
+    const guaranteed = guaranteedAtAge(input, age);
+    const last = phases[phases.length - 1];
+    if (last && Math.abs(last.guaranteed - guaranteed) < 0.5) {
+      last.toAge = age;
+    } else {
+      phases.push({
+        fromAge: age,
+        toAge: age,
+        guaranteed,
+        portfolio: withdrawalAtAge(input, age),
+      });
+    }
+  }
+  return phases;
 }

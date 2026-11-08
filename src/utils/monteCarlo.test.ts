@@ -1,7 +1,7 @@
 import { describe, test, expect } from "vitest";
 import { DEFAULTS } from "./presets";
 import { validateUserInput } from "./validation";
-import { runMonteCarlo } from "./monteCarlo";
+import { findBreakEven, runMonteCarlo } from "./monteCarlo";
 
 const SIMS = 300;
 const year = DEFAULTS.holdingPeriod;
@@ -64,5 +64,44 @@ describe("runMonteCarlo", () => {
     const noRent = runMonteCarlo({ ...allCash, monthlyRent: 1 }, SIMS);
     // Rent above owner costs: the owner banks the difference on top of home equity.
     expect(withSavings[year - 1].ownerMedian).toBeGreaterThan(noRent[year - 1].ownerMedian);
+  });
+});
+
+describe("insured mortgages", () => {
+  test("the insurance premium lowers the owner's net worth", () => {
+    const at20 = runMonteCarlo({ ...DEFAULTS, downPaymentPercentage: 20 }, SIMS)[0];
+    const at19 = runMonteCarlo({ ...DEFAULTS, downPaymentPercentage: 19.99 }, SIMS)[0];
+    // A 0.01-point smaller down payment adds a 2.8% premium to the loan: the owner is
+    // roughly $22k worse off after year 1, far more than the $100 down-payment difference.
+    expect(at20.ownerMedian - at19.ownerMedian).toBeGreaterThan(20_000);
+  });
+});
+
+describe("findBreakEven", () => {
+  test("finds the rent and price at which the sale-year call is about 50/50", () => {
+    const be = findBreakEven(DEFAULTS);
+    expect(be.year).toBe(DEFAULTS.holdingPeriod);
+    expect(be.monthlyRent).not.toBeNull();
+    expect(be.homePrice).not.toBeNull();
+    const atRent = runMonteCarlo({ ...DEFAULTS, monthlyRent: be.monthlyRent! }, 4000)[year - 1];
+    const atPrice = runMonteCarlo({ ...DEFAULTS, initialHomePrice: be.homePrice! }, 4000)[year - 1];
+    expect(atRent.renterWinPct).toBeGreaterThan(0.45);
+    expect(atRent.renterWinPct).toBeLessThan(0.55);
+    expect(atPrice.renterWinPct).toBeGreaterThan(0.45);
+    expect(atPrice.renterWinPct).toBeLessThan(0.55);
+    // Renting leads at the defaults, so a tie needs a higher rent or a lower price.
+    expect(be.monthlyRent!).toBeGreaterThan(DEFAULTS.monthlyRent);
+    expect(be.homePrice!).toBeLessThan(DEFAULTS.initialHomePrice);
+  });
+
+  test("keeps the price search within what the down payment can buy", () => {
+    // 5% down caps the price at $500k; renting still wins at that cap with a low rent.
+    const be = findBreakEven({
+      ...DEFAULTS,
+      initialHomePrice: 450_000,
+      downPaymentPercentage: 5,
+      monthlyRent: 800,
+    });
+    expect(be.homePrice == null || be.homePrice <= 500_000).toBe(true);
   });
 });

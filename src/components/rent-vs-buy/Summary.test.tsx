@@ -51,4 +51,37 @@ describe("rent-vs-buy Summary", () => {
     render(<Summary data={data} holdingPeriod={4} />);
     expect(screen.getByText(/ahead in most simulations since year 3/)).toBeInTheDocument();
   });
+
+  it("adds the rent and price that would make it a 50/50 call", () => {
+    const data = [point(1, 0.7, 1000), point(2, 0.65, 2000)];
+    render(
+      <Summary
+        data={data}
+        holdingPeriod={2}
+        breakEven={{ year: 2, monthlyRent: 4460, homePrice: 784000 }}
+        monthlyRent={3500}
+        homePrice={1000000}
+      />,
+    );
+    expect(
+      screen.getByText(
+        /50\/50 call at year 2 with a rent of \$4,460\/mo \(now \$3,500\) or a price of \$784,000 \(now \$1,000,000\)/,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("leaves out a tie input the search could not find", () => {
+    const data = [point(1, 0.7, 1000)];
+    render(
+      <Summary
+        data={data}
+        holdingPeriod={1}
+        breakEven={{ year: 1, monthlyRent: null, homePrice: 600000 }}
+        monthlyRent={3500}
+        homePrice={1000000}
+      />,
+    );
+    expect(screen.queryByText(/a rent of/)).toBeNull();
+    expect(screen.getByText(/with a price of \$600,000/)).toBeInTheDocument();
+  });
 });
