@@ -8,7 +8,7 @@
  * Pre-computed segment arrays (JST_SEG_START, JST_SEG_LEN) live in jstData.ts.
  */
 
-import { mulberry32 } from "./rng";
+import { mulberry32 } from "../rng";
 import { JST_BOND, JST_EQUITY, JST_OBSERVATIONS, JST_SEG_LEN, JST_SEG_START } from "./jstData";
 
 /** Average block length (years) — matches the Python default. */

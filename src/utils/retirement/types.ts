@@ -43,6 +43,8 @@ export interface RetirementResult {
   portfolioAtRetirement: number | null;
   /** Share of simulations (0–1) whose portfolio lasts to `planningAge`. */
   successRate: number | null;
+  /** Share of simulations (0–1) that trim spending in weak markets at least once. */
+  cutRate: number | null;
   /** Deterministic accumulation balances, currentAge..retirementAge. */
   accumulationPath: ProjectionPoint[] | null;
   /** Monte Carlo percentile bands for the retirement phase, retirementAge..planningAge. */
@@ -60,4 +62,18 @@ export interface RetirementResult {
   guaranteedIncome: number;
   /** Gross (taxable) amount the portfolio must withdraw each year. */
   portfolioWithdrawal: number;
+}
+
+/** Message sent to the retirement Web Worker. */
+export interface RetirementWorkerRequest {
+  requestId: number;
+  input: RetirementInput;
+}
+
+/** Message returned from the retirement Web Worker. */
+export interface RetirementWorkerResponse {
+  requestId: number;
+  result: RetirementResult;
+  /** Year-1 withdrawal rate (fraction); null when no feasible plan. */
+  planSWR: number | null;
 }

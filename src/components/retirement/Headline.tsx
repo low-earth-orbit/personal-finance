@@ -64,6 +64,9 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
 
   const { earliestRetirementAge, yearsUntilRetirement, retirementAgeRange } = result;
   const retireNow = yearsUntilRetirement === 0;
+  const bands = result.retirementBands;
+  const medianLeft = bands && bands.length > 0 ? bands[bands.length - 1].p50 : null;
+  const showCutRate = input.spendingFlexibilityPct > 0 && result.cutRate != null;
 
   return (
     <Card withBorder radius="md" padding="lg">
@@ -92,12 +95,17 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
               </>
             )}
           </Text>
+          <Text size="xs" c="dimmed">
+            The {input.targetSuccessRate}% confidence covers market swings after you retire: your
+            savings are projected at the expected return until then. The age range above shows how
+            market luck while saving moves the date.
+          </Text>
         </Stack>
 
         <Divider />
 
         {/* Metric strip */}
-        <SimpleGrid cols={{ base: 1, xs: 3 }} spacing="lg" verticalSpacing="md">
+        <SimpleGrid cols={{ base: 1, xs: 2, sm: 3 }} spacing="lg" verticalSpacing="md">
           {result.portfolioAtRetirement != null && (
             <Metric
               label="Savings at retirement"
@@ -117,6 +125,20 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
               value={`${(planSWR * 100).toFixed(1)}%`}
               note="of savings"
               info={<SwrTechnicalNote input={input} />}
+            />
+          )}
+          {medianLeft != null && (
+            <Metric
+              label={`Left at age ${input.planningAge}`}
+              value={formatCADCompact(medianLeft)}
+              note="median, today's dollars"
+            />
+          )}
+          {showCutRate && (
+            <Metric
+              label="Chance of trimming spending"
+              value={`${Math.round((result.cutRate ?? 0) * 100)}%`}
+              note="at least one year of reduced spending"
             />
           )}
         </SimpleGrid>

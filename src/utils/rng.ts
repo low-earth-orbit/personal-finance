@@ -1,10 +1,10 @@
 /**
- * Seeded RNG + standard-normal matrix for the glide-path Monte Carlo.
+ * Seeded random numbers shared by every Monte Carlo tool (rent-vs-buy, retirement, glide-path).
  *
- * A fixed seed makes identical inputs produce identical recommendations — no jitter
- * between renders, smooth motion when a single field is nudged (mirrors the seeded
- * approach in the retirement engine). Numbers won't match the Python engine's PCG64
- * exactly, but are statistically equivalent.
+ * A fixed seed makes identical inputs produce identical results — no jitter between renders,
+ * and smooth motion when a single field is nudged (each run consumes the same random stream).
+ * The glide-path numbers won't match the Python engine's PCG64 exactly, but are statistically
+ * equivalent.
  */
 
 /** Deterministic PRNG (mulberry32). */
@@ -16,6 +16,13 @@ export function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
+}
+
+/** One standard-normal draw via Box–Muller (cosine branch) from the supplied uniform source. */
+export function standardNormal(rand: () => number): number {
+  const u1 = Math.max(rand(), 1e-12);
+  const u2 = rand();
+  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
 /**

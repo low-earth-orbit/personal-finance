@@ -2,10 +2,10 @@
 
 ## Key Modeling Assumptions
 
-1. **Renter invests surplus**: owner total cost − rent, added mid-year (half-year return)
+1. **Cheaper side invests the difference**: while owner total cost > rent the renter invests the surplus; once owning is cheaper (e.g. after the mortgage is paid off) the owner invests rent − owner cost. Contributions land mid-year (half-year return); neither portfolio ever withdraws.
 2. **Mortgage**: conventional only, ≥20% down, ≤25yr amortization. No CMHC/high-ratio/30yr.
 3. **Compounding**: semi-annual (Canadian convention). Renewal: 5yr terms, rate redrawn at MC.
-4. **Tax**: dividends taxed annually (cost basis adjusted); capital gains at sale on `portfolioValue − bookValue`; principal residence exempt
+4. **Tax**: each portfolio splits into a sheltered sleeve (`taxShelteredPct`, default 0: TFSA/FHSA, or an RRSP at equal tax rates in and out — no tax on yield or gains) and a taxable sleeve (yield taxed annually, cost basis adjusted; capital gains at sale on `value − book`). Owner net worth = home equity after selling costs + owner portfolio after tax. Principal residence exempt.
 5. **Selling costs**: `homePrice × (1 − sellerClosingCostsPct) − mortgageBalance`
 6. **Holding period**: `holdingPeriod` (default 12yr) is comparison year. Horizon hardcoded 50yr.
 7. **Growth rates**: `rentIncreaseRate` → rent only; `ownerCostGrowthRate` → maintenance/tax/condo baseline; `homePriceGrowthRate` → home value only. Maintenance and condo fees grow an extra deterministic `maintAgingPct` per year on top of `ownerCostGrowthRate` as the building ages. Realized growth has no floors — deflation passes through symmetrically to rent and owner costs.
@@ -41,7 +41,11 @@ Two-layer uncertainty model:
 
 **Mortgage renewals:** at 5yr multiples, rate redrawn with inflation shock, balance re-amortized over remaining years.
 
-**Renter/owner share same scenario path** — enables fair pairwise comparison.
+**Renter/owner share same scenario path** — enables fair pairwise comparison. Draws come from a fixed seed (`src/utils/rng.ts`), so identical inputs give identical results and the 60/70% tier boundaries don't flicker between renders.
+
+**Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and when buying leads in most simulations, read relative to the sale year: since which year (if it leads at sale), otherwise the first later year it would, flagging an earlier lead that was lost. The lead can change hands more than once (e.g. buying pulls ahead, then building aging lets renting back in front).
+
+**Tax-sheltered share limits:** `taxShelteredPct` also shelters the starting savings (down payment + closing costs), and the model doesn't enforce TFSA/RRSP room or the FHSA's $40k lifetime cap and closure on purchase — keep the share within the user's real room.
 
 ## Maintenance Aging Calibration
 

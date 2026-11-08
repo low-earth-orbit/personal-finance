@@ -3,13 +3,14 @@ import {
   calculateMonthlyMortgagePayment,
   calculateMortgagePrincipal,
 } from "./math";
+import { mulberry32, standardNormal } from "./rng";
 import type { MonteCarloYear, UserInput } from "../types";
 
-function normalRandom(): number {
-  const u1 = Math.random();
-  const u2 = Math.random();
-  return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
+// Fixed seed: identical inputs give identical results (no jitter between renders), and every
+// run consumes the same random stream, so nudging one input moves the answer smoothly.
+const SEED = 0x2545f491;
+
+type Normal = () => number;
 
 function percentile(sorted: number[], p: number): number {
   const idx = Math.min(Math.floor(sorted.length * p), sorted.length - 1);
@@ -74,7 +75,7 @@ interface PathYear {
   ownerNetWorth: number;
 }
 
-function drawScenario(userInput: UserInput): Scenario {
+function drawScenario(userInput: UserInput, normalRandom: Normal): Scenario {
   return {
     homePriceGrowthMean:
       userInput.homePriceGrowthRate + normalRandom() * userInput.homePriceGrowthSigma,
@@ -96,7 +97,7 @@ function drawScenario(userInput: UserInput): Scenario {
 }
 
 // Year-by-year rate realizations and the mortgage rate path for one scenario.
-function drawPath(scenario: Scenario, horizon: number): ScenarioPath {
+function drawPath(scenario: Scenario, horizon: number, normalRandom: Normal): ScenarioPath {
   const annual: AnnualRates[] = [];
   const inflationShocks: number[] = [];
 
@@ -146,6 +147,47 @@ function drawPath(scenario: Scenario, horizon: number): ScenarioPath {
   return { annual, mortgageRates };
 }
 
+/**
+ * An investment portfolio split into a tax-sheltered sleeve (TFSA-like: no tax on yield or
+ * gains) and a taxable sleeve (yield taxed yearly, gains taxed at sale on value − book).
+ * Contributions are split by the sheltered share; there are no withdrawals.
+ */
+interface Portfolio {
+  sheltered: number;
+  taxable: number;
+  book: number;
+}
+
+function newPortfolio(amount: number, shelteredFrac: number): Portfolio {
+  const taxable = amount * (1 - shelteredFrac);
+  return { sheltered: amount * shelteredFrac, taxable, book: taxable };
+}
+
+/** One year of growth plus a mid-year contribution (half-year of return). */
+function stepPortfolio(
+  p: Portfolio,
+  r: number,
+  dividendYieldPct: number,
+  dividendTaxFrac: number,
+  contribution: number,
+  shelteredFrac: number,
+): void {
+  const grossDividends = (p.taxable * dividendYieldPct) / 100;
+  const midYear = 1 + r / 2;
+  p.sheltered = p.sheltered * (1 + r) + contribution * shelteredFrac * midYear;
+  p.taxable =
+    p.taxable * (1 + r) -
+    grossDividends * dividendTaxFrac +
+    contribution * (1 - shelteredFrac) * midYear;
+  p.book += contribution * (1 - shelteredFrac) + grossDividends * (1 - dividendTaxFrac);
+}
+
+/** Value if sold now, after capital-gains tax on the taxable sleeve. */
+function afterTaxValue(p: Portfolio, capGainTaxFrac: number): number {
+  const taxableGain = p.taxable - Math.max(p.book, 0);
+  return p.sheltered + p.taxable - (taxableGain > 0 ? taxableGain * capGainTaxFrac : 0);
+}
+
 // Walk one year-by-year wealth path for owner and renter.
 function simulatePath(
   userInput: UserInput,
@@ -157,6 +199,7 @@ function simulatePath(
   const capGainTaxFrac = userInput.capitalGainTaxRate / 100;
   const dividendTaxFrac = userInput.dividendTaxRate / 100;
   const netOfSellingFees = 1 - userInput.sellerClosingCostsPct / 100;
+  const shelteredFrac = Math.min(Math.max((userInput.taxShelteredPct ?? 0) / 100, 0), 1);
 
   const initialPrincipal = calculateMortgagePrincipal(
     userInput.initialHomePrice,
@@ -169,8 +212,10 @@ function simulatePath(
 
   let homePrice = userInput.initialHomePrice;
   let mortgageBalance = initialPrincipal;
-  let portfolioValue = initialPortfolio;
-  let bookValue = initialPortfolio;
+  // Whoever has the lower housing cost invests the difference: the renter while owning costs
+  // more, the owner once it costs less (e.g. after the mortgage is paid off).
+  const renterPortfolio = newPortfolio(initialPortfolio, shelteredFrac);
+  const ownerPortfolio = newPortfolio(0, shelteredFrac);
   let annualRent = userInput.monthlyRent * 12;
   // Year-0 anchored operating costs. Each grows with realized owner cost growth,
   // independent of rent growth and home price appreciation. Maintenance and
@@ -223,12 +268,17 @@ function simulatePath(
     const surplus = ownersCashOutflow - annualRent;
 
     const r = yr.investmentReturn / 100;
-    const grossDividends = (portfolioValue * yr.dividendYield) / 100;
-    const afterTaxDividends = grossDividends * (1 - dividendTaxFrac);
-
-    portfolioValue =
-      portfolioValue * (1 + r) - grossDividends * dividendTaxFrac + surplus * (1 + r / 2);
-    bookValue += surplus + afterTaxDividends;
+    const renterSaves = Math.max(surplus, 0);
+    const ownerSaves = Math.max(-surplus, 0);
+    stepPortfolio(
+      renterPortfolio,
+      r,
+      yr.dividendYield,
+      dividendTaxFrac,
+      renterSaves,
+      shelteredFrac,
+    );
+    stepPortfolio(ownerPortfolio, r, yr.dividendYield, dividendTaxFrac, ownerSaves, shelteredFrac);
 
     homePrice = homePrice * (1 + yr.homePriceGrowth / 100);
     const rentGrowth = 1 + yr.rentIncrease / 100;
@@ -238,10 +288,11 @@ function simulatePath(
     annualMaintenance = annualMaintenance * ownerCostGrowth * maintAgingFactor;
     monthlyCondoFees = monthlyCondoFees * ownerCostGrowth * maintAgingFactor;
 
-    const taxableGain = portfolioValue - Math.max(bookValue, 0);
-    const renterNetWorth =
-      taxableGain > 0 ? portfolioValue - taxableGain * capGainTaxFrac : portfolioValue;
-    const ownerNetWorth = homePrice * netOfSellingFees - mortgageBalance;
+    const renterNetWorth = afterTaxValue(renterPortfolio, capGainTaxFrac);
+    const ownerNetWorth =
+      homePrice * netOfSellingFees -
+      mortgageBalance +
+      afterTaxValue(ownerPortfolio, capGainTaxFrac);
 
     results.push({ year: y, renterNetWorth, ownerNetWorth });
   }
@@ -253,15 +304,19 @@ export function runMonteCarlo(userInput: UserInput, numSimulations: number): Mon
   const horizon = SIMULATION_HORIZON_YEARS;
   const renterByYear: number[][] = Array.from({ length: horizon }, () => []);
   const ownerByYear: number[][] = Array.from({ length: horizon }, () => []);
+  const gapByYear: number[][] = Array.from({ length: horizon }, () => []);
   const renterWinsByYear: number[] = Array.from({ length: horizon }, () => 0);
+  const rand = mulberry32(SEED);
+  const normalRandom = () => standardNormal(rand);
 
   for (let sim = 0; sim < numSimulations; sim++) {
-    const scenario = drawScenario(userInput);
-    const { annual, mortgageRates } = drawPath(scenario, horizon);
+    const scenario = drawScenario(userInput, normalRandom);
+    const { annual, mortgageRates } = drawPath(scenario, horizon, normalRandom);
     const path = simulatePath(userInput, annual, mortgageRates, scenario);
     for (let y = 0; y < horizon; y++) {
       renterByYear[y].push(path[y].renterNetWorth);
       ownerByYear[y].push(path[y].ownerNetWorth);
+      gapByYear[y].push(path[y].renterNetWorth - path[y].ownerNetWorth);
       if (path[y].renterNetWorth > path[y].ownerNetWorth) {
         renterWinsByYear[y]++;
       }
@@ -270,8 +325,10 @@ export function runMonteCarlo(userInput: UserInput, numSimulations: number): Mon
 
   return renterByYear.map((renterVals, i) => {
     const ownerVals = ownerByYear[i];
+    const gaps = gapByYear[i];
     renterVals.sort((a, b) => a - b);
     ownerVals.sort((a, b) => a - b);
+    gaps.sort((a, b) => a - b);
     return {
       year: i + 1,
       renterP25: percentile(renterVals, 0.25),
@@ -280,6 +337,7 @@ export function runMonteCarlo(userInput: UserInput, numSimulations: number): Mon
       ownerP25: percentile(ownerVals, 0.25),
       ownerMedian: percentile(ownerVals, 0.5),
       ownerP75: percentile(ownerVals, 0.75),
+      medianGap: percentile(gaps, 0.5),
       renterWinPct: renterWinsByYear[i] / numSimulations,
     };
   });

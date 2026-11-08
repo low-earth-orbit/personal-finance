@@ -20,7 +20,7 @@
  * run inside a Web Worker.
  */
 
-import { fillNormals } from "./rng";
+import { fillNormals } from "../rng";
 import { sampleBlockPaths } from "./blockBootstrap";
 import { DEFAULT_ALLOC_CURVE, GRID_STEP, type AllocAnchor } from "./presets";
 import { JST_BOND, JST_EQUITY } from "./jstData";
