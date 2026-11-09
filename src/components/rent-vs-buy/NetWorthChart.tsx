@@ -25,6 +25,7 @@ import {
   ReferenceDot,
   ResponsiveContainer,
 } from "recharts";
+import { SIMULATION_HORIZON_YEARS } from "@/utils/monteCarlo";
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import type {
   BreakEven,
@@ -336,7 +337,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       <Summary data={chartData} holdingPeriod={userInput.holdingPeriod} breakEven={breakEven} />
       <div
         role="img"
-        aria-label={`Net worth projection chart comparing renting versus buying over 50 years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}
+        aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}
       >
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={chartData} margin={{ top: 25, right: 50, left: 0, bottom: 20 }}>
@@ -529,10 +530,10 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
 
       <Text size="xs" c="dimmed">
         The chart shows net worth projections for both renting and buying scenarios from{" "}
-        {NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. It extends to a 50-year horizon
-        to show what would happen if you held longer. These projections are based on your
-        assumptions and are illustrative only — results are subject to modelling error, uncertain
-        inputs, and real-world complexity.
+        {NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. It extends to a{" "}
+        {SIMULATION_HORIZON_YEARS}-year horizon to show what would happen if you held longer. These
+        projections are based on your assumptions and are illustrative only — results are subject to
+        modelling error, uncertain inputs, and real-world complexity.
       </Text>
 
       <Group justify="space-between" align="center" mt="xs">
