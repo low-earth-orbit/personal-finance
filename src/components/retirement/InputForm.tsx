@@ -113,6 +113,12 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   }}
                 />
                 <UserInputFormItem
+                  {...num("planningAge")}
+                  label="Plan until"
+                  labelHelperText="The age your savings should last to (life expectancy). 95 is a common planning horizon, longer than the average ~85 to account for longevity risk."
+                  suffix=" yrs"
+                />
+                <UserInputFormItem
                   {...num("cppAt65")}
                   label="CPP at 65"
                   labelHelperText="The CPP pension you'd get if it started at 65, in today's dollars per year. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together."
@@ -155,12 +161,6 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   {...num("pensionStartAge")}
                   label="Pension start age"
                   labelHelperText="When your workplace pension begins."
-                  suffix=" yrs"
-                />
-                <UserInputFormItem
-                  {...num("planningAge")}
-                  label="Plan until"
-                  labelHelperText="The age your savings should last to (life expectancy). 95 is a common planning horizon, longer than the average ~85 to account for longevity risk."
                   suffix=" yrs"
                 />
               </SimpleGrid>
