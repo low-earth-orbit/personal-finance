@@ -1,22 +1,11 @@
-import { useState } from "react";
-import {
-  Accordion,
-  ActionIcon,
-  Alert,
-  Button,
-  Group,
-  Modal,
-  SimpleGrid,
-  Stack,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { IconPlus, IconRotate, IconX } from "@tabler/icons-react";
+import type { ReactNode } from "react";
+import { Accordion, Alert, Button, Group, Modal, SimpleGrid, Stack, Text } from "@mantine/core";
+import { IconRotate } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
 import { FIELD_CONSTRAINTS } from "@/utils/validation";
-import type { FieldErrors, FieldValue, Preset, SigmaKey, UserInput, UserInputKey } from "@/types";
+import type { FieldErrors, FieldValue, SigmaKey, UserInput, UserInputKey } from "@/types";
 import { formatCAD, formatPercentage } from "@/utils/format";
 import {
   calculateMonthlyMortgagePayment,
@@ -28,16 +17,12 @@ import {
 interface UserInputFormProps {
   userInput: UserInput;
   handleChange: (field: UserInputKey, value: FieldValue) => void;
-  handlePreset: (preset: Preset) => void;
   handleReset: () => void;
   expandedFields: UserInputKey[];
   toggleFieldExpanded: (baseField: UserInputKey, sigmaField?: SigmaKey) => void;
   errors: FieldErrors;
-  activePreset: Preset | null;
-  visibleBuiltins: Preset[];
-  customPresets: Preset[];
-  onSavePreset: (name: string) => void;
-  onDeletePreset: (preset: Preset) => void;
+  /** Scenario preset controls, rendered above the form. */
+  presetBar?: ReactNode;
 }
 
 interface PerturbedOptions {
@@ -49,34 +34,17 @@ interface PerturbedOptions {
 export default function UserInputForm({
   userInput,
   handleChange,
-  handlePreset,
   handleReset,
   expandedFields,
   toggleFieldExpanded,
   errors,
-  activePreset,
-  visibleBuiltins,
-  customPresets,
-  onSavePreset,
-  onDeletePreset,
+  presetBar,
 }: UserInputFormProps) {
-  const [saveOpen, { open: openSave, close: closeSave }] = useDisclosure(false);
   const [resetOpen, { open: openReset, close: closeReset }] = useDisclosure(false);
-  const [presetName, setPresetName] = useState("");
 
   const confirmReset = () => {
     handleReset();
     closeReset();
-  };
-
-  const variantFor = (preset: Preset) => (activePreset?.id === preset.id ? "filled" : "light");
-
-  const submitSave = () => {
-    const trimmed = presetName.trim();
-    if (!trimmed) return;
-    onSavePreset(trimmed);
-    setPresetName("");
-    closeSave();
   };
 
   const bind = (id: UserInputKey) => (value: FieldValue) => handleChange(id, value);
@@ -152,47 +120,13 @@ export default function UserInputForm({
 
   return (
     <Stack>
-      <Stack>
-        <Group gap="xs" role="group" aria-label="Scenario presets">
-          {[...visibleBuiltins, ...customPresets].map((preset) => (
-            <Group key={preset.id} gap={0} wrap="nowrap">
-              <Button
-                variant={variantFor(preset)}
-                size="xs"
-                radius="lg"
-                aria-pressed={activePreset?.id === preset.id}
-                onClick={() => handlePreset(preset)}
-              >
-                {preset.label}
-              </Button>
-              <ActionIcon
-                variant="transparent"
-                color="gray"
-                size="xs"
-                onClick={() => onDeletePreset(preset)}
-                aria-label={`Delete ${preset.label}`}
-              >
-                <IconX size={12} />
-              </ActionIcon>
-            </Group>
-          ))}
-          <Button
-            variant="subtle"
-            size="xs"
-            color="gray"
-            leftSection={<IconPlus size={12} />}
-            onClick={openSave}
-          >
-            Save as preset
-          </Button>
-        </Group>
-      </Stack>
+      {presetBar}
 
       <Modal opened={resetOpen} onClose={closeReset} title="Reset everything?" size="sm" centered>
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            This will remove all custom presets, restore any deleted built-in presets, and discard
-            your edits.
+            This will delete your saved presets, show any hidden scenarios, and restore the default
+            inputs.
           </Text>
           <Group justify="flex-end" gap="xs">
             <Button variant="subtle" color="gray" onClick={closeReset}>
@@ -200,32 +134,6 @@ export default function UserInputForm({
             </Button>
             <Button color="red" onClick={confirmReset}>
               Reset all
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Modal opened={saveOpen} onClose={closeSave} title="Save as preset" size="sm" centered>
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            placeholder="e.g. My place"
-            value={presetName}
-            onChange={(e) => setPresetName(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submitSave();
-              }
-            }}
-            data-autofocus
-          />
-          <Group justify="flex-end" gap="xs">
-            <Button variant="subtle" color="gray" onClick={closeSave}>
-              Cancel
-            </Button>
-            <Button onClick={submitSave} disabled={!presetName.trim()}>
-              Save
             </Button>
           </Group>
         </Stack>

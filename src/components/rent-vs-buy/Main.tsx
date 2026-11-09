@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Container, Grid } from "@mantine/core";
 import Result from "./Result";
 import UserInputForm from "./UserInputForm";
+import PresetBar from "./PresetBar";
 import { DEFAULTS, PRESETS, INPUT_UNCERTAINTIES, getActivePreset } from "@/utils/presets";
 import { validateUserInput } from "@/utils/validation";
 import {
@@ -78,6 +79,12 @@ const Main = () => {
   if (!activePreset) {
     activePreset = getActivePreset(userInput, allPresets);
   }
+  // The last picked or saved preset stays the "base" after edits, so the bar can offer
+  // Revert / Update.
+  const basePreset = allPresets.find((p) => p.id === activePresetId) ?? activePreset;
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ preset: Preset; index: number } | null>(
+    null,
+  );
 
   function setActivePresetId(id: string | null) {
     setActivePresetIdState(id);
@@ -93,13 +100,15 @@ const Main = () => {
       saveInput(next);
       return next;
     });
-    if (activePresetId !== null) setActivePresetId(null);
+    // Keep activePresetId: it now marks the base preset the inputs were edited from.
+    if (activePresetId === null && activePreset) setActivePresetId(activePreset.id);
   }
 
   function handlePreset(preset: Preset) {
     setUserInput(normalizeInput(preset.values));
     clearInput();
     setActivePresetId(preset.id);
+    setRecentlyDeleted(null);
   }
 
   function toggleFieldExpanded(baseField: UserInputKey, sigmaField?: SigmaKey) {
@@ -139,9 +148,22 @@ const Main = () => {
     setCustomPresets(next);
     saveCustomPresets(next);
     setActivePresetId(entry.id);
+    setRecentlyDeleted(null);
+  }
+
+  function handleUpdatePreset(preset: Preset) {
+    const next = customPresets.map((p) => (p.id === preset.id ? { ...p, values: userInput } : p));
+    setCustomPresets(next);
+    saveCustomPresets(next);
+    setActivePresetId(preset.id);
+    setRecentlyDeleted(null);
   }
 
   function handleDeletePreset(preset: Preset) {
+    setRecentlyDeleted({
+      preset,
+      index: preset.custom ? customPresets.findIndex((p) => p.id === preset.id) : -1,
+    });
     if (preset.custom) {
       const next = customPresets.filter((p) => p.id !== preset.id);
       setCustomPresets(next);
@@ -154,6 +176,27 @@ const Main = () => {
     if (activePresetId === preset.id) setActivePresetId(null);
   }
 
+  function handleUndoDelete() {
+    if (!recentlyDeleted) return;
+    const { preset, index } = recentlyDeleted;
+    if (preset.custom) {
+      const next = [...customPresets];
+      next.splice(Math.max(0, Math.min(index, next.length)), 0, preset);
+      setCustomPresets(next);
+      saveCustomPresets(next);
+    } else {
+      const next = hiddenBuiltins.filter((id) => id !== preset.id);
+      setHiddenBuiltins(next);
+      saveHiddenBuiltins(next);
+    }
+    setRecentlyDeleted(null);
+  }
+
+  function handleRestoreBuiltins() {
+    setHiddenBuiltins([]);
+    saveHiddenBuiltins([]);
+  }
+
   function handleReset() {
     clearAll();
     setUserInput(DEFAULTS);
@@ -161,6 +204,7 @@ const Main = () => {
     setCustomPresets([]);
     setHiddenBuiltins([]);
     setActivePresetIdState("defaults");
+    setRecentlyDeleted(null);
   }
 
   return (
@@ -170,16 +214,25 @@ const Main = () => {
           <UserInputForm
             userInput={userInput}
             handleChange={handleChange}
-            handlePreset={handlePreset}
             handleReset={handleReset}
             expandedFields={expandedFields}
             toggleFieldExpanded={toggleFieldExpanded}
             errors={errors}
-            activePreset={activePreset}
-            visibleBuiltins={visibleBuiltins}
-            customPresets={customPresets}
-            onSavePreset={handleSavePreset}
-            onDeletePreset={handleDeletePreset}
+            presetBar={
+              <PresetBar
+                presets={allPresets}
+                activePreset={activePreset}
+                basePreset={basePreset}
+                hiddenBuiltinCount={PRESETS.length - visibleBuiltins.length}
+                recentlyDeleted={recentlyDeleted?.preset ?? null}
+                onSelect={handlePreset}
+                onSave={handleSavePreset}
+                onUpdate={handleUpdatePreset}
+                onDelete={handleDeletePreset}
+                onUndoDelete={handleUndoDelete}
+                onRestoreBuiltins={handleRestoreBuiltins}
+              />
+            }
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, md: 2 }}>
