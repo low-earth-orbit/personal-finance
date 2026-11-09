@@ -66,7 +66,7 @@ const INPUT_LABELS = {
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",
-  taxShelteredPct: "Held in TFSA/RRSP (%)",
+  taxShelteredPct: "Tax-sheltered (%)",
   propertyTaxRate: "Property tax rate (%)",
   maintPct: "Maintenance (%/yr)",
   maintAgingPct: "Building aging (%/yr)",
