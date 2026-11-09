@@ -160,15 +160,12 @@ export default function Methodology() {
         </Point>
         <Point heading="An over-funded plan has no best allocation.">
           If every allocation already delivers your target, the tool says so: the weight shown is
-          the middle of a tie. Decide what the surplus is for — leave it (set &ldquo;Leave money to
-          heirs&rdquo;) or use it (retire earlier or spend more).
+          the middle of a tie. Decide what the surplus is for: retire earlier or spend more.
         </Point>
-        <Point heading="What the bequest and start-age inputs do.">
-          &ldquo;Leave money to heirs&rdquo; gives money left at the end a value (none, some or
-          strong); with typical risk aversion a large estate adds little, so it mostly matters for
-          over-funded plans. A guaranteed-income start age after retirement makes the portfolio
-          carry the full target until the pension starts, which lowers income — retiring at 60 with
-          CPP/OAS from 65 cost about 6% in our example.
+        <Point heading="What the start-age input does.">
+          A guaranteed-income start age after retirement makes the portfolio carry the full target
+          until the pension starts, which lowers income — retiring at 60 with CPP/OAS from 65 cost
+          about 6% in our example.
         </Point>
         <Point heading="Bonds here are nominal.">
           The app&apos;s bond asset is an ordinary (nominal) bond. Our research finds that a mostly

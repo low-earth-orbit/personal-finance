@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Container, Grid } from "@mantine/core";
 import InputForm from "./InputForm";
 import Result from "./Result";
-import { DEFAULTS } from "@/utils/glide-path/presets";
+import { DEFAULTS, withFixedSettings } from "@/utils/glide-path/presets";
 import { loadInput, loadReturnMode, saveInput, saveReturnMode } from "@/utils/glide-path/storage";
 import { validateGlidePathInput } from "@/utils/glide-path/validation";
 import type {
@@ -38,6 +38,16 @@ export default function Main() {
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
   const seedRef = useRef(0);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const scrollToResultRef = useRef(false);
+
+  // Scroll after the loader renders: scrolling inside the click handler is cancelled by scroll
+  // anchoring when the result column grows from empty.
+  useEffect(() => {
+    if (!computing || !scrollToResultRef.current) return;
+    scrollToResultRef.current = false;
+    resultRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  }, [computing]);
 
   function terminateWorker() {
     workerRef.current?.terminate();
@@ -111,6 +121,8 @@ export default function Main() {
     cancelPendingComputation();
     seedRef.current = 0;
     compute(0, false);
+    // Below lg the result is stacked above the form, out of view from the Generate button.
+    scrollToResultRef.current = !!window.matchMedia?.("(max-width: 74.99em)").matches;
   }
 
   // Opt-in: redraw the Monte Carlo with the next seed, leaving inputs untouched, so the user
@@ -123,10 +135,10 @@ export default function Main() {
   }
 
   function handleChange(key: GlidePathInputKey, value: FieldValue) {
-    const next = {
+    const next = withFixedSettings({
       ...input,
       [key]: value === "" ? value : +value,
-    } as GlidePathInput;
+    } as GlidePathInput);
     setInput(next);
     saveInput(next);
     cancelPendingComputation();
@@ -173,7 +185,7 @@ export default function Main() {
             generating={computing}
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, lg: 2 }}>
+        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, lg: 2 }} ref={resultRef}>
           <Result
             input={computed?.input ?? input}
             result={computed?.data ?? null}

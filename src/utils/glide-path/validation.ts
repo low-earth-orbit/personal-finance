@@ -130,7 +130,7 @@ export function validateGlidePathInput(input: GlidePathInput): GlidePathErrors {
     input.targetIncome <= input.guaranteedIncome
   ) {
     errors.targetIncome =
-      "Target income must exceed guaranteed income when flexibility is 0; raise the target, set flexibility > 0, or add a bequest.";
+      "Target income must exceed guaranteed income when flexibility is 0; raise the target or set flexibility > 0.";
   }
 
   return errors;

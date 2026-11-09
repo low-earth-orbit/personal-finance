@@ -371,7 +371,7 @@ describe("glide-path Result", () => {
       }),
     );
     expect(screen.getByText(/Your plan is over-funded/i)).toBeInTheDocument();
-    expect(screen.getByText(/Add a bequest weight or retire earlier/i)).toBeInTheDocument();
+    expect(screen.getByText(/Retire earlier or spend more/i)).toBeInTheDocument();
     expect(screen.getByText(/middle of that tie/i)).toBeInTheDocument();
     expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
   });

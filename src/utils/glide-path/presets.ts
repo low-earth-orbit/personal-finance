@@ -30,7 +30,9 @@ export const DEFAULT_ALLOC_CURVE: AllocAnchor[] = [
 
 /**
  * Default inputs. Rates are percentages; dollars are today's (real) dollars.
- * `numPaths` and `interval` are exposed because this is a nerds tool.
+ * `numPaths` is exposed because this is a nerds tool. `bequestWeight`, `retirementMaxEquityPct`
+ * and `interval` are engine settings the web app fixes (see `withFixedSettings`); the Python CLI
+ * keeps them as research controls.
  */
 export const DEFAULTS = {
   // ── About you ─────────────────────────────────────────────
@@ -86,12 +88,19 @@ export const GRID_STEP = 0.05;
 /** Risk-aversion presets surfaced as quick buttons. */
 export const GAMMA_PRESETS = [2, 3, 4, 5] as const;
 
-/** "Leave money to heirs" presets: bequest weight θ (Python `--bequest-weight`). */
-export const BEQUEST_PRESETS = [
-  { value: 0, label: "None" },
-  { value: 0.25, label: "Some" },
-  { value: 0.5, label: "Strong" },
-] as const;
+/**
+ * Settings the web app does not expose: no bequest weight, a 5-year glide step, and one equity
+ * ceiling for all years. Applied to every loaded or edited input so a value saved by an older
+ * version cannot linger unseen.
+ */
+export function withFixedSettings<T extends { maxEquityPct: unknown }>(input: T): T {
+  return {
+    ...input,
+    bequestWeight: DEFAULTS.bequestWeight,
+    interval: DEFAULTS.interval,
+    retirementMaxEquityPct: input.maxEquityPct,
+  };
+}
 
 /** Spending-flexibility presets (fraction). */
 export const FLEX_PRESETS = [

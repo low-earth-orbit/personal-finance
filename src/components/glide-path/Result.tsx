@@ -325,8 +325,10 @@ export default function Result({
   }
 
   if (!result) {
+    // Below lg the result sits above the form; an empty placeholder there only pushes the form
+    // down, so it is shown beside the form on wide screens only.
     return (
-      <Center mih={400}>
+      <Center mih={400} visibleFrom="lg">
         <Stack align="center" gap="md">
           <ThemeIcon size={56} variant="light" color="teal" radius="xl">
             <IconChartLine size={30} />
@@ -470,8 +472,7 @@ export default function Result({
             <Stack gap={2}>
               <Text fw={600}>Your plan is over-funded</Text>
               <Text size="sm" c="dimmed">
-                The allocation doesn&apos;t change your income. Add a bequest weight or retire
-                earlier.
+                The allocation doesn&apos;t change your income. Retire earlier or spend more.
               </Text>
             </Stack>
           </Group>
