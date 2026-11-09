@@ -19,7 +19,7 @@ function percentile(sorted: number[], p: number): number {
 }
 
 const MORTGAGE_TERM_YEARS = 5;
-export const SIMULATION_HORIZON_YEARS = 50;
+export const SIMULATION_HORIZON_YEARS = 30;
 
 // Annual return volatility derived from the expected return: a higher expected
 // return implies more equity exposure, which implies more year-to-year risk.

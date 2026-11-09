@@ -29,8 +29,13 @@ export const DEFAULTS = {
   dividendYield: 2.4,
   dividendTaxRate: 22.5,
   capitalGainTaxRate: 15.6,
-  /** Share of invested savings (renter's and owner's) held in tax-sheltered accounts, treated as TFSA-like. */
-  taxShelteredPct: 0,
+  /**
+   * Share of invested savings (renter's and owner's) held in tax-sheltered accounts, treated as
+   * TFSA-like. 50%: a couple's unused TFSA room (~$218k by 2026 if never used) plus RRSP room
+   * could shelter most of a typical down payment, but many people have already used part of it,
+   * and the portfolio outgrows new room over a long horizon.
+   */
+  taxShelteredPct: 50,
   ...INPUT_UNCERTAINTIES,
 };
 

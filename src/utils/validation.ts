@@ -31,7 +31,7 @@ export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
   downPaymentPercentage: { min: 5, max: 100, step: 5 },
   annualMortgageInterestRate: { min: -10, max: 20, step: 0.25 },
   amortization: { min: 5, max: 30, step: 5 },
-  holdingPeriod: { min: 1, max: 50, step: 1 },
+  holdingPeriod: { min: 1, max: 30, step: 1 },
   investmentReturnRate: {
     min: 0,
     max: 10,

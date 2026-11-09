@@ -342,7 +342,7 @@ export default function UserInputForm({
                 <UserInputFormItem
                   id="taxShelteredPct"
                   label="Tax-sheltered"
-                  labelHelperText="Share of invested savings held in tax-sheltered accounts such as a TFSA or RRSP. That share is treated as tax-free: no tax on yield or gains. This is exact for a TFSA and approximate for an RRSP, which is only equivalent if you reinvest the tax refund and pay the same tax rate on withdrawal. Applies to whoever invests the monthly difference, renter or owner, and to the starting savings too, so keep it within your contribution room; leave at 0% if that room is already used."
+                  labelHelperText="Share of invested savings held in tax-sheltered accounts such as a TFSA or RRSP. That share is treated as tax-free: no tax on yield or gains. This is exact for a TFSA and approximate for an RRSP, which is only equivalent if you reinvest the tax refund and pay the same tax rate on withdrawal. Applies to whoever invests the monthly difference, renter or owner, and to the starting savings too, so keep it within your contribution room; leave at 0% if that room is already used. The default 50% assumes some, but not all, of your room is still free."
                   value={userInput.taxShelteredPct}
                   onChange={bind("taxShelteredPct")}
                   error={errors.taxShelteredPct}
