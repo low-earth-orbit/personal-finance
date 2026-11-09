@@ -14,9 +14,9 @@ const Methodology = () => {
         insurance) above the rent, and once owning becomes cheaper (for example after the mortgage
         is paid off) the owner invests the savings instead. At the end of the holding period, the
         owner sells the home — net of selling costs and remaining mortgage balance — and both sides
-        cash out their portfolios net of capital gains tax (none on the share held in a TFSA, or an
-        RRSP at equal tax rates in and out). The option that leaves more after-tax net worth wins.
-        Other calculators I recommend:{" "}
+        cash out their portfolios net of capital gains tax (none on the tax-sheltered share, which
+        is treated like a TFSA; an RRSP is only approximated). The option that leaves more after-tax
+        net worth wins. Other calculators I recommend:{" "}
         <Anchor href="http://www.holypotato.net/?p=1235" target="_blank" rel="noreferrer">
           John Robertson
         </Anchor>{" "}
