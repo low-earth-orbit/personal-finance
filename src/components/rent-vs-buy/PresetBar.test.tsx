@@ -12,6 +12,7 @@ function renderBar(props: Partial<Parameters<typeof PresetBar>[0]> = {}) {
     onSelect: vi.fn(),
     onSave: vi.fn(),
     onUpdate: vi.fn(),
+    onRename: vi.fn(),
     onDelete: vi.fn(),
     onUndoDelete: vi.fn(),
     onRestoreBuiltins: vi.fn(),
@@ -85,6 +86,24 @@ describe("PresetBar", () => {
     expect(screen.getByText("Deleted My place.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(h.onUndoDelete).toHaveBeenCalled();
+  });
+
+  it("renames a saved preset, but only to an unused name", async () => {
+    const h = renderBar();
+    expect(screen.queryByRole("button", { name: `Rename ${PRESETS[0].label}` })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Rename My place" }));
+    const input = await screen.findByRole("textbox", { name: "Name" });
+    expect(input).toHaveValue("My place");
+    expect(screen.getByRole("button", { name: "Rename" })).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: PRESETS[1].label.toUpperCase() } });
+    expect(screen.getByText("Another preset already uses this name.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rename" })).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "  Downtown condo " } });
+    fireEvent.click(screen.getByRole("button", { name: "Rename" }));
+    expect(h.onRename).toHaveBeenCalledWith(mine, "Downtown condo");
   });
 
   it("shows how many built-in scenarios are hidden", () => {
