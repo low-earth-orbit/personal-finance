@@ -293,6 +293,19 @@ export default function UserInputForm({
               />
 
               <UserInputFormItem
+                id="condoFeesPerMonth"
+                label="Condo fees"
+                labelHelperText="Monthly condo or strata fees in today's dollars. Set to $0 for detached homes."
+                value={userInput.condoFeesPerMonth}
+                onChange={bind("condoFeesPerMonth")}
+                error={errors.condoFeesPerMonth}
+                prefix="$"
+                suffix=" /mo"
+                thousandSeparator
+                {...c("condoFeesPerMonth")}
+              />
+
+              <UserInputFormItem
                 id="maintPct"
                 label="Maintenance & insurance"
                 labelHelperText="Annual repairs and insurance. Toggle % of today's home price or $/yr. Excludes condo fees. Typically 0.5–1% for condos and 1–2% for detached homes."
@@ -308,25 +321,6 @@ export default function UserInputForm({
               />
 
               <UserInputFormItem
-                id="condoFeesPerMonth"
-                label="Condo fees"
-                labelHelperText="Monthly condo or strata fees in today's dollars. Set to $0 for detached homes."
-                value={userInput.condoFeesPerMonth}
-                onChange={bind("condoFeesPerMonth")}
-                error={errors.condoFeesPerMonth}
-                prefix="$"
-                suffix=" /mo"
-                thousandSeparator
-                {...c("condoFeesPerMonth")}
-              />
-
-              {perturbed("ownerCostGrowthRate", "ownerCostGrowthSigma", {
-                label: "Cost inflation",
-                helperText:
-                  "General price inflation for property tax, insurance, condo fees, and baseline maintenance. Maintenance and condo fees grow an extra building-aging uplift on top (see Building aging).",
-              })}
-
-              <UserInputFormItem
                 id="maintAgingPct"
                 label="Building aging"
                 labelHelperText={`Extra yearly rise from building deterioration, on top of cost inflation.${maintTotalText ? ` ${maintTotalText}` : ""} Default 1%/yr matches the AHS maintenance-only age gradient (see methodology note). 0% for new builds. Does not apply to property tax.`}
@@ -336,6 +330,12 @@ export default function UserInputForm({
                 suffix="%"
                 {...c("maintAgingPct")}
               />
+
+              {perturbed("ownerCostGrowthRate", "ownerCostGrowthSigma", {
+                label: "Cost inflation",
+                helperText:
+                  "General price inflation for property tax, insurance, condo fees, and baseline maintenance. Maintenance and condo fees grow an extra building-aging uplift on top (see Building aging).",
+              })}
 
               <UserInputFormItem
                 id="holdingPeriod"

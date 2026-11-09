@@ -81,6 +81,7 @@ export default function InputForm({
           <Accordion.Panel>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
               <UserInputFormItem {...num("startAge")} label="Current age" suffix=" yrs" />
+              <UserInputFormItem {...num("retirementAge")} label="Retirement age" suffix=" yrs" />
               <UserInputFormItem
                 {...num("startSavings")}
                 label="Current savings"
@@ -102,19 +103,18 @@ export default function InputForm({
           <Accordion.Control>Retirement targets</Accordion.Control>
           <Accordion.Panel>
             <SimpleGrid cols={{ base: 1, sm: 2 }}>
-              <UserInputFormItem {...num("retirementAge")} label="Retirement age" suffix=" yrs" />
-              <UserInputFormItem
-                {...num("planningAge")}
-                label="Plan until"
-                labelHelperText="The age your money should last to (life expectancy). 95 is a common horizon."
-                suffix=" yrs"
-              />
               <UserInputFormItem
                 {...num("targetIncome")}
                 label="Target retirement income"
                 labelHelperText="Gross retirement income including guaranteed income."
                 prefix="$"
                 thousandSeparator
+              />
+              <UserInputFormItem
+                {...num("planningAge")}
+                label="Plan until"
+                labelHelperText="The age your money should last to (life expectancy). 95 is a common horizon."
+                suffix=" yrs"
               />
               <UserInputFormItem
                 {...num("guaranteedIncome")}
@@ -257,14 +257,6 @@ export default function InputForm({
                   labelHelperText="The equity ceiling in retirement. It cannot exceed max equity."
                   suffix="%"
                 />
-                {leveraged && (
-                  <UserInputFormItem
-                    {...num("borrowCost")}
-                    label="Real cost of borrowing"
-                    labelHelperText="Your real (after-inflation) borrowing rate."
-                    suffix="%"
-                  />
-                )}
                 <UserInputFormItem
                   {...num("numPaths")}
                   label="Monte Carlo paths"
@@ -277,6 +269,14 @@ export default function InputForm({
                   labelHelperText="Years each recommended allocation is held before the next step. Shorter intervals make a more detailed path."
                   suffix=" yrs"
                 />
+                {leveraged && (
+                  <UserInputFormItem
+                    {...num("borrowCost")}
+                    label="Real cost of borrowing"
+                    labelHelperText="Your real (after-inflation) borrowing rate."
+                    suffix="%"
+                  />
+                )}
               </SimpleGrid>
             </Stack>
           </Accordion.Panel>
