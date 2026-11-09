@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ActionIcon, Anchor, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
-import { IconDeviceFloppy, IconPlus, IconX } from "@tabler/icons-react";
+import { IconDeviceFloppy, IconPencil, IconPlus, IconX } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import type { Preset } from "@/types";
 
@@ -15,6 +15,7 @@ interface PresetBarProps {
   onSelect: (preset: Preset) => void;
   onSave: (name: string) => void;
   onUpdate: (preset: Preset) => void;
+  onRename: (preset: Preset, name: string) => void;
   onDelete: (preset: Preset) => void;
   onUndoDelete: () => void;
   onRestoreBuiltins: () => void;
@@ -29,6 +30,7 @@ export default function PresetBar({
   onSelect,
   onSave,
   onUpdate,
+  onRename,
   onDelete,
   onUndoDelete,
   onRestoreBuiltins,
@@ -42,6 +44,25 @@ export default function PresetBar({
   const nameError =
     clash && !clash.custom ? "A built-in scenario already uses this name." : undefined;
   const replacing = clash?.custom ? clash : null;
+
+  const [renaming, setRenaming] = useState<Preset | null>(null);
+  const [newName, setNewName] = useState("");
+  const newTrimmed = newName.trim();
+  const renameClash = presets.some(
+    (p) => p.id !== renaming?.id && p.label.toLowerCase() === newTrimmed.toLowerCase(),
+  );
+  const canRename = !!newTrimmed && !renameClash && newTrimmed !== renaming?.label;
+
+  const startRename = (preset: Preset) => {
+    setNewName(preset.label);
+    setRenaming(preset);
+  };
+
+  const submitRename = () => {
+    if (!renaming || !canRename) return;
+    onRename(renaming, newTrimmed);
+    setRenaming(null);
+  };
 
   const startSave = () => {
     setName(edited && basePreset?.custom ? `${basePreset.label} (copy)` : "");
@@ -73,6 +94,18 @@ export default function PresetBar({
                 {preset.label}
                 {isBase ? " (edited)" : ""}
               </Button>
+              {preset.custom && (
+                <ActionIcon
+                  variant="transparent"
+                  color="gray"
+                  size="sm"
+                  onClick={() => startRename(preset)}
+                  aria-label={`Rename ${preset.label}`}
+                  title="Rename preset"
+                >
+                  <IconPencil size={12} />
+                </ActionIcon>
+              )}
               <ActionIcon
                 variant="transparent"
                 color="gray"
@@ -168,6 +201,38 @@ export default function PresetBar({
             </Button>
             <Button onClick={submitSave} disabled={!trimmed || !!nameError}>
               {replacing ? "Replace" : "Save"}
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={renaming != null}
+        onClose={() => setRenaming(null)}
+        title="Rename preset"
+        size="sm"
+        centered
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Name"
+            value={newName}
+            onChange={(e) => setNewName(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitRename();
+              }
+            }}
+            error={renameClash ? "Another preset already uses this name." : undefined}
+            data-autofocus
+          />
+          <Group justify="flex-end" gap="xs">
+            <Button variant="subtle" color="gray" onClick={() => setRenaming(null)}>
+              Cancel
+            </Button>
+            <Button onClick={submitRename} disabled={!canRename}>
+              Rename
             </Button>
           </Group>
         </Stack>

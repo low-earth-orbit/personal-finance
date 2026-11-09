@@ -159,6 +159,14 @@ const Main = () => {
     setRecentlyDeleted(null);
   }
 
+  function handleRenamePreset(preset: Preset, name: string) {
+    const label = name.trim();
+    if (!label) return;
+    const next = customPresets.map((p) => (p.id === preset.id ? { ...p, label } : p));
+    setCustomPresets(next);
+    saveCustomPresets(next);
+  }
+
   function handleDeletePreset(preset: Preset) {
     setRecentlyDeleted({
       preset,
@@ -228,6 +236,7 @@ const Main = () => {
                 onSelect={handlePreset}
                 onSave={handleSavePreset}
                 onUpdate={handleUpdatePreset}
+                onRename={handleRenamePreset}
                 onDelete={handleDeletePreset}
                 onUndoDelete={handleUndoDelete}
                 onRestoreBuiltins={handleRestoreBuiltins}
