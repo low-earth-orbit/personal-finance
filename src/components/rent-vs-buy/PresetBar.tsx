@@ -1,16 +1,19 @@
 import { useState } from "react";
-import { ActionIcon, Anchor, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
-import { IconDeviceFloppy, IconPencil, IconPlus, IconX } from "@tabler/icons-react";
+import { Anchor, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
+import { IconDeviceFloppy, IconPlus, IconSettings } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
+import ManagePresetsModal, { type ImportSummary } from "./ManagePresetsModal";
+import type { PresetFileEntry } from "@/utils/presetFile";
 import type { Preset } from "@/types";
 
 interface PresetBarProps {
+  /** Visible presets, built-ins first. */
   presets: Preset[];
+  hiddenBuiltins: Preset[];
   /** Preset whose values match the inputs exactly (highlighted). */
   activePreset: Preset | null;
   /** Last preset the user picked or saved; still set after they edit away from it. */
   basePreset: Preset | null;
-  hiddenBuiltinCount: number;
   recentlyDeleted: Preset | null;
   onSelect: (preset: Preset) => void;
   onSave: (name: string) => void;
@@ -18,14 +21,15 @@ interface PresetBarProps {
   onRename: (preset: Preset, name: string) => void;
   onDelete: (preset: Preset) => void;
   onUndoDelete: () => void;
-  onRestoreBuiltins: () => void;
+  onShowBuiltin: (preset: Preset) => void;
+  onImport: (entries: PresetFileEntry[]) => ImportSummary;
 }
 
 export default function PresetBar({
   presets,
+  hiddenBuiltins,
   activePreset,
   basePreset,
-  hiddenBuiltinCount,
   recentlyDeleted,
   onSelect,
   onSave,
@@ -33,39 +37,24 @@ export default function PresetBar({
   onRename,
   onDelete,
   onUndoDelete,
-  onRestoreBuiltins,
+  onShowBuiltin,
+  onImport,
 }: PresetBarProps) {
   const [saveOpen, { open: openSave, close: closeSave }] = useDisclosure(false);
+  const [manageOpen, { open: openManage, close: closeManage }] = useDisclosure(false);
   const [name, setName] = useState("");
 
   const edited = basePreset != null && activePreset?.id !== basePreset.id;
   const trimmed = name.trim();
-  const clash = presets.find((p) => p.label.toLowerCase() === trimmed.toLowerCase()) ?? null;
+  const clash =
+    [...presets, ...hiddenBuiltins].find((p) => p.label.toLowerCase() === trimmed.toLowerCase()) ??
+    null;
   const nameError =
     clash && !clash.custom ? "A built-in scenario already uses this name." : undefined;
   const replacing = clash?.custom ? clash : null;
 
-  const [renaming, setRenaming] = useState<Preset | null>(null);
-  const [newName, setNewName] = useState("");
-  const newTrimmed = newName.trim();
-  const renameClash = presets.some(
-    (p) => p.id !== renaming?.id && p.label.toLowerCase() === newTrimmed.toLowerCase(),
-  );
-  const canRename = !!newTrimmed && !renameClash && newTrimmed !== renaming?.label;
-
-  const startRename = (preset: Preset) => {
-    setNewName(preset.label);
-    setRenaming(preset);
-  };
-
-  const submitRename = () => {
-    if (!renaming || !canRename) return;
-    onRename(renaming, newTrimmed);
-    setRenaming(null);
-  };
-
   const startSave = () => {
-    setName(edited && basePreset?.custom ? `${basePreset.label} (copy)` : "");
+    setName(edited && basePreset ? `${basePreset.label} (my version)` : "");
     openSave();
   };
 
@@ -83,40 +72,17 @@ export default function PresetBar({
           const active = activePreset?.id === preset.id;
           const isBase = edited && basePreset?.id === preset.id;
           return (
-            <Group key={preset.id} gap={0} wrap="nowrap">
-              <Button
-                variant={active ? "filled" : isBase ? "outline" : "light"}
-                size="xs"
-                radius="lg"
-                aria-pressed={active}
-                onClick={() => onSelect(preset)}
-              >
-                {preset.label}
-                {isBase ? " (edited)" : ""}
-              </Button>
-              {preset.custom && (
-                <ActionIcon
-                  variant="transparent"
-                  color="gray"
-                  size="sm"
-                  onClick={() => startRename(preset)}
-                  aria-label={`Rename ${preset.label}`}
-                  title="Rename preset"
-                >
-                  <IconPencil size={12} />
-                </ActionIcon>
-              )}
-              <ActionIcon
-                variant="transparent"
-                color="gray"
-                size="sm"
-                onClick={() => onDelete(preset)}
-                aria-label={preset.custom ? `Delete ${preset.label}` : `Hide ${preset.label}`}
-                title={preset.custom ? "Delete preset" : "Hide scenario"}
-              >
-                <IconX size={12} />
-              </ActionIcon>
-            </Group>
+            <Button
+              key={preset.id}
+              variant={active ? "filled" : isBase ? "outline" : "light"}
+              size="xs"
+              radius="lg"
+              aria-pressed={active}
+              onClick={() => onSelect(preset)}
+            >
+              {preset.label}
+              {isBase ? " (edited)" : ""}
+            </Button>
           );
         })}
         <Button
@@ -128,6 +94,15 @@ export default function PresetBar({
         >
           Save as preset
         </Button>
+        <Button
+          variant="subtle"
+          size="xs"
+          color="gray"
+          leftSection={<IconSettings size={12} />}
+          onClick={openManage}
+        >
+          Manage
+        </Button>
       </Group>
 
       {edited && basePreset && (
@@ -135,14 +110,23 @@ export default function PresetBar({
           <Text size="xs" c="dimmed">
             Edited from {basePreset.label}.
           </Text>
-          {basePreset.custom && (
+          {basePreset.custom ? (
             <Button
               variant="light"
               size="compact-xs"
               leftSection={<IconDeviceFloppy size={12} />}
               onClick={() => onUpdate(basePreset)}
             >
-              Update {basePreset.label}
+              Save to {basePreset.label}
+            </Button>
+          ) : (
+            <Button
+              variant="light"
+              size="compact-xs"
+              leftSection={<IconDeviceFloppy size={12} />}
+              onClick={startSave}
+            >
+              Save as new preset
             </Button>
           )}
           <Anchor component="button" type="button" size="xs" onClick={() => onSelect(basePreset)}>
@@ -151,7 +135,7 @@ export default function PresetBar({
         </Group>
       )}
 
-      {recentlyDeleted && (
+      {recentlyDeleted && !manageOpen && (
         <Group gap="xs" aria-live="polite">
           <Text size="xs" c="dimmed">
             {recentlyDeleted.custom ? "Deleted" : "Hid"} {recentlyDeleted.label}.
@@ -162,18 +146,18 @@ export default function PresetBar({
         </Group>
       )}
 
-      {!recentlyDeleted && hiddenBuiltinCount > 0 && (
-        <Anchor
-          component="button"
-          type="button"
-          size="xs"
-          c="dimmed"
-          style={{ alignSelf: "flex-start" }}
-          onClick={onRestoreBuiltins}
-        >
-          Show {hiddenBuiltinCount} hidden {hiddenBuiltinCount === 1 ? "scenario" : "scenarios"}
-        </Anchor>
-      )}
+      <ManagePresetsModal
+        opened={manageOpen}
+        onClose={closeManage}
+        presets={presets}
+        hiddenBuiltins={hiddenBuiltins}
+        recentlyDeleted={recentlyDeleted}
+        onRename={onRename}
+        onDelete={onDelete}
+        onUndoDelete={onUndoDelete}
+        onShowBuiltin={onShowBuiltin}
+        onImport={onImport}
+      />
 
       <Modal opened={saveOpen} onClose={closeSave} title="Save as preset" size="sm" centered>
         <Stack gap="md">
@@ -201,38 +185,6 @@ export default function PresetBar({
             </Button>
             <Button onClick={submitSave} disabled={!trimmed || !!nameError}>
               {replacing ? "Replace" : "Save"}
-            </Button>
-          </Group>
-        </Stack>
-      </Modal>
-
-      <Modal
-        opened={renaming != null}
-        onClose={() => setRenaming(null)}
-        title="Rename preset"
-        size="sm"
-        centered
-      >
-        <Stack gap="md">
-          <TextInput
-            label="Name"
-            value={newName}
-            onChange={(e) => setNewName(e.currentTarget.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submitRename();
-              }
-            }}
-            error={renameClash ? "Another preset already uses this name." : undefined}
-            data-autofocus
-          />
-          <Group justify="flex-end" gap="xs">
-            <Button variant="subtle" color="gray" onClick={() => setRenaming(null)}>
-              Cancel
-            </Button>
-            <Button onClick={submitRename} disabled={!canRename}>
-              Rename
             </Button>
           </Group>
         </Stack>

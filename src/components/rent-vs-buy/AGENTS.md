@@ -7,7 +7,8 @@ Year-by-year net worth comparison, MC confidence bands, win probability. Methodo
 - `Main.tsx` — state container; holds `userInput`, `expandedFields`, `customPresets`, `hiddenBuiltins`, `activePresetId`; persists via `src/utils/storage.ts`
 - `RentVsBuyApp.tsx` — `"use client"` wrapper, lazy-loads Main (`ssr:false`)
 - `UserInputForm.tsx` — Accordion form (Rent/Property/Mortgage/Investment/Costs)
-- `PresetBar.tsx` — preset chips; "edited from" state with Update/Revert, save dialog (same name replaces a saved preset), rename (saved presets), delete/hide with Undo, restore hidden scenarios
+- `PresetBar.tsx` — preset chips, Save as preset, Manage; "edited from" line with Save to <preset> (saved) or Save as new preset (built-in) and Revert; save dialog (same name replaces a saved preset)
+- `ManagePresetsModal.tsx` — rename/delete saved presets, hide/show built-ins (Undo), export/import JSON via `src/utils/presetFile.ts`
 - `NetWorthChart.tsx` — dispatches MC to Web Worker, renders chart + Summary Alert + CSV
 - `Result.tsx` — validates input → renders NetWorthChart
 - `Methodology.tsx` — static methodology note
