@@ -43,9 +43,21 @@ describe("glide-path storage", () => {
     expect(input.bequestWeight).toBe(0);
   });
 
-  it("loads a saved glide-step interval", () => {
-    window.localStorage.setItem("glide_input", JSON.stringify({ ...DEFAULTS, interval: 10 }));
+  it("ignores saved settings the web app no longer exposes", () => {
+    window.localStorage.setItem(
+      "glide_input",
+      JSON.stringify({
+        ...DEFAULTS,
+        maxEquityPct: 150,
+        retirementMaxEquityPct: 60,
+        bequestWeight: 0.5,
+        interval: 10,
+      }),
+    );
 
-    expect(loadInput().interval).toBe(10);
+    const input = loadInput();
+    expect(input.interval).toBe(5);
+    expect(input.bequestWeight).toBe(0);
+    expect(input.retirementMaxEquityPct).toBe(150);
   });
 });

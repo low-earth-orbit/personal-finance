@@ -14,7 +14,7 @@ import {
 import { IconChartLine } from "@tabler/icons-react";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import FieldHeader from "@/components/shared/FieldHeader";
-import { BEQUEST_PRESETS, GAMMA_PRESETS } from "@/utils/glide-path/presets";
+import { GAMMA_PRESETS } from "@/utils/glide-path/presets";
 import { FIELD_CONSTRAINTS } from "@/utils/glide-path/validation";
 import type {
   GlidePathErrors,
@@ -208,19 +208,6 @@ export default function InputForm({
                 description="How much you value spending later in retirement compared with earlier years. 1.0 = value every year equally, 0.985 = balanced, 0.97 = strongly favour earlier years."
                 step={0.005}
               />
-              <Stack gap={4}>
-                <FieldHeader
-                  label="Leave money to heirs"
-                  description="None = money left at the end of the plan is worth nothing to the optimizer. Some or Strong give what you leave a value (bequest weight 0.25 or 0.5). It mostly matters when your plan is over-funded: it then picks the allocation for your heirs instead of an arbitrary tie."
-                />
-                <SegmentedControl
-                  value={String(input.bequestWeight)}
-                  onChange={(v) => onChange("bequestWeight", Number(v))}
-                  data={BEQUEST_PRESETS.map((p) => ({ value: String(p.value), label: p.label }))}
-                  aria-label="Leave money to heirs"
-                  size="sm"
-                />
-              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -248,13 +235,7 @@ export default function InputForm({
                 <UserInputFormItem
                   {...num("maxEquityPct")}
                   label="Max equity"
-                  labelHelperText="The most equity the optimizer may use. Above 100% means borrowing to invest."
-                  suffix="%"
-                />
-                <UserInputFormItem
-                  {...num("retirementMaxEquityPct")}
-                  label="Retirement max equity"
-                  labelHelperText="The equity ceiling in retirement. It cannot exceed max equity."
+                  labelHelperText="The most equity the optimizer may use, before and during retirement. Above 100% means borrowing to invest."
                   suffix="%"
                 />
                 <UserInputFormItem
@@ -262,12 +243,6 @@ export default function InputForm({
                   label="Monte Carlo paths"
                   labelHelperText="The number of simulated market histories. More paths give steadier results but take longer."
                   thousandSeparator
-                />
-                <UserInputFormItem
-                  {...num("interval")}
-                  label="Glide-step interval"
-                  labelHelperText="Years each recommended allocation is held before the next step. Shorter intervals make a more detailed path."
-                  suffix=" yrs"
                 />
                 {leveraged && (
                   <UserInputFormItem

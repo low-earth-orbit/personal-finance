@@ -64,11 +64,6 @@ describe("glide-path InputForm guidance", () => {
     ).toBeInTheDocument();
     expect(
       await screen.findByRole("button", {
-        name: /more information about glide-step interval/i,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", {
         name: /more information about monte carlo paths/i,
       }),
     ).toBeInTheDocument();
@@ -85,24 +80,14 @@ describe("glide-path InputForm guidance", () => {
     expect(await screen.findByRole("textbox", { name: "Custom risk aversion" })).toHaveValue("4.5");
   });
 
-  it("sets the bequest weight from the heirs control", () => {
-    const onChange = vi.fn();
-    renderWithMantine(
-      <InputForm
-        input={DEFAULTS}
-        errors={{}}
-        returnMode="iid-mc"
-        onChange={onChange}
-        onReturnModeChange={vi.fn()}
-        onReset={vi.fn()}
-        onGenerate={vi.fn()}
-        generating={false}
-      />,
-    );
+  it("has no heirs, retirement max equity or glide-step controls", () => {
+    renderForm({});
+    fireEvent.click(screen.getByRole("button", { name: "Simulation" }));
 
-    expect(screen.getByRole("radio", { name: "None" })).toBeChecked();
-    fireEvent.click(screen.getByRole("radio", { name: "Some" }));
-    expect(onChange).toHaveBeenCalledWith("bequestWeight", 0.25);
+    expect(screen.queryByText("Leave money to heirs")).toBeNull();
+    expect(screen.queryByText("Retirement max equity")).toBeNull();
+    expect(screen.queryByText("Glide-step interval")).toBeNull();
+    expect(screen.getByText("Max equity")).toBeInTheDocument();
   });
 
   it("disables the generate button and shows loading while computing", () => {

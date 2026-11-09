@@ -1,4 +1,4 @@
-import { DEFAULTS } from "./presets";
+import { DEFAULTS, withFixedSettings } from "./presets";
 import type { GlidePathInput, GlidePathInputKey, GlidePathReturnMode } from "./types";
 
 const KEY = "glide_input";
@@ -31,7 +31,7 @@ export function loadInput(): GlidePathInput {
       typeof current.guaranteedStartAge === "number"
         ? current.guaranteedStartAge
         : (current.retirementAge ?? DEFAULTS.retirementAge);
-    return { ...DEFAULTS, ...current, guaranteedIncome, guaranteedStartAge };
+    return withFixedSettings({ ...DEFAULTS, ...current, guaranteedIncome, guaranteedStartAge });
   } catch {
     return { ...DEFAULTS };
   }
