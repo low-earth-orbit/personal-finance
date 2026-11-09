@@ -3,6 +3,8 @@ import { Container, Grid } from "@mantine/core";
 import Result from "./Result";
 import UserInputForm from "./UserInputForm";
 import PresetBar from "./PresetBar";
+import type { ImportSummary } from "./ManagePresetsModal";
+import type { PresetFileEntry } from "@/utils/presetFile";
 import { DEFAULTS, PRESETS, INPUT_UNCERTAINTIES, getActivePreset } from "@/utils/presets";
 import { validateUserInput } from "@/utils/validation";
 import {
@@ -35,6 +37,11 @@ const normalizeInput = (values?: Partial<UserInput> | null): UserInput => ({
   ...DEFAULTS,
   ...(values ?? {}),
 });
+
+const newPresetId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `cp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 const Main = () => {
   const [userInput, setUserInput] = useState<UserInput>(() => {
@@ -136,10 +143,7 @@ const Main = () => {
     const label = name.trim();
     if (!label) return;
     const entry: Preset = {
-      id:
-        typeof crypto !== "undefined" && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `cp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: newPresetId(),
       label,
       values: userInput,
       custom: true,
@@ -200,9 +204,36 @@ const Main = () => {
     setRecentlyDeleted(null);
   }
 
-  function handleRestoreBuiltins() {
-    setHiddenBuiltins([]);
-    saveHiddenBuiltins([]);
+  function handleShowBuiltin(preset: Preset) {
+    const next = hiddenBuiltins.filter((id) => id !== preset.id);
+    setHiddenBuiltins(next);
+    saveHiddenBuiltins(next);
+    if (recentlyDeleted?.preset.id === preset.id) setRecentlyDeleted(null);
+  }
+
+  /** Add imported presets; a name matching a saved preset replaces its values. */
+  function handleImportPresets(entries: PresetFileEntry[]): ImportSummary {
+    const next = [...customPresets];
+    const taken = new Set(PRESETS.map((p) => p.label.toLowerCase()));
+    let added = 0;
+    let replaced = 0;
+    for (const { label, values } of entries) {
+      const existing = next.findIndex((p) => p.label.toLowerCase() === label.toLowerCase());
+      if (existing >= 0) {
+        next[existing] = { ...next[existing], values: normalizeInput(values) };
+        replaced += 1;
+        continue;
+      }
+      let name = label;
+      for (let n = 2; taken.has(name.toLowerCase()); n++) name = `${label} (${n})`;
+      next.push({ id: newPresetId(), label: name, values: normalizeInput(values), custom: true });
+      taken.add(name.toLowerCase());
+      added += 1;
+    }
+    setCustomPresets(next);
+    saveCustomPresets(next);
+    setRecentlyDeleted(null);
+    return { added, replaced };
   }
 
   function handleReset() {
@@ -231,7 +262,7 @@ const Main = () => {
                 presets={allPresets}
                 activePreset={activePreset}
                 basePreset={basePreset}
-                hiddenBuiltinCount={PRESETS.length - visibleBuiltins.length}
+                hiddenBuiltins={PRESETS.filter((p) => hiddenBuiltins.includes(p.id))}
                 recentlyDeleted={recentlyDeleted?.preset ?? null}
                 onSelect={handlePreset}
                 onSave={handleSavePreset}
@@ -239,7 +270,8 @@ const Main = () => {
                 onRename={handleRenamePreset}
                 onDelete={handleDeletePreset}
                 onUndoDelete={handleUndoDelete}
-                onRestoreBuiltins={handleRestoreBuiltins}
+                onShowBuiltin={handleShowBuiltin}
+                onImport={handleImportPresets}
               />
             }
           />
