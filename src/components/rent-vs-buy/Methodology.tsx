@@ -16,7 +16,7 @@ const Methodology = () => {
         owner sells the home — net of selling costs and remaining mortgage balance — and both sides
         cash out their portfolios net of capital gains tax (none on the tax-sheltered share, which
         is treated like a TFSA; an RRSP is only approximated). The option that leaves more after-tax
-        net worth wins. Other calculators I recommend:{" "}
+        net worth wins. Other calculators to compare:{" "}
         <Anchor href="http://www.holypotato.net/?p=1235" target="_blank" rel="noreferrer">
           John Robertson
         </Anchor>{" "}

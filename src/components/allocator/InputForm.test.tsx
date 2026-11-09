@@ -64,7 +64,7 @@ describe("allocator InputForm", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Show recommendation" }));
+    await user.click(screen.getByRole("button", { name: "Show split" }));
     expect(onShowRecommendation).toHaveBeenCalledOnce();
   });
 
@@ -83,8 +83,8 @@ describe("allocator InputForm", () => {
 
     // Once started, the recommendation recomputes automatically: no Show button,
     // just the notice — including while a recompute is in flight (loading).
-    expect(screen.queryByRole("button", { name: "Show recommendation" })).not.toBeInTheDocument();
-    expect(screen.getByText(/Recommendation updates automatically/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show split" })).not.toBeInTheDocument();
+    expect(screen.getByText(/The split updates automatically/i)).toBeInTheDocument();
   });
 
   it("uses one explicit RRSP withdrawal tax-rate input", async () => {

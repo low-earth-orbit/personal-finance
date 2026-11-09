@@ -20,7 +20,7 @@ export default function Result({
       <Paper withBorder radius="md" p="lg">
         <Text fw={700}>Review your numbers first</Text>
         <Text size="sm" c="dimmed" mt={4}>
-          The values shown are examples. Review the starting inputs, then generate a recommendation.
+          The values shown are examples. Review the starting inputs, then show the split.
         </Text>
       </Paper>
     );
@@ -35,13 +35,13 @@ export default function Result({
   if (status === "error" && !allocation) {
     return (
       <Alert icon={<IconAlertCircle />} color="red" title="Calculation failed">
-        Change an input to retry the recommendation.
+        Change an input to retry.
       </Alert>
     );
   }
   if (!allocation) {
     return (
-      <Alert icon={<Loader size="sm" />} title="Calculating recommendation" aria-live="polite">
+      <Alert icon={<Loader size="sm" />} title="Calculating split" aria-live="polite">
         Comparing account splits and RRSP deduction years.
       </Alert>
     );
@@ -52,7 +52,7 @@ export default function Result({
         <Group gap="xs" aria-live="polite">
           <Loader size="xs" />
           <Text size="xs" c="dimmed">
-            Updating recommendation…
+            Updating split…
           </Text>
         </Group>
       )}

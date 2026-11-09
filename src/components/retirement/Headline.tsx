@@ -75,7 +75,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         {/* Hero: the retirement age */}
         <Stack gap={2}>
           <Text size="sm" fw="600">
-            {retireNow ? "You can retire" : "You can retire at"}
+            Projected earliest retirement
           </Text>
           <Group gap="xs" align="baseline" wrap="nowrap">
             <Title order={2} fz={{ base: 30, sm: 36 }} c="teal">
@@ -88,10 +88,10 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
             )}
           </Group>
           <Text size="xs" c="dimmed">
-            {retireNow ? `Your savings already support your target income.` : ``}
+            {retireNow ? `Projected savings already cover the target income.` : ``}
             {!retireNow && retirementAgeRange && (
               <>
-                50% chance you retire between ages {retirementAgeRange.p25} and{" "}
+                In half of the simulations, between ages {retirementAgeRange.p25} and{" "}
                 {retirementAgeRange.p75}.
               </>
             )}

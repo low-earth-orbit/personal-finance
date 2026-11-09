@@ -263,11 +263,11 @@ export default function InputForm({
       </Accordion>
       {started ? (
         <Text size="xs" c="dimmed" mt="sm">
-          Recommendation updates automatically when inputs change.
+          The split updates automatically when inputs change.
         </Text>
       ) : (
         <Button fullWidth mt="lg" onClick={showRecommendation} loading={loading} disabled={loading}>
-          Show recommendation
+          Show split
         </Button>
       )}
       <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />

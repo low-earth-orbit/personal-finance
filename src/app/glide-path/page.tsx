@@ -6,7 +6,7 @@ import Methodology from "@/components/glide-path/Methodology";
 
 export const metadata: Metadata = {
   title: "Lifetime Allocation",
-  description: "Find your optimal stock allocation across your lifetime.",
+  description: "A research model of how stock allocation could change over a lifetime.",
 };
 
 export default function GlidePathPage() {
@@ -14,7 +14,7 @@ export default function GlidePathPage() {
     <>
       <Header
         title="Lifetime Allocation"
-        subtitle="Find your optimal stock allocation across your lifetime."
+        subtitle="A research model of how stock allocation could change over a lifetime."
         showHomeLink
       />
       <main>

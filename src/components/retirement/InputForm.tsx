@@ -213,8 +213,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
                     <Text size="xs" c="yellow.8">
-                      Below 90% leans optimistic — it accepts more sequence-of-returns risk. 90% or
-                      higher is recommended.
+                      Below 90% leans optimistic — it accepts more sequence-of-returns risk. Many
+                      planners use 90% or higher.
                     </Text>
                   </Group>
                 )}
@@ -243,8 +243,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
                     <Text size="xs" c="yellow.8">
-                      Cutting more than 20% is a big lifestyle reduction — make sure you could
-                      really live on the reduced floor for many years if markets stay weak.
+                      Cutting more than 20% is a big lifestyle reduction — the result assumes the
+                      reduced floor is livable for many years if markets stay weak.
                     </Text>
                   </Group>
                 )}

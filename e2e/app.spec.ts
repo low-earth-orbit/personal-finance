@@ -17,7 +17,7 @@ test("hub landing page lists the available tools", async ({ page }) => {
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();
 });
 
-test("allocator requires input review before showing a recommendation", async ({ page }) => {
+test("allocator requires input review before showing the split", async ({ page }) => {
   await page.goto("/allocator");
 
   await expect(
@@ -28,10 +28,10 @@ test("allocator requires input review before showing a recommendation", async ({
   await expect(page.getByText("Review your numbers first")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Invest about/ })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Show recommendation" }).click();
+  await page.getByRole("button", { name: "Show split" }).click();
   await expect(page.getByRole("heading", { name: "Invest about $50,000" })).toBeVisible();
   await expect(page.getByText("Why this split")).toBeVisible();
-  await expect(page.getByText("Before acting")).toBeVisible();
+  await expect(page.getByText("Model limits")).toBeVisible();
 
   await page.getByLabel("Lump sum to invest now").fill("51000");
   await expect(page.getByRole("heading", { name: "Invest about $50,000" })).toBeVisible();

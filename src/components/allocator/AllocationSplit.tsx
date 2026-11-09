@@ -235,13 +235,13 @@ export default function AllocationSplit({
 
         <Paper withBorder radius="md" p="md">
           <Text size="sm" fw={700}>
-            Before acting
+            Model limits
           </Text>
           <Text size="xs" c="dimmed" mt={4}>
             Only BC, ON, and NB are supported. The model holds returns and tax law constant and
             excludes annual room accrual, pension adjustments, dividend credits, OAS clawback, and
-            market uncertainty. Small assumption changes can change the split. Verify room and tax
-            advice.
+            market uncertainty. Small assumption changes can change the split. Check your
+            contribution room and tax details before relying on it.
           </Text>
           <Anchor href="#model-assumptions" size="xs" mt={6}>
             Review detailed assumptions
