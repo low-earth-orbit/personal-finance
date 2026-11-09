@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderWithMantine } from "@/test-utils";
 import UserInputForm from "./UserInputForm";
-import { DEFAULTS, PRESETS } from "@/utils/presets";
+import { DEFAULTS } from "@/utils/presets";
 import type { UserInput } from "@/types";
 
 function renderForm(overrides: Partial<UserInput> = {}) {
@@ -10,16 +10,10 @@ function renderForm(overrides: Partial<UserInput> = {}) {
     <UserInputForm
       userInput={userInput}
       handleChange={vi.fn()}
-      handlePreset={vi.fn()}
       handleReset={vi.fn()}
       expandedFields={[]}
       toggleFieldExpanded={vi.fn()}
       errors={{}}
-      activePreset={null}
-      visibleBuiltins={PRESETS}
-      customPresets={[]}
-      onSavePreset={vi.fn()}
-      onDeletePreset={vi.fn()}
     />,
   );
 }
