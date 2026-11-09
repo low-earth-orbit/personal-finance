@@ -18,20 +18,21 @@ export default function Methodology() {
     <Container size="xl" py="xl">
       <Stack gap="md">
         <Title order={2} fz="xl">
-          How this works — and why it&apos;s &ldquo;optimal&rdquo;
+          How this research model works
         </Title>
 
         <Text size="sm" c="dimmed">
           Most glide-path rules (e.g. &ldquo;100 minus your age&rdquo;, target-date funds) are
           heuristics — they have no explicit link to your income target, risk tolerance, or
-          guaranteed income. This tool derives an allocation from first principles instead.
+          guaranteed income. This model derives an allocation from stated preferences and return
+          assumptions instead.
         </Text>
 
         <Title order={3} fz="md">
           What &ldquo;optimal&rdquo; means here
         </Title>
         <Text size="sm" c="dimmed">
-          The optimizer finds the equity weight at each age that maximizes your{" "}
+          The optimizer finds the equity weight at each age that maximizes the{" "}
           <Text span fw={600}>
             expected utility of retirement consumption
           </Text>
@@ -53,7 +54,7 @@ export default function Methodology() {
           sets how much you front-load spending into your earlier, more active retirement years. The
           result is the best{" "}
           <Text span fw={600}>
-            risk-adjusted outcome for your situation
+            risk-adjusted outcome for the inputs entered
           </Text>{" "}
           — not the highest expected return, and not the least volatile.
         </Text>
@@ -135,32 +136,32 @@ export default function Methodology() {
           A larger guaranteed income (CPP + OAS + DB) lets the portfolio take more equity risk
           because it already covers some downside. With no guaranteed income, rare depleted years
           dominate CRRA utility, so the web app requires at least $10,000 per year for a meaningful
-          recommendation. If guaranteed income covers your whole target and spending is fixed, the
-          portfolio funds nothing and no allocation is better than another, so the tool asks you to
-          adjust the inputs.
+          result. If guaranteed income covers your whole target and spending is fixed, the portfolio
+          funds nothing and no allocation is better than another, so the tool asks you to adjust the
+          inputs.
         </Point>
 
         <Title order={3} fz="md">
-          Applying this
+          Research findings
         </Title>
-        <Point heading="Choose the return model before the shape.">
+        <Point heading="The return model matters more than the shape.">
           The two return models can disagree on the right equity level by 30 percentage points,
-          while the glide shape within either is worth about 0.5% of income. Try both settings of
-          the Simulation toggle.
+          while the glide shape within either is worth about 0.5% of income. Comparing both settings
+          of the Simulation toggle shows the range.
         </Point>
-        <Point heading="When they disagree, pick a constant weight between their answers.">
+        <Point heading="Constant weights between the two models' answers hold up across eras.">
           Any constant weight from 70% to 100% equity cost at most about 2% of certainty-equivalent
-          income in every historical era we tested, so you don&apos;t need to know which regime is
-          coming.
+          income in every historical era we tested, so the result depends little on which regime
+          comes next.
         </Point>
         <Point heading="Leverage earns little.">
           For a young saver, allowing up to 150% equity raised certainty-equivalent income by under
           1% in both models, and only in the first decade of saving — before margin calls, rate
-          changes or nerves. Treat equity above about 110% as unrewarded.
+          changes or nerves. In this model, equity above about 110% is unrewarded.
         </Point>
         <Point heading="An over-funded plan has no best allocation.">
           If every allocation already delivers your target, the tool says so: the weight shown is
-          the middle of a tie. Decide what the surplus is for: retire earlier or spend more.
+          the middle of a tie.
         </Point>
         <Point heading="What the start-age input does.">
           A guaranteed-income start age after retirement makes the portfolio carry the full target
@@ -182,8 +183,8 @@ export default function Methodology() {
           >
             glide-path analysis note
           </Anchor>
-          . Runs in your browser — nothing is sent anywhere. This is an illustration, not financial
-          advice.
+          . Runs in your browser — nothing is sent anywhere. This is a research model for education,
+          not financial advice or a recommendation for any portfolio.
         </Text>
       </Stack>
     </Container>

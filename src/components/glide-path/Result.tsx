@@ -150,7 +150,7 @@ function ShapeSummary({
   return (
     <Text size="sm" c="dimmed">
       Hold {mix} at every age
-      {compact ? "." : " — the simplest plan to implement and to hold through market swings."}
+      {compact ? "." : " — the simplest schedule to follow."}
     </Text>
   );
 }
@@ -296,7 +296,7 @@ export default function Result({
   if (hasErrors && !result) {
     return (
       <Alert variant="light" color="gray" icon={<IconInfoCircle />} title="Incomplete inputs">
-        Fix the highlighted fields to compare your allocation options.
+        Fix the highlighted fields to compare allocations.
       </Alert>
     );
   }
@@ -304,7 +304,7 @@ export default function Result({
   if (error && !result) {
     return (
       <Alert variant="light" color="red" icon={<IconAlertTriangle />} title="Couldn't compute">
-        Something went wrong while optimizing your allocation. Adjust an input and generate again.
+        Something went wrong while running the model. Adjust an input and generate again.
       </Alert>
     );
   }
@@ -315,7 +315,7 @@ export default function Result({
         <Stack align="center" gap="md">
           <Loader size="xl" />
           <Text size="sm" c="dimmed" ta="center">
-            Optimizing your allocation paths…
+            Running the optimizer…
             <br />
             This may take a few moments.
           </Text>
@@ -340,7 +340,7 @@ export default function Result({
               <Text span fw={600}>
                 Generate allocation paths
               </Text>{" "}
-              to find your personalized equity allocation.
+              to run the model on these inputs.
             </Text>
           </Stack>
         </Stack>
@@ -400,13 +400,13 @@ export default function Result({
 
   const reasonText = reco.preferConstant
     ? reco.glideBad
-      ? "The constant allocation is preferred because the glide path's CE income is tail-dominated."
+      ? "The model prefers the constant allocation because the glide path's CE income is tail-dominated."
       : result.overFunded
-        ? "The constant allocation is preferred because every allocation gives about the same income; this weight is the middle of that tie."
-        : "The constant allocation is preferred because the optimized glide path is not clearly better (within 3% on CE income and 1 point on shortfall)."
+        ? "The model prefers the constant allocation because every allocation gives about the same income; this weight is the middle of that tie."
+        : "The model prefers the constant allocation because the optimized glide path is not clearly better (within 3% on CE income and 1 point on shortfall)."
     : reco.flatBad
-      ? "The glide path is preferred because the constant allocation's CE income is tail-dominated."
-      : "The glide path is preferred because the constant allocation trails it.";
+      ? "The model prefers the glide path because the constant allocation's CE income is tail-dominated."
+      : "The model prefers the glide path because the constant allocation trails it.";
   const fundingText =
     result.fundingRatio === null
       ? "not available"
@@ -445,11 +445,11 @@ export default function Result({
               <IconAlertTriangle size={19} />
             </ThemeIcon>
             <Stack gap={2}>
-              <Text fw={600}>Your plan may need adjustment</Text>
+              <Text fw={600}>High shortfall in this scenario</Text>
               {hasHighDrawdownRisk && (
                 <Text size="sm" c="dimmed">
-                  Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher.
-                  Consider retiring later, reducing retirement spending, or saving more.
+                  Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. In the
+                  model, a later retirement, lower spending or more saving reduces it.
                 </Text>
               )}
               {!hasHighDrawdownRisk && hasHighFullPathRisk && (
@@ -470,9 +470,10 @@ export default function Result({
               <IconInfoCircle size={19} />
             </ThemeIcon>
             <Stack gap={2}>
-              <Text fw={600}>Your plan is over-funded</Text>
+              <Text fw={600}>This scenario is over-funded</Text>
               <Text size="sm" c="dimmed">
-                The allocation doesn&apos;t change your income. Retire earlier or spend more.
+                Every allocation gives about the same income for these inputs, so the model has no
+                best weight.
               </Text>
             </Stack>
           </Group>
@@ -524,7 +525,7 @@ export default function Result({
         ))
       ) : (
         <>
-          {/* Primary — the recommended allocation, with its own outcomes inline. */}
+          {/* Primary — the model's preferred allocation, with its own outcomes inline. */}
           <Card
             withBorder
             radius="md"
@@ -541,7 +542,7 @@ export default function Result({
                 </ThemeIcon>
                 <Stack gap={0}>
                   <Text size="xs" fw={700} c="teal" tt="uppercase">
-                    Recommended allocation
+                    Model&apos;s preferred allocation
                   </Text>
                   <Title order={3} fz="lg">
                     {primary.title}
@@ -556,7 +557,8 @@ export default function Result({
               <OutcomeMetrics stats={primary.stats} />
 
               <Text size="xs" c="dimmed">
-                {reasonText}
+                {reasonText} Research output under this model&apos;s assumptions, not personal
+                advice.
               </Text>
             </Stack>
           </Card>
@@ -586,10 +588,10 @@ export default function Result({
         <Card withBorder radius="md" padding="md">
           <Group gap="sm" wrap="nowrap" align="flex-start">
             <Stack gap={2}>
-              <Text fw={600}>You may have room to adjust your plan</Text>
+              <Text fw={600}>Low shortfall in this scenario</Text>
               <Text size="sm" c="dimmed">
-                This plan&apos;s drawdown shortfall is below 5%. You may be able to retire earlier
-                or increase your retirement spending.
+                Drawdown shortfall is below 5%, so these inputs have slack: an earlier retirement or
+                higher spending would also pass in the model.
               </Text>
             </Stack>
           </Group>

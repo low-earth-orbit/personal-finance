@@ -83,8 +83,8 @@ function renderResult(result: GlidePathResult | null, extra = {}) {
 describe("glide-path Result", () => {
   it("prefers the constant allocation when CE income is within 1%", () => {
     renderResult(makeResult({ flatCeIncome: 49500 }));
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
-    expect(screen.getByText(/The constant allocation is preferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/The model prefers the constant allocation/i)).toBeInTheDocument();
   });
 
   it("reports comparable outcomes for both allocation options", () => {
@@ -135,8 +135,8 @@ describe("glide-path Result", () => {
         flatDepletion: 0.1,
       }),
     );
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
-    expect(screen.getByText(/The constant allocation is preferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/The model prefers the constant allocation/i)).toBeInTheDocument();
   });
 
   it("prefers the glide when the constant adds more than 1 point of full-path shortfall", () => {
@@ -150,8 +150,8 @@ describe("glide-path Result", () => {
         flatDepletion: 0.111,
       }),
     );
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
-    expect(screen.getByText(/The glide path is preferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/The model prefers the glide path/i)).toBeInTheDocument();
   });
 
   it("prefers the constant when full-path shortfall is within 1 point", () => {
@@ -165,8 +165,8 @@ describe("glide-path Result", () => {
         flatDepletion: 0.109,
       }),
     );
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
-    expect(screen.getByText(/The constant allocation is preferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/The model prefers the constant allocation/i)).toBeInTheDocument();
   });
 
   it("prefers the constant when it wins all comparable outcomes", () => {
@@ -180,8 +180,8 @@ describe("glide-path Result", () => {
         flatDepletion: 0.1,
       }),
     );
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
-    expect(screen.getByText(/The constant allocation is preferred/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/The model prefers the constant allocation/i)).toBeInTheDocument();
   });
 
   it("prefers the glide path when the constant trails every threshold", () => {
@@ -195,13 +195,15 @@ describe("glide-path Result", () => {
         flatDepletion: 0.16,
       }),
     );
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(
-      screen.getByText(/The glide path is preferred because the constant allocation trails it/i),
+      screen.getByText(
+        /The model prefers the glide path because the constant allocation trails it/i,
+      ),
     ).toBeInTheDocument();
   });
 
-  it("suggests retiring earlier or spending more below 5% drawdown shortfall", () => {
+  it("notes slack below 5% drawdown shortfall", () => {
     renderResult(
       makeResult({
         ceIncome: 60000,
@@ -213,10 +215,12 @@ describe("glide-path Result", () => {
       }),
     );
 
-    const guidance = screen.getByText(/You may have room to adjust your plan/i);
-    const recommendation = screen.getByText(/Recommended allocation/i);
+    const guidance = screen.getByText(/Low shortfall in this scenario/i);
+    const recommendation = screen.getByText(/preferred allocation/i);
 
-    expect(screen.getByText(/may be able to retire earlier or increase/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/an earlier retirement or higher spending would also pass/i),
+    ).toBeInTheDocument();
     expect(
       guidance.compareDocumentPosition(recommendation) & Node.DOCUMENT_POSITION_PRECEDING,
     ).toBeTruthy();
@@ -234,7 +238,9 @@ describe("glide-path Result", () => {
       }),
     );
 
-    expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
+    expect(
+      screen.queryByText(/an earlier retirement or higher spending would also pass/i),
+    ).toBeNull();
   });
 
   it("does not show plan-adjustment guidance for an inconclusive comparison", () => {
@@ -247,7 +253,9 @@ describe("glide-path Result", () => {
       }),
     );
 
-    expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
+    expect(
+      screen.queryByText(/an earlier retirement or higher spending would also pass/i),
+    ).toBeNull();
   });
 
   it("warns when recommended drawdown shortfall is at least 15%", () => {
@@ -262,11 +270,11 @@ describe("glide-path Result", () => {
       }),
     );
 
-    const warning = screen.getByText(/Your plan may need adjustment/i);
+    const warning = screen.getByText(/High shortfall in this scenario/i);
     const glide = screen.getByRole("heading", { name: "Optimized glide path" });
 
     expect(screen.getByText(/Drawdown shortfall is 15% or higher/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Recommended allocation/i)).toBeNull();
+    expect(screen.queryByText(/preferred allocation/i)).toBeNull();
     expect(screen.queryByText(/Alternative —/i)).toBeNull();
     expect(screen.getByRole("heading", { name: "Constant 60% equity" })).toBeInTheDocument();
     expect(warning.compareDocumentPosition(glide) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -285,7 +293,7 @@ describe("glide-path Result", () => {
     );
 
     expect(screen.getByText(/Full-path shortfall is 30% or higher/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Recommended allocation/i)).toBeNull();
+    expect(screen.queryByText(/preferred allocation/i)).toBeNull();
     expect(screen.queryByText(/Alternative —/i)).toBeNull();
     expect(screen.getByRole("heading", { name: "Optimized glide path" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Constant 60% equity" })).toBeInTheDocument();
@@ -303,7 +311,9 @@ describe("glide-path Result", () => {
       }),
     );
 
-    expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
+    expect(
+      screen.queryByText(/an earlier retirement or higher spending would also pass/i),
+    ).toBeNull();
     expect(screen.getByText(/Full-path shortfall is 30% or higher/i)).toBeInTheDocument();
   });
 
@@ -326,7 +336,7 @@ describe("glide-path Result", () => {
   it("prefers the constant when only the glide path CE is tail-dominated", () => {
     renderResult(makeResult({ ceIncome: 95, flatCeIncome: 50000 }));
 
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(screen.getByText(/glide path's CE income is tail-dominated/i)).toBeInTheDocument();
     expect(screen.queryByText(/Comparison inconclusive/i)).toBeNull();
   });
@@ -334,7 +344,7 @@ describe("glide-path Result", () => {
   it("prefers the glide path when only the constant CE is tail-dominated", () => {
     renderResult(makeResult({ ceIncome: 50000, flatCeIncome: 444 }));
 
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(
       screen.getByText(/constant allocation's CE income is tail-dominated/i),
     ).toBeInTheDocument();
@@ -346,7 +356,7 @@ describe("glide-path Result", () => {
 
     expect(screen.getByText(/Comparison inconclusive/i)).toBeInTheDocument();
     expect(screen.getByText(/cannot reliably distinguish these allocations/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Recommended allocation/i)).toBeNull();
+    expect(screen.queryByText(/preferred allocation/i)).toBeNull();
     expect(screen.getAllByText("Optimized glide path")).not.toHaveLength(0);
     expect(screen.getAllByText("Constant 60% equity")).not.toHaveLength(0);
   });
@@ -358,7 +368,7 @@ describe("glide-path Result", () => {
     expect(screen.getByText("$750,000")).toBeInTheDocument();
   });
 
-  it("flags an over-funded plan and recommends the constant", () => {
+  it("flags an over-funded scenario and prefers the constant", () => {
     renderResult(
       makeResult({
         overFunded: true,
@@ -370,10 +380,12 @@ describe("glide-path Result", () => {
         flatDrawdownDepletion: 0,
       }),
     );
-    expect(screen.getByText(/Your plan is over-funded/i)).toBeInTheDocument();
-    expect(screen.getByText(/Retire earlier or spend more/i)).toBeInTheDocument();
+    expect(screen.getByText(/This scenario is over-funded/i)).toBeInTheDocument();
+    expect(screen.getByText(/no best weight/i)).toBeInTheDocument();
     expect(screen.getByText(/middle of that tie/i)).toBeInTheDocument();
-    expect(screen.queryByText(/may be able to retire earlier or increase/i)).toBeNull();
+    expect(
+      screen.queryByText(/an earlier retirement or higher spending would also pass/i),
+    ).toBeNull();
   });
 
   it("shows welfare CE with a bequest weight but gates on spending CE", () => {
@@ -388,7 +400,7 @@ describe("glide-path Result", () => {
         params: { bequestWeight: 0.25 },
       }),
     );
-    expect(screen.queryByText(/The glide path is preferred/i)).toBeNull();
+    expect(screen.queryByText(/The model prefers the glide path/i)).toBeNull();
     expect(screen.getByText(/\$51,000\/yr including what you leave/)).toBeInTheDocument();
   });
 
@@ -427,7 +439,7 @@ describe("glide-path Result", () => {
 
   it("shows the loading state while computing", () => {
     renderResult(null, { computing: true });
-    expect(screen.getByText(/Optimizing your allocation paths/i)).toBeInTheDocument();
+    expect(screen.getByText(/Running the optimizer/i)).toBeInTheDocument();
   });
 
   it("keeps existing results visible while updating", () => {
@@ -437,14 +449,14 @@ describe("glide-path Result", () => {
       onReroll: () => {},
     });
     expect(screen.getByText(/Updating allocation paths/i)).toBeInTheDocument();
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /another simulation sample/i })).toBeDisabled();
   });
 
   it("keeps existing results visible after inputs change and prompts generation", () => {
     renderResult(makeResult(), { stale: true, onReroll: () => {} });
     expect(screen.getByText(/Inputs changed.*Generate allocation paths/i)).toBeInTheDocument();
-    expect(screen.getByText(/Recommended allocation/i)).toBeInTheDocument();
+    expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(screen.queryByText(/Updating allocation paths/i)).toBeNull();
     expect(screen.getByRole("button", { name: /another simulation sample/i })).toBeDisabled();
   });

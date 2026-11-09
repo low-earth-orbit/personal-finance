@@ -32,7 +32,8 @@ const TOOLS: Tool[] = [
   {
     emoji: "🛤️",
     title: "Lifetime Allocation",
-    description: "Find your optimal stock allocation across your lifetime. FOR NERDS.",
+    description:
+      "A research model of how stock allocation could change over a lifetime. FOR NERDS.",
     href: "/glide-path",
     status: "new",
   },

@@ -145,7 +145,7 @@ export default function GlidePathChart({
   return (
     <Card withBorder radius="md" padding="md">
       <Group justify="space-between" align="center" mb="md" wrap="wrap" gap="xs">
-        <Text fw={600}>Optimal equity allocation by age</Text>
+        <Text fw={600}>Model-optimized equity allocation by age</Text>
         <SegmentedControl
           size="xs"
           w={{ base: "100%", xs: "auto" }}
@@ -160,7 +160,7 @@ export default function GlidePathChart({
       </Group>
       <div
         role="img"
-        aria-label="Optimal equity weight by age"
+        aria-label="Model-optimized equity weight by age"
         style={{ width: "100%", minWidth: 0 }}
       >
         <ResponsiveContainer width="100%" height={340}>
