@@ -55,6 +55,9 @@ function makeResult(o: ResultOverrides = {}): GlidePathResult {
     expectedRetirementBalance: 1200000,
     initialTargetDraw: 48000,
     fundingRatio: 0.04,
+    flatExpectedRetirementBalance: 1100000,
+    flatInitialTargetDraw: 48000,
+    flatFundingRatio: 0.0436,
     flatDepletion: 0.06,
     flatDrawdownDepletion: 0.04,
     incomeCv: 0.2,
@@ -80,7 +83,71 @@ function renderResult(result: GlidePathResult | null, extra = {}) {
   );
 }
 
+// The tail-dominated CE guard only applies without guaranteed income (the web form requires
+// $10,000, so this is the direct-engine case).
+const NO_GUARANTEED_INCOME = { input: { ...DEFAULTS, guaranteedIncome: 0 } };
+
 describe("glide-path Result", () => {
+  it("shows a low CE as a figure when guaranteed income sets a real floor", () => {
+    renderResult(makeResult({ ceIncome: 95, flatCeIncome: 444 }));
+
+    expect(screen.queryByText(/Tail-dominated/i)).toBeNull();
+    expect(screen.queryByText(/Comparison inconclusive/i)).toBeNull();
+  });
+
+  it("describes the tent as the low within 15 years of retirement", () => {
+    renderResult(makeResult({ ceIncome: 60000, flatCeIncome: 50000, tentPct: 45, tentAge: 61 }));
+
+    expect(screen.getByText(/Within 15 years of retirement \(age 65\)/)).toHaveTextContent(
+      "Within 15 years of retirement (age 65), the equity weight is lowest at 45%, around age 61.",
+    );
+  });
+
+  it("shows the expected balance and year-1 draw of the preferred allocation", () => {
+    // Constant preferred: its own balance, not the glide path's.
+    const { unmount } = renderResult(makeResult({ flatCeIncome: 49500 }));
+    expect(screen.getByText(/Expected retirement balance ≈ \$1,100,000/)).toHaveTextContent(
+      "Year-1 portfolio draw ≈ $48,000 (4.4% of the expected retirement balance)",
+    );
+    expect(screen.queryByText(/\$1,200,000/)).toBeNull();
+    unmount();
+
+    renderResult(makeResult({ ceIncome: 60000, flatCeIncome: 50000 }));
+    expect(screen.getByText(/Expected retirement balance ≈ \$1,200,000/)).toBeInTheDocument();
+    expect(screen.queryByText(/\$1,100,000/)).toBeNull();
+  });
+
+  it("shows each option's expected balance when neither is preferred", () => {
+    renderResult(makeResult({ drawdownDepletion: 0.25, flatDrawdownDepletion: 0.25 }));
+
+    expect(screen.queryByText(/preferred allocation/i)).toBeNull();
+    expect(screen.getByText(/Expected retirement balance ≈ \$1,200,000/)).toBeInTheDocument();
+    expect(screen.getByText(/Expected retirement balance ≈ \$1,100,000/)).toBeInTheDocument();
+  });
+
+  it("shows one allocation when the optimized glide path is the constant weight", () => {
+    const same = makeResult({
+      equityByYear: Array.from({ length: 60 }, () => 1),
+      flatEquityPct: 100,
+      flatCeIncome: 50000,
+      flatDepletion: 0.05,
+      flatDrawdownDepletion: 0.05,
+    });
+    const { unmount } = renderResult(same);
+    expect(screen.getByText("Constant 100% equity")).toBeInTheDocument();
+    expect(screen.queryByText(/Alternative/)).toBeNull();
+    expect(
+      screen.getByText(/The optimized glide path is this same constant allocation\./),
+    ).toBeInTheDocument();
+    unmount();
+
+    // High shortfall shows the options without a preference: still only one card.
+    renderResult({ ...same, drawdownDepletion: 0.4, flatDrawdownDepletion: 0.4 });
+    expect(screen.queryByText(/preferred allocation/i)).toBeNull();
+    expect(screen.queryByRole("heading", { name: "Optimized glide path" })).toBeNull();
+    expect(screen.getAllByRole("heading", { name: "Constant 100% equity" })).toHaveLength(1);
+  });
+
   it("prefers the constant allocation when CE income is within 1%", () => {
     renderResult(makeResult({ flatCeIncome: 49500 }));
     expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
@@ -251,6 +318,7 @@ describe("glide-path Result", () => {
         drawdownDepletion: 0.04,
         flatDrawdownDepletion: 0.03,
       }),
+      NO_GUARANTEED_INCOME,
     );
 
     expect(
@@ -327,6 +395,7 @@ describe("glide-path Result", () => {
         flatDepletion: 0.08,
         flatDrawdownDepletion: 0.04,
       }),
+      NO_GUARANTEED_INCOME,
     );
     expect(screen.queryByRole("alert")).toBeNull();
     expect(container.querySelectorAll(".tabler-icon-alert-triangle")).toHaveLength(3);
@@ -334,7 +403,7 @@ describe("glide-path Result", () => {
   });
 
   it("prefers the constant when only the glide path CE is tail-dominated", () => {
-    renderResult(makeResult({ ceIncome: 95, flatCeIncome: 50000 }));
+    renderResult(makeResult({ ceIncome: 95, flatCeIncome: 50000 }), NO_GUARANTEED_INCOME);
 
     expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(screen.getByText(/glide path's CE income is tail-dominated/i)).toBeInTheDocument();
@@ -342,7 +411,7 @@ describe("glide-path Result", () => {
   });
 
   it("prefers the glide path when only the constant CE is tail-dominated", () => {
-    renderResult(makeResult({ ceIncome: 50000, flatCeIncome: 444 }));
+    renderResult(makeResult({ ceIncome: 50000, flatCeIncome: 444 }), NO_GUARANTEED_INCOME);
 
     expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
     expect(
@@ -352,7 +421,7 @@ describe("glide-path Result", () => {
   });
 
   it("shows an inconclusive comparison when both CE scores are tail-dominated", () => {
-    renderResult(makeResult({ ceIncome: 95, flatCeIncome: 444 }));
+    renderResult(makeResult({ ceIncome: 95, flatCeIncome: 444 }), NO_GUARANTEED_INCOME);
 
     expect(screen.getByText(/Comparison inconclusive/i)).toBeInTheDocument();
     expect(screen.getByText(/cannot reliably distinguish these allocations/i)).toBeInTheDocument();
@@ -457,6 +526,11 @@ describe("glide-path Result", () => {
     renderResult(makeResult(), { stale: true, onReroll: () => {} });
     expect(screen.getByText(/Inputs changed.*Generate allocation paths/i)).toBeInTheDocument();
     expect(screen.getByText(/preferred allocation/i)).toBeInTheDocument();
+    // The outdated result is dimmed; the notice above it is not.
+    expect(screen.getByText(/preferred allocation/i).closest("[data-stale]")).toHaveStyle({
+      opacity: "0.55",
+    });
+    expect(screen.getByText(/Inputs changed/i).closest("[data-stale]")).toBeNull();
     expect(screen.queryByText(/Updating allocation paths/i)).toBeNull();
     expect(screen.getByRole("button", { name: /another simulation sample/i })).toBeDisabled();
   });

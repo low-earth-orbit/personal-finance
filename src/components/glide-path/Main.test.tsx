@@ -13,15 +13,21 @@ vi.mock("./InputForm", () => ({
     onChange,
     onReturnModeChange,
     onGenerate,
+    onReset,
+    returnMode,
   }: {
     onChange: (key: GlidePathInputKey, value: FieldValue) => void;
     onReturnModeChange: (mode: GlidePathReturnMode) => void;
     onGenerate: () => void;
+    onReset: () => void;
+    returnMode: GlidePathReturnMode;
   }) => (
     <>
+      <span data-testid="return-mode">{returnMode}</span>
       <button onClick={() => onChange("startAge", 31)}>Change input</button>
       <button onClick={() => onReturnModeChange("forward-block")}>Change return mode</button>
       <button onClick={onGenerate}>Generate</button>
+      <button onClick={onReset}>Reset</button>
     </>
   ),
 }));
@@ -78,5 +84,17 @@ describe("glide-path Main", () => {
     expect(WorkerMock.instances).toHaveLength(2);
     expect(screen.getByTestId("stale")).toHaveTextContent("false");
     expect(screen.getByTestId("updating")).toHaveTextContent("true");
+  });
+
+  it("resets the return model along with the inputs", () => {
+    renderWithMantine(<Main />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Change return mode" }));
+    expect(screen.getByTestId("return-mode")).toHaveTextContent("forward-block");
+    expect(localStorage.getItem("glide_return_mode")).toBe("forward-block");
+
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByTestId("return-mode")).toHaveTextContent("iid-mc");
+    expect(localStorage.getItem("glide_return_mode")).toBe("iid-mc");
   });
 });

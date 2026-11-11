@@ -15,15 +15,10 @@ import { JST_BOND, JST_EQUITY, JST_OBSERVATIONS, JST_SEG_LEN, JST_SEG_START } fr
 const BLOCK_YEARS = 10;
 
 /**
- * Sample `nYears × nPaths` paired equity/bond return paths by stationary block
- * bootstrap from the pre-rescaled JST pooled history. Returns two flat Float32Arrays
- * (row-major: index = year * nPaths + path).
+ * Sample `nYears × nPaths` JST row indices by stationary block bootstrap (row-major:
+ * index = year * nPaths + path).
  */
-export function sampleBlockPaths(
-  nYears: number,
-  nPaths: number,
-  seed: number,
-): { eqPaths: Float32Array; bdPaths: Float32Array } {
+export function sampleBlockIndices(nYears: number, nPaths: number, seed: number): Int32Array {
   const rand = mulberry32(seed);
   const obs = JST_OBSERVATIONS;
   const restartProb = 1.0 / BLOCK_YEARS;
@@ -54,6 +49,20 @@ export function sampleBlockPaths(
     }
   }
 
+  return indices;
+}
+
+/**
+ * Sample `nYears × nPaths` paired equity/bond return paths by stationary block
+ * bootstrap from the pre-rescaled JST pooled history. Returns two flat Float32Arrays
+ * (row-major: index = year * nPaths + path).
+ */
+export function sampleBlockPaths(
+  nYears: number,
+  nPaths: number,
+  seed: number,
+): { eqPaths: Float32Array; bdPaths: Float32Array } {
+  const indices = sampleBlockIndices(nYears, nPaths, seed);
   // Gather return paths from the pre-rescaled JST arrays.
   const eqPaths = new Float32Array(nYears * nPaths);
   const bdPaths = new Float32Array(nYears * nPaths);

@@ -299,11 +299,26 @@ def run_gamma_sweep(args):
         ("forward-block (pooled)",
          dict(return_mode="forward-block", dataset="pooled", block_years=args.block_years)),
     ]
-    for gamma in (2.0, 4.0, 8.0):
+    gammas = (1.0, 2.0, 4.0, 8.0)
+    iid_glides = {}
+    for gamma in gammas:
         print(f"\n  -- γ = {gamma:g} --")
         for label, overrides in modes:
             rec = recommend_glide_path(**base_kwargs(args, gamma=gamma, **overrides))
             print(summary_row(label, rec))
+            if label == "iid-mc":
+                iid_glides[gamma] = np.asarray(rec["equity_by_year"], dtype=float)
+
+    # Cross-scoring: if γ only rescales CE (constant-dollar spending), a glide optimized for one
+    # γ scores about the same as any other γ's glide under every γ.
+    print("\n  iid-mc glides cross-scored (CE $/yr; rows = γ used to score, columns = γ optimized for)")
+    print(f"  {'score γ':>8} " + " ".join(f"{'opt γ=' + format(g, 'g'):>10}" for g in gammas)
+          + f" {'spread':>8}")
+    for score_gamma in gammas:
+        kwargs = base_kwargs(args, gamma=score_gamma, return_mode="iid-mc")
+        ces = [evaluate_path(iid_glides[g], **kwargs)["ce_income"] for g in gammas]
+        print(f"  {score_gamma:>8g} " + " ".join(f"{ce:>10,.0f}" for ce in ces)
+              + f" {max(ces) - min(ces):>8,.0f}")
 
 
 def _history_cuts():

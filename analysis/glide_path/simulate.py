@@ -53,7 +53,8 @@ class Lifecycle:
         guaranteed = np.where(started, float(guaranteed_income), 0.0)
         floor = np.where(started, 0.0, float(guaranteed_income))
         offset = float(target_income if bequest_offset is None else bequest_offset)
-        return cls(accum_years, retire_years, current_savings, annual_contribution, guaranteed,
+        # float(): an integer balance with no working years would make the utility arrays integer.
+        return cls(accum_years, retire_years, float(current_savings), annual_contribution, guaranteed,
                    np.maximum(target_income - guaranteed, 0.0), flexibility, withdrawal_rate,
                    gamma, beta, floor, float(bequest_weight), offset)
 

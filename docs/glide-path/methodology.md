@@ -29,10 +29,10 @@ It assumes you know personal-finance basics (asset allocation, safe withdrawal r
 
 Default household: age 35, $200k saved, $20k/yr contributions for 30 years, a $60k real retirement target of which $20k is guaranteed income (CPP/OAS/DB), a 30-year retirement, risk aversion γ = 4 and time preference β = 0.985.
 
-1. **The return model decides whether there is a bond tent**, that is, equity dipping around retirement and rising again afterwards. Under iid, constant-dollar spending gives a tent bottoming at 30–70% equity, and the best constant weight is **70%** for a 30-year retirement (90–100% for 40–50 years; §2b). Under forward-block the optimum is **flat ~100% equity** (§3a).
+1. **The return model decides whether there is a bond tent**, that is, equity dipping around retirement and rising again afterwards. Under iid, constant-dollar spending gives a tent bottoming at 30–60% equity (§2b), and the best constant weight is **70%** for a 30-year retirement (90–100% for 40–50 years; §2e). Under forward-block the optimum is **flat ~100% equity** (§3a).
 2. **Flexible spenders hold 100% equity** throughout, in both models (§2b, §3a).
 3. **The glide's shape is worth little; its level matters more.** Out of sample, the optimized glide beats the best constant weight by ≤ ~0.5% of certainty-equivalent (CE) income under iid, and by ≈ $0 under forward-block (§2e, §3a).
-4. **The iid tent comes from over-funding.** The default plan's first-year withdrawal is only ~2.3% of its median retirement balance, so the optimizer has little use for upside and protects the floor. At a ~3.3% draw the tent disappears (§2f).
+4. **The iid tent comes from over-funding.** The default plan's first-year withdrawal is only ~2.3% of its median retirement balance, so the optimizer has little use for upside and protects the floor. At a ~3.3% draw the tent is a shallow dip to 85%, and at ~3.9% it is gone (§2f).
 5. **Flat 100% is a verdict on long nominal bonds, not on equity.** In history they had bad decades, a 0.29 correlation with stocks and a fat left tail. Swap them for an idealized real asset and the optimum falls to ~50%; with realistic assumptions about a real fund, to 55–70% (§4a, §4c). In 1990–2020, ordinary nominal bonds already give 50% (§3c).
 6. **A mostly real bond sleeve holds up in every regime tested.** In the full history CE rises with the real share of the bond sleeve all the way to 100%; in 1990–2020 the mix barely matters. Pair ~60% equity with an all-real sleeve, or ~80% with a half-real one. A US-CPI fund (XSTH) hedges ~90% of Canadian inflation in the eras where inflation matters (§4f).
 7. **Guessing the regime wrong costs little.** Any constant weight from 70% to 100% costs at most ~2% of CE in any era tested (§3d).
@@ -171,7 +171,7 @@ The historical modes are annual sequencing checks, not an ACO replication (ACO b
 ### 1.4 Objective and optimizer
 
 - **Objective:** maximize expected Σ βᵗ·u(consumptionₜ) + θ·u(W_T + k) over retirement, with CRRA utility `u(c) = c^(1−γ)/(1−γ)` (log at γ = 1). The optional bequest term values final wealth W_T with the same γ, offset by k (default: one year of target spending, so a zero estate is finite) and undiscounted. θ = 0 by default (no bequest). CE income converts the consumption part back into dollars; with θ > 0 a **welfare CE** also includes the bequest term, measured against an empty estate. Both engines report the median money left at the end.
-- **Decision variable:** the equity weight for each step, a run of years held at one weight: 1 year in §2 and §3a; 5 years in the `research_history` sections (§2f, §3b–§4) and by default in the app (adjustable 1–10). Weights sit on a 5pp grid (10pp in §2).
+- **Decision variable:** the equity weight for each step, a run of years held at one weight: 1 year in §2 and §3a; 5 years in the `research_history` sections (§2f, §3b–§4) and in the app, where the step is fixed. Weights sit on a 5pp grid (10pp in §2).
 - **Coordinate ascent:** starting from the best constant weight, the optimizer tries every weight for one step with the others fixed, keeps the best, and cycles through the steps until nothing moves (at most 10–12 passes in Python, 6 in the app). No shape is imposed. The result is a coordinate-wise optimum, not a guaranteed global one.
 - **Common random numbers:** all candidates are scored on the same simulated paths, so differences between them are not sampling noise.
 
@@ -181,15 +181,17 @@ Grids and step lengths differ between sections, so tent depths from §2 (10pp, 1
 
 Three independent sets of simulated paths keep the comparison honest: the glide is fitted on an **optimization sample**, the best constant weight is picked on a **selection sample**, and both are scored on an **evaluation sample**. Every CE and shortfall figure in this note is out of sample in this sense.
 
-**Simplicity rule (web app).** The app recommends the constant weight unless the glide beats it by more than 3% on CE income or by more than 1 point on full-path shortfall (`SIMPLICITY_*` in [`recommendation.ts`](../../src/utils/glide-path/recommendation.ts)). With a bequest weight the gate still compares spending CE: the bequest already shapes both allocations through the objective, and welfare CE is ill-conditioned for well-funded plans (it inverts u near the CRRA bound, so a 0.1% spending-CE gap can show as a 4–5% welfare-CE gap). CE gaps under ~3% are inside the model's own uncertainty: glide edge ≤ ~0.5%, Monte Carlo noise ~0.3%, era regret ≤ ~2%. Across 72 input combinations, every threshold of 2% or more gave the same seed-stable picks, and the constant never added more than 0.3pp of full-path shortfall (calibration notes in the source). The Python CLI has no simplicity rule; it flags the constant weight when its CE beats the glide's by more than 5%. Both always report the raw optimized glide.
+**Simplicity rule (web app).** The app recommends the constant weight unless the glide beats it by more than 3% on CE income or by more than 1 point on full-path shortfall (`SIMPLICITY_*` in [`recommendation.ts`](../../src/utils/glide-path/recommendation.ts)). The gate compares spending CE even when a bequest weight is set (the app fixes θ = 0, so this matters only for direct engine calls): the bequest already shapes both allocations through the objective, and welfare CE is ill-conditioned for well-funded plans (it inverts u near the CRRA bound, so a 0.1% spending-CE gap can show as a 4–5% welfare-CE gap). CE gaps under ~3% are inside the model's own uncertainty: glide edge ≤ ~0.5%, Monte Carlo noise ~0.3%, era regret ≤ ~2%. Across 72 input combinations, every threshold of 2% or more gave the same seed-stable picks, and the constant never added more than 0.3pp of full-path shortfall (calibration notes in the source). The Python CLI has no simplicity rule; it flags the constant weight when its CE beats the glide's by more than 5%. Both always report the raw optimized glide.
 
-**Over-funded plans and ties.** When θ = 0 and every constant weight on the selection sample delivers the target (CE within 0.5% and shortfall under 0.5%), both engines flag the plan as over-funded: the allocation does not change income. Ties among equally good weights (exact or within 1e-12) go to the middle of the tied range, for the optimizer's starting weight and for the best constant weight; they used to go to 0% equity.
+**Over-funded plans and ties.** When θ = 0 and every constant weight on the selection sample delivers the target (CE within 0.5% and shortfall under 0.5%), both engines flag the plan as over-funded: the allocation does not change income. Ties among equally good weights (exact or within 1e-12) go to the middle of the tied range, for the optimizer's starting weight and for the best constant weight; a first-wins rule would report 0% equity, a corner the objective did not choose.
+
+**What the app reports.** For each allocation: CE income, drawdown-only and full-path shortfall, the median money left at the end, and the year-1 portfolio draw as a share of that allocation's median retirement balance. When the optimized glide is a single weight (common with flexible spending and tightly funded plans) it is the constant allocation, and the app shows it once. The app states no preference and shows both allocations side by side when the preferred one has a drawdown-only shortfall of 15% or more, or a full-path shortfall of 30% or more; it notes slack when drawdown-only shortfall is under 5% (flexibility below 0.5 only, since shortfall is ~0 by construction above that). A "Test another simulation sample" button reruns the same plan on fresh paths to show how much of the result is Monte Carlo noise.
 
 ### 1.6 Scope limits
 
-- **Guaranteed income is required.** Without it, a depleted year drives consumption to ~$0, where CRRA utility plunges toward −∞ and a handful of ruined paths decide the comparison. Raising the floor would invent income; scoring only surviving paths would make every γ agree. The app therefore requires ≥ $10,000 of guaranteed income; Python accepts zero but reports the comparison as inconclusive. A bridge is handled by the consumption floor in §1.1.
+- **Guaranteed income is required.** Without it, a depleted year drives consumption to ~$0, where CRRA utility plunges toward −∞ and a handful of ruined paths decide the comparison. Raising the floor would invent income; scoring only surviving paths would make every γ agree. The app therefore requires ≥ $10,000 of guaranteed income; Python accepts zero, and its glide-versus-constant comparison is then inconclusive. A bridge is handled by the consumption floor in §1.1.
 - **Undetermined allocation.** With flex = 0, guaranteed income ≥ the target from retirement and no bequest weight, the portfolio funds nothing and every allocation ties; both engines reject this input.
-- **Final retirement year.** With no bequest weight, the last year's allocation barely matters. It is reported (the `end` column) but excluded from the tent and slope; read it loosely.
+- **Final retirement step.** With no bequest weight, the last step's allocation barely matters (the last year with 1-year steps, the last five years in the app). It is reported (the `end` column) but left out of the retirement slope and the tent whenever at least two earlier retirement steps exist; read it loosely.
 
 ---
 
@@ -202,7 +204,7 @@ Three independent sets of simulated paths keep the comparison honest: the glide 
 **Reading the glide tables.** Columns are equity %:
 
 - `start`, `acc. avg`, `pre-ret`, `@ret`: equity at the first age, the accumulation average, the year before retirement, and the retirement year;
-- `tent (age)`: the lowest equity in the first 15 retirement years, and the age where it occurs;
+- `tent (age)`: the lowest equity within 15 years either side of retirement, and the age where it occurs (the same rule the app and CLI use; ties go to the retirement side);
 - `end`: final-year equity (read loosely, §1.6);
 - `BEFORE` / `AFTER`: the slope of the accumulation and retirement segments;
 - `CE income`, and `Shortfall` (full-path).
@@ -226,8 +228,8 @@ The default household (retiring at 65) with retirements of 30, 40 and 50 years, 
 | Spending | Ret. horizon | start | acc. avg | pre-ret | @ret | tent (age) | end | BEFORE | AFTER | CE income | Shortfall |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | constant $ | 30y | 100 | 78 | 40 | 50 | 30 (@67) | 100 | Falling | Rising | $58,089 | 2.6% |
-| constant $ | 40y | 100 | 86 | 60 | 70 | 70 (@65) | 100 | Falling | Rising | $55,353 | 5.1% |
-| constant $ | 50y | 100 | 91 | 60 | 70 | 70 (@65) | 100 | Falling | Rising | $52,925 | 7.1% |
+| constant $ | 40y | 100 | 86 | 60 | 70 | 50 (@63) | 100 | Falling | Rising | $55,353 | 5.1% |
+| constant $ | 50y | 100 | 91 | 60 | 70 | 60 (@64) | 100 | Falling | Rising | $52,925 | 7.1% |
 | semi-flex 50% | 30y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $79,467 | 0.5% |
 | semi-flex 50% | 40y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $77,423 | 1.5% |
 | semi-flex 50% | 50y | 100 | 100 | 100 | 100 | 90 (@70) | 100 | Flat | Flat | $74,275 | 2.8% |
@@ -235,7 +237,7 @@ The default household (retiring at 65) with retirements of 30, 40 and 50 years, 
 | flexible 100% | 40y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $79,584 | 0.0% |
 | flexible 100% | 50y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $78,381 | 0.0% |
 
-- **Constant dollar → a tent.** Equity falls through accumulation to a low at or just after retirement (30–70%), then rises. Rigid income costs shortfall risk (3–7%, rising with the horizon). Longer retirements need more growth, so their tent is shallower.
+- **Constant dollar → a tent.** Equity falls through accumulation to a low within a few years of retirement (30–60%), then rises. Rigid income costs shortfall risk (3–7%, rising with the horizon). Longer retirements need more growth, so their tent is shallower.
 - **Semi-flexible and flexible → 100% throughout.** Their cost is income variability, not shortfall.
 - The CE gap between rule rows is **not** the value of flexibility; see §2f.
 
@@ -247,9 +249,9 @@ Start age stays 35; the retirement age moves to 55, 65 or 75, so the household s
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | constant $ | 20y | 100 | 96 | 80 | 80 | 80 (@55) | 100 | Falling | Falling | $48,640 | 14.6% |
 | constant $ | 30y | 100 | 78 | 40 | 50 | 30 (@67) | 100 | Falling | Rising | $58,089 | 2.6% |
-| constant $ | 40y | 40 | 62 | 30 | 40 | 40 (@75) | 100 | Falling | Falling | $59,804 | 0.4% |
+| constant $ | 40y | 40 | 62 | 30 | 40 | 20 (@60) | 100 | Falling | Falling | $59,804 | 0.4% |
 
-A longer accumulation acts as a funding lever. A 40-year saver is so over-funded for the $40k gap that the optimum averages ~60% equity and dips to 30–40% around retirement; a 20-year saver stays at 80–100% (15% shortfall).
+A longer accumulation acts as a funding lever. A 40-year saver is so over-funded for the $40k gap that the optimum averages ~60% equity and is as low as 20% in the 15 years before retirement; a 20-year saver stays at 80–100% (15% shortfall).
 
 ### 2d. Risk aversion (30y + 30y)
 
@@ -257,15 +259,15 @@ A longer accumulation acts as a funding lever. A 40-year saver is so over-funded
 | ------------- | --- | ----- | -------- | ------- | ---- | ---------- | --- | ------- | ------ |
 | constant $    | 2   | 100   | 77       | 50      | 60   | 40 (@67)   | 100 | Falling | Rising |
 | constant $    | 4   | 100   | 78       | 40      | 50   | 30 (@67)   | 100 | Falling | Rising |
-| constant $    | 8   | 100   | 76       | 50      | 60   | 40 (@67)   | 100 | Falling | Rising |
+| constant $    | 8   | 100   | 76       | 50      | 60   | 30 (@62)   | 100 | Falling | Rising |
 | flexible 100% | 8   | 100   | 93       | 80      | 80   | 70 (@66)   | 90  | Falling | Flat   |
 
 Flexible spending holds 100% throughout at γ = 2 and 4.
 
 **Why γ doesn't move the constant-dollar tent.** With consumption capped at the target, ~99% of simulated retirement years sit exactly at the target and ~1% at the floor. Expected utility is then a constant minus (the utility gap between target and floor) × (expected discounted years at the floor). Any utility function therefore ranks allocations by those floor-years; γ only rescales the CE level.
 
-- The recommender's best constant weight is identical for γ = 1, 2, 4 and 8, and each γ's glide scored under another γ differs by ≤ ~$7/yr.
-- The tent bottoms (40%, 30%, 40%) are within one grid step of each other: optimizer noise.
+- The recommender's best constant weight is 70% for γ = 1, 2, 4 and 8. Scored under any one γ, the four γ-optimized glides differ by ≤ ~$10/yr for γ ≤ 4 and by ~$35/yr for γ = 8 (`research_history --sections gamma`, 5-year steps).
+- The tent bottoms (40%, 30%, 30%) are within one grid step of each other: optimizer noise.
 - γ matters once spending flexes: at semi-flex, γ = 8 moves the best constant weight from 100% to 60%.
 
 ### 2e. Is the glide shape worth anything? (out of sample)
@@ -291,10 +293,10 @@ For semi-flexible and flexible spending, every column ties at 100% equity in all
 
 | savings / contribution | gap ÷ balance | tent | best constant | CE      | full-path shortfall |
 | ---------------------- | ------------- | ---- | ------------- | ------- | ------------------- |
-| $300k / $30k           | 1.8%          | 40%  | 40%           | $59,915 | 0.2%                |
+| $300k / $30k           | 1.8%          | 35%  | 40%           | $59,915 | 0.2%                |
 | $200k / $20k (default) | 2.3%          | 50%  | 70%           | $58,107 | 2.6%                |
-| $150k / $15k           | 2.8%          | 70%  | 100%          | $53,205 | 8.0%                |
-| $120k / $12k           | 3.3%          | 100% | 100%          | $47,710 | 14.3%               |
+| $150k / $15k           | 2.8%          | 65%  | 100%          | $53,205 | 8.0%                |
+| $120k / $12k           | 3.3%          | 85%  | 100%          | $47,710 | 14.3%               |
 | $100k / $10k           | 3.9%          | 100% | 100%          | $43,013 | 22.1%               |
 
 A spender capped at the target gains nothing from extra wealth (with no bequest weight) but loses heavily from shortfalls. The more over-funded the plan, the more the optimizer protects the floor.
@@ -347,13 +349,13 @@ The product engine (`recommend_glide_path`, forward-block), 1-year steps, 5pp gr
 
 | Spending | Ret. horizon | start | acc. avg | pre-ret | @ret | tent (age) | end | BEFORE | AFTER | CE income | Shortfall |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| constant $ | 30y | 100 | 97 | 100 | 75 | 75 (@65) | 100 | Flat | Rising | $57,814 | 2.2% |
-| constant $ | 40y | 100 | 99 | 100 | 95 | 95 (@65) | 100 | Flat | Flat | $55,911 | 3.6% |
+| constant $ | 30y | 100 | 97 | 100 | 75 | 70 (@61) | 100 | Flat | Rising | $57,814 | 2.2% |
+| constant $ | 40y | 100 | 99 | 100 | 95 | 90 (@55) | 100 | Flat | Flat | $55,911 | 3.6% |
 | constant $ | 50y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $54,188 | 4.8% |
 | semi-flex 50% | 30y | 100 | 100 | 100 | 100 | 100 (@65) | 0 | Flat | Flat | $80,960 | 0.4% |
 | flexible 100% | 30y | 100 | 100 | 100 | 100 | 100 (@65) | 100 | Flat | Flat | $84,038 | 0.0% |
 
-Out of sample the best constant weight is 100% in every row, and the glide's edge over it is −$15 to $0/yr (noise). Compared with iid, constant-dollar accumulation stays at ~100% instead of averaging 78%, and the dip is 75–100% instead of 30–70%. CE barely moves ($57.8k vs $58.1k at 30 years). This reproduces ACO's flat 100% on our own capital-market assumptions.
+Out of sample the best constant weight is 100% in every row, and the glide's edge over it is −$15 to $0/yr (noise). Compared with iid, constant-dollar accumulation stays at ~100% instead of averaging 78%, and the dip is 70–100% instead of 30–60%. CE barely moves ($57.8k vs $58.1k at 30 years). This reproduces ACO's flat 100% on our own capital-market assumptions.
 
 ### 3b. What drives the flip
 
@@ -506,7 +508,7 @@ Cell b is the closest the menu comes to a short-TIPS ETF such as XSTH, but it is
 The "none" row differs from §4a's $59,276 by Monte Carlo noise. For scale, φ = 0.5 is as persistent as long nominal bonds (VR(10y) ≈ 2.6); φ = 0.8 gives ≈ 5.4.
 
 - **The direction is robust.** No single change takes the optimum above 70%, and the plausible combined case lands at 55%. Even a leg twice as persistent as long bonds stays at 70%, so persistence alone is not what pins forward-block at 100%.
-- **The size of the gain is not.** It falls from ~$1.5k/yr (2.6% of CE) to ~$0.8k/yr (1.4%) in the combined case; correlation and the lower mean matter most. Only when most assumptions turn unfavourable at once (harsh row) does the gain shrink to noise (~$170/yr) and the optimum return to 85%.
+- **The size of the gain is not.** It falls from ~$1.5k/yr (2.6% of CE) to ~$0.8k/yr (1.4%) in the combined case; correlation and the lower mean matter most. Only when most assumptions turn unfavourable at once (harsh row) does the gain shrink to noise (~$150/yr) and the optimum return to 85%.
 - **Not modelled:** the ~3-month indexation lag, hedging costs and fees. The US-versus-Canadian CPI gap is measured in §4f.
 - **Full history only.** In 1990–2020 nominal bonds already give 50% (§3c), and the real asset adds ≤ 0.1% of CE there (§4f).
 
@@ -638,9 +640,9 @@ Mixes step by 25%; CE at the best constant weight:
 
 **Python** (`analysis/glide_path/`): module roles, API and run commands are in its [README](../../analysis/glide_path/README.md). Research code can pass `history=` (a custom or cut return series) and `sampler=` (a custom index sampler) to `recommend_glide_path`.
 
-**Web** (`src/utils/glide-path/`): `engine.ts` (the same model, one simulation kernel for iid and forward-block), `recommendation.ts` (simplicity rule), `jstData.ts` (generated bundle). The app defaults to 5-year steps (adjustable 1–10), offers iid-mc and forward-block, and requires ≥ $10k of guaranteed income from its start age. Its "Leave money to heirs" input maps none / some / strong to θ = 0 / 0.25 / 0.5.
+**Web** (`src/utils/glide-path/`): `engine.ts` (the same model, one simulation kernel for iid and forward-block), `recommendation.ts` (simplicity rule), `jstData.ts` (generated bundle). The app offers iid-mc and forward-block and requires ≥ $10k of guaranteed income from its start age. It fixes 5-year steps, θ = 0 (no bequest weight), one equity ceiling for all years and 2.1% inflation; those stay adjustable in Python.
 
-**CLI.** `python3 analysis/recommend_glide.py -i` prompts for every input and prints the equivalent command. `--guaranteed-start-age AGE` (with `--start-age`) sets the bridge, `--bequest-weight θ` and `--bequest-offset k` the bequest term, and `--compare-modes` prints one table across iid-mc, forward-block, historical-block and historical-block on 1990–2020.
+**CLI.** `python3 analysis/recommend_glide.py -i` prompts for every input and prints the equivalent command. `--guaranteed-start-age AGE` (with `--start-age`) sets the bridge, `--bequest-weight θ` and `--bequest-offset k` the bequest term (the interactive "Leave money to heirs?" prompt maps none / some / strong to θ = 0 / 0.25 / 0.5), and `--compare-modes` prints one table across iid-mc, forward-block, historical-block and historical-block on 1990–2020.
 
 Where each result comes from (`research_history` sections are passed as `--sections <name> ...`):
 

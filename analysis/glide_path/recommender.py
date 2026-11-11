@@ -56,7 +56,7 @@ KEY INPUTS
                               `inflation`. Used only by `iid-mc` and forward-block rescaling.
   inflation                 : annual inflation rate used to convert nominal returns to real.
                               Must match the units of `alloc_curve` (default: percent, i.e. 2.1).
-                              Used only by `iid-mc`.
+                              Used by `iid-mc` and forward-block rescaling.
   returns_in_percent        : if True (default), `alloc_curve` means/vols are in % per year.
   return_mode               : "iid-mc" (default — forward-CMA normal Monte Carlo, no
                               sequencing; the conservative no-recovery baseline — see the
@@ -149,8 +149,8 @@ from analysis.glide_path.simulate import (  # noqa: E402
     tie_middle_argmax,
 )
 
-__all__ = ["DATASETS", "PWL_CURVE", "RETURN_MODES", "BlockLayout", "evaluate_path",
-           "optimize_blocks", "recommend_glide_path"]
+__all__ = ["DATASETS", "PWL_CURVE", "RETURN_MODES", "TENT_WINDOW", "BlockLayout",
+           "describe_shape", "evaluate_path", "optimize_blocks", "recommend_glide_path"]
 
 SELECT_SEED_OFFSET = 4242  # flat-comparator selection sample (also evaluate_path's sample)
 EVAL_SEED_OFFSET = 9999    # independent evaluation sample
@@ -230,14 +230,24 @@ def _classify(delta, flat_band):
     return "Rising" if delta > flat_band else ("Falling" if delta < -flat_band else "Flat")
 
 
-def _describe_shape(weights, accum_years, flat_band):
-    """Accumulation/retirement slopes and the tent (lowest equity in the first 15 retirement years).
+TENT_WINDOW = 15  # years either side of retirement searched for the tent bottom
 
-    The retirement slope drops the final year: without a bequest motive that year's allocation is
-    either objective-neutral (flex=1) or a weak-gradient horizon optimum, not advice."""
+
+def describe_shape(weights, accum_years, layout, flat_band):
+    """Accumulation/retirement slopes and the tent (lowest equity within 15 years of retirement).
+
+    The final retirement step is left out of the retirement slope and the tent when at least two
+    steps remain: without a bequest motive its allocation is either objective-neutral (flex=1) or
+    a weak-gradient horizon optimum, not advice. The tent looks 15 years either side of
+    retirement; ties go to the retirement side, then to the year nearest retirement. ``tent_i``
+    is a year index from the start of the plan."""
     acc, ret = weights[:accum_years], weights[accum_years:]
-    tent_i = int(np.argmin(ret[: min(15, len(ret))])) if len(ret) else 0
-    ret_eff = ret[:-1] if len(ret) >= 3 else ret
+    retire_starts = [s for s in layout.starts if s >= accum_years]
+    ret_eff = ret[: retire_starts[-1] - accum_years] if len(retire_starts) >= 3 else ret
+    tent_i = accum_years + int(np.argmin(ret_eff[:TENT_WINDOW]))
+    for i in range(accum_years - 1, max(accum_years - TENT_WINDOW, 0) - 1, -1):
+        if weights[i] < weights[tent_i]:
+            tent_i = i
     return {
         "accum_dir": _classify(acc[-1] - acc[0], flat_band) if len(acc) >= 2 else "n/a",
         "retire_dir": _classify(ret_eff[-1] - ret_eff[0], flat_band) if len(ret_eff) >= 2 else "n/a",
@@ -249,6 +259,8 @@ def _describe_shape(weights, accum_years, flat_band):
 def _validate(*, flexibility, guaranteed_income, target_income, interval, accum_years,
               retire_years, grid_step, max_leverage, retirement_max_equity, curve_mean_basis,
               guaranteed_delay=0, bequest_weight=0.0, bequest_offset=None):
+    if accum_years < 0 or retire_years < 1:
+        raise ValueError("accum_years must be >= 0 and retire_years must be >= 1")
     if not (0.0 <= flexibility <= 1.0):
         raise ValueError("flexibility must be in [0, 1]")
     if curve_mean_basis not in ("geometric", "arithmetic"):
@@ -270,8 +282,6 @@ def _validate(*, flexibility, guaranteed_income, target_income, interval, accum_
             "flexible (flexibility=0) and there is no bequest motive; raise the target, set "
             "flexibility > 0 or add a bequest weight"
         )
-    if accum_years + retire_years < 1:
-        raise ValueError("need at least one year")
     if not (grid_step <= max_leverage <= 3.0):
         raise ValueError("max_leverage must be in [grid_step, 3.0] (1.0 = no leverage)")
     if not (0.0 <= retirement_max_equity <= max_leverage):
@@ -327,7 +337,8 @@ def recommend_glide_path(
       schedule        : blocks {step, year_start, year_end, phase, equity_pct[, age_start]}
       equity_by_year  : per-year equity weights (fractions)
       accum_dir, retire_dir : 'Rising' | 'Flat' | 'Falling'
-      tent_pct, tent_age|tent_year : lowest equity within 15y of retirement
+      tent_pct, tent_age|tent_year : lowest equity within 15y either side of retirement (the
+                        final retirement step is left out, as it is for retire_dir)
       ce_income, depletion, income_cv : the glide's outcomes on the independent evaluation sample
       welfare_ce, median_bequest : CE including the bequest term (= ce_income when θ = 0) and the
                         median balance left at the end of the plan; flat_* twins for the constant
@@ -400,7 +411,7 @@ def recommend_glide_path(
     flat_drawdown_st = drawdown_outcomes(_constant_paths(best_flat, n_years), eval_sample,
                                          market, life)
 
-    shape = _describe_shape(weights, accum_years, flat_band)
+    shape = describe_shape(weights, accum_years, layout, flat_band)
     tent_i = shape["tent_i"]
     schedule = []
     for b, (s, e) in enumerate(zip(layout.starts, layout.ends)):
@@ -423,8 +434,8 @@ def recommend_glide_path(
         "equity_by_year": [round(float(w), 4) for w in weights],
         "accum_dir": shape["accum_dir"],
         "retire_dir": shape["retire_dir"],
-        "tent_pct": round(float(weights[accum_years + tent_i]) * 100, 1) if retire_years else None,
-        tent_label: (start_age or 0) + accum_years + tent_i,
+        "tent_pct": round(float(weights[tent_i]) * 100, 1),
+        tent_label: (start_age or 0) + tent_i,
         "ce_income": round(st["ce_income"], 0),
         "welfare_ce": round(st["welfare_ce"], 0) if math.isfinite(st["welfare_ce"]) else None,
         "median_bequest": round(st["median_bequest"], 0),
@@ -502,8 +513,11 @@ def evaluate_path(
 ) -> dict:
     """Score a fixed per-year equity path on the selection sample (``seed + 4242``).
 
-    Same market and lifecycle as :func:`recommend_glide_path` but no optimization, so a path can
-    be compared with the CEs in that function's ``flat_curve``."""
+    Same market and lifecycle as :func:`recommend_glide_path` but no optimization. Paths scored
+    with the same ``n_paths`` and ``seed`` share one sample, so they can be compared with each
+    other. They match the CEs in :func:`recommend_glide_path`'s ``flat_curve`` only when
+    ``n_paths`` equals that function's selection-sample size, ``max(n_paths, 40_000)``; pass
+    ``n_paths >= 40_000`` to both for that comparison."""
     weights = np.asarray(weights, dtype=float)
     if weights.shape != (accum_years + retire_years,):
         raise ValueError(f"weights must have shape ({accum_years + retire_years},), "

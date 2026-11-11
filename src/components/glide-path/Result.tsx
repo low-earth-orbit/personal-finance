@@ -24,6 +24,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconArrowsShuffle,
+  IconRefresh,
 } from "@tabler/icons-react";
 import GlidePathChart from "./GlidePathChart";
 import FieldLabel from "@/components/shared/FieldLabel";
@@ -32,7 +33,6 @@ import {
   DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD,
   FULLPATH_RISK_HIGHLIGHT_THRESHOLD,
   LOW_DRAWDOWN_SHORTFALL_THRESHOLD,
-  ceIsDegenerate,
   pickRecommendation,
 } from "@/utils/glide-path/recommendation";
 import type { GlidePathInput, GlidePathResult, SlopeDir } from "@/utils/glide-path/types";
@@ -61,8 +61,13 @@ const METRIC_HELP = {
   fullPath:
     "The same shortfall measure taken over the whole path from today, so it also reflects the luck of markets in the years before you retire.",
   bequest:
-    "Median real balance left at the end of the plan, in today's dollars. Unless you choose to leave money to heirs, the optimizer gives this money no value.",
+    "Median real balance left at the end of the plan, in today's dollars. The optimizer gives this money no value.",
 } as const;
+
+const SAME_ALLOCATION_NOTE = "The optimized glide path is this same constant allocation.";
+
+/** Opacity of a result whose inputs have changed since it was generated. */
+const STALE_OPACITY = 0.55;
 
 const DIR_COLOR: Record<SlopeDir, string> = {
   Rising: "teal",
@@ -117,11 +122,11 @@ function GlideShape({
       </Group>
       {!compact && result.tentPct != null && result.tentAge != null && (
         <Text size="sm" c="dimmed">
-          The equity weight bottoms at{" "}
+          Within 15 years of retirement (age {retireAge}), the equity weight is lowest at{" "}
           <Text span fw={600} c="bright">
             {result.tentPct}%
-          </Text>{" "}
-          around age {result.tentAge}, near retirement (age {retireAge}).
+          </Text>
+          , around age {result.tentAge}.
         </Text>
       )}
     </Stack>
@@ -213,6 +218,10 @@ function CompactStat({
 }
 
 interface OptionStats {
+  /** Median-path balance at retirement and the year-1 draw it funds, for this allocation. */
+  expectedBalance: number;
+  initialDraw: number;
+  fundingRatio: number | null;
   ceIncome: number;
   ceDegenerate: boolean;
   /** CE including the bequest term; shown only when a bequest weight is set. */
@@ -222,7 +231,21 @@ interface OptionStats {
   medianBequest: number;
 }
 
-/** The three outcome metrics for one option, as a full grid or a compact inline row. */
+/** Funding context for one option: the balance it is expected to reach and the first draw. */
+function FundingLine({ stats }: { stats: OptionStats }) {
+  const share =
+    stats.fundingRatio === null
+      ? "not available"
+      : `${(stats.fundingRatio * 100).toFixed(1)}% of the expected retirement balance`;
+  return (
+    <Text size="sm" c="dimmed">
+      Expected retirement balance ≈ {formatCAD(stats.expectedBalance)} · Year-1 portfolio draw ≈{" "}
+      {formatCAD(stats.initialDraw)} ({share})
+    </Text>
+  );
+}
+
+/** The four outcome metrics for one option, as a full grid or a compact inline row. */
 function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compact?: boolean }) {
   const ceValue = stats.ceDegenerate ? "Tail-dominated" : `${formatCAD(stats.ceIncome)}/yr`;
   const drawValue = `${(stats.drawdownDepletion * 100).toFixed(1)}%`;
@@ -243,7 +266,7 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
   }
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="sm">
+    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
       <MetricItem
         label="CE income"
         help={METRIC_HELP.ce}
@@ -350,14 +373,17 @@ export default function Result({
 
   const reco = pickRecommendation(input, result);
   const flatPct = Math.round(result.flatEquityPct);
-  const incomeDegenerate = ceIsDegenerate(result.ceIncome, input.targetIncome);
-  const flatDegenerate = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
+  const incomeDegenerate = reco.glideBad;
+  const flatDegenerate = reco.flatBad;
   const showWelfare = result.params.bequestWeight > 0;
 
   const glide = {
     kind: "glide" as const,
     title: "Optimized glide path",
     stats: {
+      expectedBalance: result.expectedRetirementBalance,
+      initialDraw: result.initialTargetDraw,
+      fundingRatio: result.fundingRatio,
       ceIncome: result.ceIncome,
       ceDegenerate: incomeDegenerate,
       welfareCe: showWelfare ? result.welfareCe : null,
@@ -370,6 +396,9 @@ export default function Result({
     kind: "constant" as const,
     title: `Constant ${flatPct}% equity`,
     stats: {
+      expectedBalance: result.flatExpectedRetirementBalance,
+      initialDraw: result.flatInitialTargetDraw,
+      fundingRatio: result.flatFundingRatio,
       ceIncome: result.flatCeIncome,
       ceDegenerate: flatDegenerate,
       welfareCe: showWelfare ? result.flatWelfareCe : null,
@@ -378,6 +407,12 @@ export default function Result({
       medianBequest: result.flatMedianBequest,
     },
   };
+  // The optimizer often settles on one weight for every step (flexible spending, tightly funded
+  // plans). The glide path and the constant allocation are then the same schedule with the same
+  // outcomes, so it is shown once.
+  const glideIsConstant = result.equityByYear.every(
+    (w) => Math.abs(w * 100 - result.flatEquityPct) < 1e-6,
+  );
   const primary = reco.preferConstant ? constant : glide;
   const secondary = reco.preferConstant ? glide : constant;
   const hasHighDrawdownRisk =
@@ -398,19 +433,17 @@ export default function Result({
     !hasHighFullPathRisk;
   const showNeutralOptions = reco.inconclusive || planNeedsAdjustment;
 
-  const reasonText = reco.preferConstant
-    ? reco.glideBad
-      ? "The model prefers the constant allocation because the glide path's CE income is tail-dominated."
-      : result.overFunded
-        ? "The model prefers the constant allocation because every allocation gives about the same income; this weight is the middle of that tie."
-        : "The model prefers the constant allocation because the optimized glide path is not clearly better (within 3% on CE income and 1 point on shortfall)."
-    : reco.flatBad
-      ? "The model prefers the glide path because the constant allocation's CE income is tail-dominated."
-      : "The model prefers the glide path because the constant allocation trails it.";
-  const fundingText =
-    result.fundingRatio === null
-      ? "not available"
-      : `${(result.fundingRatio * 100).toFixed(1)}% of the expected retirement balance`;
+  const reasonText = glideIsConstant
+    ? SAME_ALLOCATION_NOTE
+    : reco.preferConstant
+      ? reco.glideBad
+        ? "The model prefers the constant allocation because the glide path's CE income is tail-dominated."
+        : result.overFunded
+          ? "The model prefers the constant allocation because every allocation gives about the same income; this weight is the middle of that tie."
+          : "The model prefers the constant allocation because the optimized glide path is not clearly better (within 3% on CE income and 1 point on shortfall)."
+      : reco.flatBad
+        ? "The model prefers the glide path because the constant allocation's CE income is tail-dominated."
+        : "The model prefers the glide path because the constant allocation trails it.";
 
   return (
     <Stack gap="lg" pos="relative">
@@ -423,186 +456,204 @@ export default function Result({
         </Group>
       )}
       {stale && (
-        <Text size="xs" c="orange" fw={600} aria-live="polite">
-          {hasErrors
-            ? "Inputs changed: fix the highlighted fields, then generate again."
-            : "Inputs changed. Generate allocation paths to refresh this result."}
-        </Text>
+        <Group gap="xs" wrap="nowrap" aria-live="polite">
+          <IconRefresh size={16} color="var(--mantine-color-orange-6)" style={{ flexShrink: 0 }} />
+          <Text size="sm" c="orange" fw={600}>
+            {hasErrors
+              ? "Inputs changed: fix the highlighted fields, then generate again."
+              : "Inputs changed. Generate allocation paths to refresh this result."}
+          </Text>
+        </Group>
       )}
       {error && (
         <Text size="xs" c="red" fw={600} aria-live="polite">
           Generation failed. Try again.
         </Text>
       )}
-      <Text size="sm" c="dimmed">
-        Expected retirement balance ≈ {formatCAD(result.expectedRetirementBalance)} · Year-1
-        portfolio draw ≈ {formatCAD(result.initialTargetDraw)} ({fundingText})
-      </Text>
-      {planNeedsAdjustment && (
-        <Card withBorder radius="md" padding="md">
-          <Group gap="sm" wrap="nowrap" align="flex-start">
-            <ThemeIcon color="yellow" variant="light" size={34} radius="xl">
-              <IconAlertTriangle size={19} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text fw={600}>High shortfall in this scenario</Text>
-              {hasHighDrawdownRisk && (
-                <Text size="sm" c="dimmed">
-                  Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. In the
-                  model, a later retirement, lower spending or more saving reduces it.
-                </Text>
-              )}
-              {!hasHighDrawdownRisk && hasHighFullPathRisk && (
-                <Text size="sm" c="dimmed">
-                  Full-path shortfall is {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
-                  pre-retirement market luck has a meaningful effect.
-                </Text>
-              )}
-            </Stack>
-          </Group>
-        </Card>
-      )}
-
-      {result.overFunded && (
-        <Card withBorder radius="md" padding="md">
-          <Group gap="sm" wrap="nowrap" align="flex-start">
-            <ThemeIcon color="blue" variant="light" size={34} radius="xl">
-              <IconInfoCircle size={19} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text fw={600}>This scenario is over-funded</Text>
-              <Text size="sm" c="dimmed">
-                Every allocation gives about the same income for these inputs, so the model has no
-                best weight.
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-      )}
-
-      {reco.inconclusive && (
-        <Card
-          withBorder
-          radius="md"
-          padding="lg"
-          style={{
-            borderColor: "var(--mantine-color-yellow-5)",
-            borderWidth: 2,
-          }}
-        >
-          <Group gap="sm" wrap="nowrap" align="flex-start">
-            <ThemeIcon color="yellow" variant="light" size={38} radius="xl">
-              <IconAlertTriangle size={22} />
-            </ThemeIcon>
-            <Stack gap={2}>
-              <Text size="xs" fw={700} c="yellow.7" tt="uppercase">
-                Comparison inconclusive
-              </Text>
-              <Title order={3} fz="lg">
-                CE income is tail-dominated
-              </Title>
-              <Text size="sm" c="dimmed">
-                Near-zero income in bad-luck paths overwhelms CE income, so it cannot reliably
-                distinguish these allocations. Compare their shortfall rates below.
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-      )}
-
-      {showNeutralOptions ? (
-        [glide, constant].map((option) => (
-          <Card key={option.kind} withBorder radius="md" padding="lg">
-            <Stack gap="md">
-              <Title order={3} fz="lg">
-                {option.title}
-              </Title>
-              <ShapeSummary kind={option.kind} input={input} result={result} flatPct={flatPct} />
-              <Divider />
-              <OutcomeMetrics stats={option.stats} />
-            </Stack>
+      {/* A result for earlier inputs stays readable but is dimmed so it does not pass as current. */}
+      <Stack
+        gap="lg"
+        style={{ opacity: stale ? STALE_OPACITY : 1 }}
+        data-stale={stale || undefined}
+      >
+        {planNeedsAdjustment && (
+          <Card withBorder radius="md" padding="md">
+            <Group gap="sm" wrap="nowrap" align="flex-start">
+              <ThemeIcon color="yellow" variant="light" size={34} radius="xl">
+                <IconAlertTriangle size={19} />
+              </ThemeIcon>
+              <Stack gap={2}>
+                <Text fw={600}>High shortfall in this scenario</Text>
+                {hasHighDrawdownRisk && (
+                  <Text size="sm" c="dimmed">
+                    Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. In
+                    the model, a later retirement, lower spending or more saving reduces it.
+                  </Text>
+                )}
+                {!hasHighDrawdownRisk && hasHighFullPathRisk && (
+                  <Text size="sm" c="dimmed">
+                    Full-path shortfall is {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
+                    pre-retirement market luck has a meaningful effect.
+                  </Text>
+                )}
+              </Stack>
+            </Group>
           </Card>
-        ))
-      ) : (
-        <>
-          {/* Primary — the model's preferred allocation, with its own outcomes inline. */}
+        )}
+
+        {result.overFunded && (
+          <Card withBorder radius="md" padding="md">
+            <Group gap="sm" wrap="nowrap" align="flex-start">
+              <ThemeIcon color="blue" variant="light" size={34} radius="xl">
+                <IconInfoCircle size={19} />
+              </ThemeIcon>
+              <Stack gap={2}>
+                <Text fw={600}>This scenario is over-funded</Text>
+                <Text size="sm" c="dimmed">
+                  Every allocation gives about the same income for these inputs, so the model has no
+                  best weight.
+                </Text>
+              </Stack>
+            </Group>
+          </Card>
+        )}
+
+        {reco.inconclusive && (
           <Card
             withBorder
             radius="md"
             padding="lg"
             style={{
-              borderColor: "var(--mantine-color-teal-5)",
+              borderColor: "var(--mantine-color-yellow-5)",
               borderWidth: 2,
             }}
           >
-            <Stack gap="md">
-              <Group gap="sm" wrap="nowrap" align="flex-start">
-                <ThemeIcon color="teal" size={38} radius="xl">
-                  <IconCheck size={22} />
-                </ThemeIcon>
-                <Stack gap={0}>
-                  <Text size="xs" fw={700} c="teal" tt="uppercase">
-                    Model&apos;s preferred allocation
-                  </Text>
-                  <Title order={3} fz="lg">
-                    {primary.title}
-                  </Title>
-                </Stack>
-              </Group>
-
-              <ShapeSummary kind={primary.kind} input={input} result={result} flatPct={flatPct} />
-
-              <Divider />
-
-              <OutcomeMetrics stats={primary.stats} />
-
-              <Text size="xs" c="dimmed">
-                {reasonText} Research output under this model&apos;s assumptions, not personal
-                advice.
-              </Text>
-            </Stack>
-          </Card>
-
-          {/* Secondary — the alternative, compact. */}
-          <Card withBorder radius="md" padding="md">
-            <Stack gap="xs">
-              <Group justify="space-between" align="center" wrap="nowrap">
-                <Text size="sm" fw={600} c="dimmed">
-                  Alternative — {secondary.title}
+            <Group gap="sm" wrap="nowrap" align="flex-start">
+              <ThemeIcon color="yellow" variant="light" size={38} radius="xl">
+                <IconAlertTriangle size={22} />
+              </ThemeIcon>
+              <Stack gap={2}>
+                <Text size="xs" fw={700} c="yellow.7" tt="uppercase">
+                  Comparison inconclusive
                 </Text>
-              </Group>
-              <ShapeSummary
-                kind={secondary.kind}
-                input={input}
-                result={result}
-                flatPct={flatPct}
-                compact
-              />
-              <OutcomeMetrics stats={secondary.stats} compact />
-            </Stack>
+                <Title order={3} fz="lg">
+                  CE income is tail-dominated
+                </Title>
+                <Text size="sm" c="dimmed">
+                  Near-zero income in bad-luck paths overwhelms CE income, so it cannot reliably
+                  distinguish these allocations. Compare their shortfall rates below.
+                </Text>
+              </Stack>
+            </Group>
           </Card>
-        </>
-      )}
+        )}
 
-      {hasRoomToAdjustPlan && (
-        <Card withBorder radius="md" padding="md">
-          <Group gap="sm" wrap="nowrap" align="flex-start">
-            <Stack gap={2}>
-              <Text fw={600}>Low shortfall in this scenario</Text>
-              <Text size="sm" c="dimmed">
-                Drawdown shortfall is below 5%, so these inputs have slack: an earlier retirement or
-                higher spending would also pass in the model.
-              </Text>
-            </Stack>
-          </Group>
-        </Card>
-      )}
+        {showNeutralOptions ? (
+          (glideIsConstant ? [constant] : [glide, constant]).map((option) => (
+            <Card key={option.kind} withBorder radius="md" padding="lg">
+              <Stack gap="md">
+                <Title order={3} fz="lg">
+                  {option.title}
+                </Title>
+                <ShapeSummary kind={option.kind} input={input} result={result} flatPct={flatPct} />
+                <FundingLine stats={option.stats} />
+                <Divider />
+                <OutcomeMetrics stats={option.stats} />
+                {glideIsConstant && (
+                  <Text size="xs" c="dimmed">
+                    {SAME_ALLOCATION_NOTE}
+                  </Text>
+                )}
+              </Stack>
+            </Card>
+          ))
+        ) : (
+          <>
+            {/* Primary — the model's preferred allocation, with its own outcomes inline. */}
+            <Card
+              withBorder
+              radius="md"
+              padding="lg"
+              style={{
+                borderColor: "var(--mantine-color-teal-5)",
+                borderWidth: 2,
+              }}
+            >
+              <Stack gap="md">
+                <Group gap="sm" wrap="nowrap" align="flex-start">
+                  <ThemeIcon color="teal" size={38} radius="xl">
+                    <IconCheck size={22} />
+                  </ThemeIcon>
+                  <Stack gap={0}>
+                    <Text size="xs" fw={700} c="teal" tt="uppercase">
+                      Model&apos;s preferred allocation
+                    </Text>
+                    <Title order={3} fz="lg">
+                      {primary.title}
+                    </Title>
+                  </Stack>
+                </Group>
 
-      <GlidePathChart
-        input={input}
-        result={result}
-        showConstant={showNeutralOptions || !flatDegenerate}
-      />
+                <ShapeSummary kind={primary.kind} input={input} result={result} flatPct={flatPct} />
+                <FundingLine stats={primary.stats} />
+
+                <Divider />
+
+                <OutcomeMetrics stats={primary.stats} />
+
+                <Text size="xs" c="dimmed">
+                  {reasonText} Research output under this model&apos;s assumptions, not personal
+                  advice.
+                </Text>
+              </Stack>
+            </Card>
+
+            {/* Secondary — the alternative, compact. */}
+            {!glideIsConstant && (
+              <Card withBorder radius="md" padding="md">
+                <Stack gap="xs">
+                  <Group justify="space-between" align="center" wrap="nowrap">
+                    <Text size="sm" fw={600} c="dimmed">
+                      Alternative — {secondary.title}
+                    </Text>
+                  </Group>
+                  <ShapeSummary
+                    kind={secondary.kind}
+                    input={input}
+                    result={result}
+                    flatPct={flatPct}
+                    compact
+                  />
+                  <OutcomeMetrics stats={secondary.stats} compact />
+                </Stack>
+              </Card>
+            )}
+          </>
+        )}
+
+        {hasRoomToAdjustPlan && (
+          <Card withBorder radius="md" padding="md">
+            <Group gap="sm" wrap="nowrap" align="flex-start">
+              <ThemeIcon color="teal" variant="light" size={34} radius="xl">
+                <IconInfoCircle size={19} />
+              </ThemeIcon>
+              <Stack gap={2}>
+                <Text fw={600}>Low shortfall in this scenario</Text>
+                <Text size="sm" c="dimmed">
+                  Drawdown shortfall is below 5%, so these inputs have slack: an earlier retirement
+                  or higher spending would also pass in the model.
+                </Text>
+              </Stack>
+            </Group>
+          </Card>
+        )}
+
+        <GlidePathChart
+          input={input}
+          result={result}
+          showConstant={showNeutralOptions || !flatDegenerate}
+        />
+      </Stack>
 
       {onReroll && (
         <Stack gap={4} align="center" mt="xs">

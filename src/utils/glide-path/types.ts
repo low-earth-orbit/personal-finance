@@ -33,7 +33,10 @@ export interface GlidePathResult {
   equityByYear: number[];
   accumDir: SlopeDir;
   retireDir: SlopeDir;
-  /** Lowest equity within 15y of retirement (the "tent" bottom), as a %. */
+  /**
+   * Lowest equity within 15 years either side of retirement (the "tent" bottom), as a %. The
+   * final retirement step is left out, as it is for `retireDir`.
+   */
   tentPct: number | null;
   /** Age of the tent bottom. */
   tentAge: number | null;
@@ -68,6 +71,12 @@ export interface GlidePathResult {
   initialTargetDraw: number;
   /** Initial portfolio draw as a fraction of the expected retirement balance, or null if nonpositive. */
   fundingRatio: number | null;
+  /** Deterministic expected balance at retirement under the best constant allocation. */
+  flatExpectedRetirementBalance: number;
+  /** First-year portfolio draw for the best constant allocation. */
+  flatInitialTargetDraw: number;
+  /** `flatInitialTargetDraw` as a fraction of `flatExpectedRetirementBalance`, or null. */
+  flatFundingRatio: number | null;
   /** Full-path depletion for the best constant allocation. */
   flatDepletion: number;
   /** Drawdown-only depletion for the best constant allocation. */

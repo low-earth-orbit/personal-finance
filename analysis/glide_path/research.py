@@ -25,7 +25,7 @@ and letting "flat-then-dip" emerge if it is in fact optimal.
 WHY iid + OUR CMAs (not historical backtests)
 ---------------------------------------------
 Two well-known studies answer this from realized history:
-  * ACO (Anarkulova–Cederburg–O'Doherty, SSRN 4590406): a 38-country block bootstrap says
+  * ACO (Anarkulova–Cederburg–O'Doherty, SSRN 4590406): a 39-country block bootstrap says
     hold ~100% equity FLAT across the whole lifecycle (no bonds, no glide); for constant-$
     spending their optimal age profile is flat ~100% in accumulation with a shallow
     bills/bonds "tent" right AT retirement.
@@ -78,7 +78,7 @@ import matplotlib.pyplot as plt
 from analysis.shared.returns import arithmetic_to_geometric
 
 from .markets import PWL_CURVE, IidMarket, build_alloc
-from .recommender import BlockLayout, optimize_blocks
+from .recommender import TENT_WINDOW, BlockLayout, describe_shape, optimize_blocks
 from .simulate import Lifecycle, path_outcomes
 
 # ───────────────────────────── CONFIG ─────────────────────────────
@@ -133,14 +133,6 @@ def alloc(w):
     return MARKET.alloc(np.asarray(w, dtype=float))
 
 
-def classify(delta):
-    if delta > FLAT_BAND:
-        return "Rising"
-    if delta < -FLAT_BAND:
-        return "Falling"
-    return "Flat"
-
-
 def predraw(n_years, n_sims, seed):
     return MARKET.sample(n_years, n_sims, seed)
 
@@ -171,34 +163,28 @@ def optimize_glide(accum_years, retire_years, flex, gamma=GAMMA, n=OPT_N, seed=S
                            np.full(layout.n_blocks, len(grid) - 1), passes)
 
 
-TRANSITION_WINDOW = 15  # years around retirement in which we locate the "tent" bottom
-
-
 def summarize(w, accum_years, retire_years):
     """Compact description of an age→equity path: levels at key points + per-phase slope.
 
-    ``tent`` is the minimum equity in the first TRANSITION_WINDOW retirement years. The
-    retirement slope covers the whole retirement phase, dropping the final year when there are
-    at least three years: at flex=1 that final-year allocation is objective-neutral and ties keep
-    the incoming value; at flex<1 the terminal value is a genuine no-bequest-horizon optimum."""
+    The tent and slopes come from the recommender's ``describe_shape`` (1-year steps here), so
+    the tables use the product's definitions: ``tent`` is the lowest equity within TENT_WINDOW
+    years either side of retirement, and the final retirement year is left out of the tent and
+    the retirement slope (at flex=1 it is objective-neutral and ties keep the incoming value; at
+    flex<1 it is a no-bequest-horizon optimum)."""
     acc, ret = w[:accum_years], w[accum_years:]
-    twin = min(TRANSITION_WINDOW, retire_years)
-    tr_i = int(np.argmin(ret[:twin]))
+    shape = describe_shape(w, accum_years, BlockLayout.build(accum_years, retire_years, 1),
+                           FLAT_BAND)
     return {
         "w": w,
         "start": w[0],
         "accum_avg": float(acc.mean()),
         "pre_ret": acc[-1],
         "at_ret": ret[0],
-        "tent": float(ret[:twin].min()),          # lowest equity near retirement (the tent bottom)
-        "tent_age": START_AGE + accum_years + tr_i,
+        "tent": float(w[shape["tent_i"]]),        # lowest equity near retirement (the tent bottom)
+        "tent_age": START_AGE + shape["tent_i"],
         "end": w[-1],                              # terminal-year equity
-        # Retirement slope uses the whole phase, except the arbitrary final-year flex=1 tie.
-        "accum_dir": classify(acc[-1] - acc[0]),
-        "retire_dir": classify(
-            (ret[:-1] if len(ret) >= 3 else ret)[-1]
-            - (ret[:-1] if len(ret) >= 3 else ret)[0]
-        ),
+        "accum_dir": shape["accum_dir"],
+        "retire_dir": shape["retire_dir"],
     }
 
 
@@ -228,7 +214,7 @@ def run_retire_sweep():
                   f"{s['tent']*100:>4.0f}%(@{s['tent_age']:>2}) {s['end']*100:>3.0f}% | "
                   f"{s['accum_dir']:>7} {s['retire_dir']:>7} | ${st['ce']:>6,.0f} {st['depletion']*100:>4.1f}%")
     print("-" * 104)
-    print("Equity %. 'tent' = lowest equity within 15y of retirement (the retirement-date tent bottom);")
+    print(f"Equity %. 'tent' = lowest equity within {TENT_WINDOW}y either side of retirement (the tent bottom);")
     print("'end' = terminal-year equity; flex=1 makes it objective-neutral, while flex<1 has a genuine no-bequest terminal optimum.")
     print("BEFORE/AFTER = accumulation slope / whole-retirement slope (final year omitted when >=3y; see docstring).")
     return results

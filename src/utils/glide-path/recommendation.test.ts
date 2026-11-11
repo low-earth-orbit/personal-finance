@@ -53,14 +53,31 @@ describe("pickRecommendation", () => {
   });
 
   it("is inconclusive when both CE scores are degenerate", () => {
-    const r = pickRecommendation(DEFAULTS, result({ ceIncome: 10, flatCeIncome: 12 }));
+    const noFloor = { ...DEFAULTS, guaranteedIncome: 0 };
+    const r = pickRecommendation(noFloor, result({ ceIncome: 10, flatCeIncome: 12 }));
     expect(r.inconclusive).toBe(true);
+  });
+
+  it("compares a low CE normally when guaranteed income sets a real floor", () => {
+    // Target far above the guaranteed income: CE near the floor is a real figure, not the
+    // numerical-floor artifact.
+    const input = { ...DEFAULTS, targetIncome: 300000, guaranteedIncome: 10000 };
+    const r = pickRecommendation(input, result({ ceIncome: 12000, flatCeIncome: 11900 }));
+    expect(r).toMatchObject({ inconclusive: false, glideBad: false, flatBad: false });
+    expect(r.preferConstant).toBe(true);
   });
 });
 
 describe("ceIsDegenerate", () => {
-  it("flags CE below max($1,000, 5% of target)", () => {
-    expect(ceIsDegenerate(2999, 60000)).toBe(true);
-    expect(ceIsDegenerate(3001, 60000)).toBe(false);
+  it("flags CE below max($1,000, 5% of target) without guaranteed income", () => {
+    expect(ceIsDegenerate(2999, 60000, 0)).toBe(true);
+    expect(ceIsDegenerate(3001, 60000, 0)).toBe(false);
+    expect(ceIsDegenerate(999, 10000, 0)).toBe(true);
+  });
+
+  it("never flags a plan with a real guaranteed income", () => {
+    expect(ceIsDegenerate(2999, 60000, 20000)).toBe(false);
+    expect(ceIsDegenerate(12000, 300000, 10000)).toBe(false);
+    expect(ceIsDegenerate(999, 60000, 999)).toBe(true);
   });
 });

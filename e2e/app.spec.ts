@@ -63,3 +63,30 @@ test("retirement planner shows an earliest retirement age and chart", async ({ p
     page.getByRole("img", { name: /retirement portfolio projection chart/i }),
   ).toBeVisible();
 });
+
+test("lifetime allocation generates a recommendation under both return models", async ({
+  page,
+}) => {
+  // Two optimizer runs in a dev-mode worker; allow for a slow CI machine.
+  test.setTimeout(120_000);
+  await page.goto("/glide-path");
+
+  await expect(page.getByRole("heading", { name: "Lifetime Allocation" })).toBeVisible();
+
+  const generate = page.getByRole("button", { name: "Generate allocation paths" });
+  await generate.click();
+  await expect(page.getByText(/preferred allocation/i)).toBeVisible({ timeout: 60_000 });
+  await expect(page.getByRole("img", { name: /equity weight by age/i })).toBeVisible();
+  await expect(page.getByText(/IID normal draws from the forward-CMA/)).toBeVisible();
+
+  // Switching the return model marks the result stale until it is generated again.
+  await page.getByRole("button", { name: "Simulation", exact: true }).click();
+  await page.getByText("Historical sequences", { exact: true }).click();
+  await expect(page.getByText(/Inputs changed/)).toBeVisible();
+
+  await generate.click();
+  await expect(page.getByText(/stationary block bootstrap from JST Macrohistory/)).toBeVisible({
+    timeout: 60_000,
+  });
+  await expect(page.getByText(/Inputs changed/)).toHaveCount(0);
+});

@@ -3,8 +3,9 @@
 Command-line front end for the Lifetime Allocation Optimizer.
 
 Optimizes (by simulation, not a lookup table) the portfolio allocation per step for YOUR inputs and
-prints the schedule + outcome stats. Supports forward-CMA iid Monte Carlo and raw-history iid
-or block bootstrap. Flag-driven wrapper around
+prints the schedule + outcome stats. Supports forward-CMA iid Monte Carlo, raw-history iid or
+block bootstrap, and forward-block (history rescaled to the forward CMAs, then
+block-bootstrapped). Flag-driven wrapper around
 `analysis.glide_path.recommender.recommend_glide_path`; `-i/--interactive` prompts for the
 inputs instead and prints the equivalent flag command.
 
@@ -20,14 +21,15 @@ EXAMPLES
   # allow lifecycle leverage: up to 1.5x equity, borrowing at 1.5% real
   python3 analysis/recommend_glide.py --accum 30 --retire 30 --gamma 2 --max-leverage 1.5 --borrow-cost 1.5
 
-  # use your own capital-market curve (CSV rows: equity_weight,mean,vol — nominal geometric % by default)
+  # use your own capital-market curve (CSV rows: equity_weight,mean,vol — nominal geometric % by
+  # default; iid-mc and forward-block only)
   python3 analysis/recommend_glide.py --curve mycurve.csv --flex 1 --guaranteed-income 40000
 
-  # raw equal-weight world history, preserving sequencing in stationary circular blocks
+  # raw history (pooled per-country sequences), preserving sequencing in stationary circular blocks
   python3 analysis/recommend_glide.py --mode historical-block --block-years 10 --interval 5
 
-  # per-country sequences (single-country sequence risk) instead of the equal-weight world average
-  python3 analysis/recommend_glide.py --mode forward-block --dataset pooled
+  # the equal-weight world average instead of per-country sequences
+  python3 analysis/recommend_glide.py --mode forward-block --dataset world
 
   # retire at 60, CPP/OAS from 65 (the portfolio funds the whole target until then), some bequest
   python3 analysis/recommend_glide.py --start-age 40 --accum 20 --retire 35 \
@@ -217,7 +219,7 @@ def build_parser():
     ap.add_argument("--target-income", type=float, default=60_000.0, help="target real retirement income ($/yr)")
     ap.add_argument("--withdrawal-rate", type=float, default=0.04, help="rate for the flexible spending part")
     ap.add_argument("--inflation", type=float, default=2.1,
-                    help="inflation %% used to deflate the iid-mc curve to real")
+                    help="inflation %% used to deflate the curve to real (iid-mc and forward-block)")
     ap.add_argument("--curve-mean-basis", choices=("geometric", "arithmetic"), default="geometric",
                     help="whether --curve means are nominal geometric or already arithmetic")
     ap.add_argument("--mode", choices=RETURN_MODES,
@@ -246,7 +248,8 @@ def build_parser():
                     help="number of simulation paths used by the optimizer")
     # capital-market curve + outputs
     ap.add_argument("--curve", type=str, default=None,
-                    help="iid-mc CSV of 'equity_weight,mean,vol' rows; means are nominal geometric %% by default (default: built-in PWL curve)")
+                    help="CSV of 'equity_weight,mean,vol' rows for iid-mc and forward-block; means "
+                    "are nominal geometric %% by default (default: built-in PWL curve)")
     ap.add_argument("--plot", type=str, default=None, help="save a step-plot of the recommendation to this PNG")
     ap.add_argument("--show", action="store_true", help="display the plot interactively")
     return ap
@@ -274,14 +277,19 @@ def main(argv=None):
         return
     mode = args.mode or "iid-mc"
 
+    if args.accum < 0:
+        ap.error("--accum must be >= 0")
+    if args.retire < 1:
+        ap.error("--retire must be >= 1")
     if args.block_years < 1:
         ap.error("--block-years must be >= 1")
     if args.compare_modes and (args.mode or args.curve or args.dataset != "pooled"
                                or args.exclude_countries or args.exclude_years):
         ap.error("--compare-modes sets the return model itself; drop --mode, --curve, "
                  "--dataset and --exclude-*")
-    if args.curve and mode != "iid-mc":
-        ap.error("--curve is only supported with --mode iid-mc; historical modes use raw JST returns")
+    if args.curve and mode not in ("iid-mc", "forward-block"):
+        ap.error("--curve is only supported with --mode iid-mc or forward-block; historical-iid "
+                 "and historical-block use raw JST returns")
     exclusions = bool(args.exclude_countries or args.exclude_years)
     if mode == "iid-mc" and exclusions:
         ap.error("--exclude-* apply only to historical modes")

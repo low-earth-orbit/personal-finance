@@ -52,11 +52,13 @@ describe("glide-path storage", () => {
         retirementMaxEquityPct: 60,
         bequestWeight: 0.5,
         interval: 10,
+        inflation: 3.5,
       }),
     );
 
     const input = loadInput();
     expect(input.interval).toBe(5);
+    expect(input.inflation).toBe(DEFAULTS.inflation);
     expect(input.bequestWeight).toBe(0);
     expect(input.retirementMaxEquityPct).toBe(150);
   });

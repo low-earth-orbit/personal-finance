@@ -112,9 +112,9 @@ def collect_argv():
                                0.04, float, "0.04 = 4%")
 
     _section("Preferences & risk")
-    print("  Risk aversion (γ): 1 = very aggressive, 2 = aggressive, 3 = moderate, "
-          "4 = cautious, 5+ = very cautious.")
-    gamma = _ask("Risk aversion γ", 4.0, float, "4 = cautious base case")
+    print("  Risk aversion (γ): 1 to 2 = very aggressive, 3 to 5 = moderate, "
+          "6 to 10 = very cautious.")
+    gamma = _ask("Risk aversion γ", 4.0, float, "4 = moderate base case")
     beta = _ask("Time-discount factor β", 0.985, float,
                 "1.0 = equal weight, 0.985 = balanced, 0.97 = stronger early-years tilt")
     bequest = _ask_choice(
