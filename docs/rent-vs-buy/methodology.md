@@ -4,7 +4,7 @@
 
 1. **Cheaper side invests the difference**: while owner total cost > rent the renter invests the surplus; once owning is cheaper (e.g. after the mortgage is paid off) the owner invests rent − owner cost. Contributions land mid-year (half-year return); neither portfolio ever withdraws.
 2. **Mortgage**: conventional (≥20% down) or insured (high-ratio) under the rules effective Dec 15, 2024: homes under $1.5M, minimum down 5% of the first $500k + 10% of the rest (`minimumDownPaymentPct`). The insurance premium — 2.80% / 3.10% / 4.00% of the loan for LTV ≤85 / ≤90 / ≤95%, +0.20 points for a 30-year amortization — is added to the mortgage (`calculateOpeningMortgageBalance`). Amortization up to 30 years (insured: first-time buyers or new builds only; the app can't check eligibility). Not modelled: provincial sales tax on the premium (ON/QC/SK — users add it to buyer closing costs) and the lower rates insured mortgages often get.
-3. **Compounding**: semi-annual (Canadian convention). Renewal: 5yr terms, rate redrawn at MC.
+3. **Compounding**: semi-annual (Canadian convention). The first 5yr term is at the entered rate (known at signing); each renewal redraws the rate at MC.
 4. **Tax**: each portfolio splits into a sheltered sleeve (`taxShelteredPct`, default 50 (some but not all TFSA/RRSP room still free), UI label "Tax-sheltered": treated as TFSA-like — no tax on yield or gains) and a taxable sleeve (yield taxed annually, cost basis adjusted; capital gains at sale on `value − book`). Owner net worth = home equity after selling costs + owner portfolio after tax. Principal residence exempt.
 5. **Selling costs**: `homePrice × (1 − sellerClosingCostsPct) − mortgageBalance`
 6. **Holding period**: `holdingPeriod` (default 12yr) is comparison year. Horizon hardcoded 30yr (`SIMULATION_HORIZON_YEARS`), so `holdingPeriod` ≤ 30.
@@ -22,7 +22,7 @@ Two-layer uncertainty model:
 | `investmentReturnSigma` | Long-run portfolio return mean            |
 | `rentIncreaseSigma`     | Long-run rent growth mean                 |
 | `ownerCostGrowthSigma`  | Long-run recurring owner cost growth mean |
-| `mortgageRateSigma`     | Long-run mortgage rate mean               |
+| `mortgageRateSigma`     | Long-run mortgage rate mean (renewals)    |
 | `dividendYieldSigma`    | Long-run dividend yield mean              |
 
 `maintPct`/`propertyTaxRate` have no sigma — path driven by `ownerCostGrowthRate`. `maintAgingPct` is a deterministic uplift on maintenance and condo fees (no sigma, no inflation beta).
@@ -37,9 +37,11 @@ Two-layer uncertainty model:
 
 `INFLATION_BETA` couples home prices, rents, owner costs, mortgage rates through inflation factor.
 
-**Investment returns:** lognormal with the input treated as a **compound (geometric)** annual return `g` (`logMean = log(1+g)`; `R = exp(logMean + σZ) − 1`), so the portfolio compounds at `g` on the median path — consistent with the PWL / FP-Canada figures the default (6.3%, the 80/20 row) comes from. (Before Nov 2026 the input was treated as the arithmetic mean, `logMean = log(1+μ) − σ²/2`, which compounded ~σ²/2 too low.) iid shocks — no AR(1). Long-run-mean uncertainty dominates long-horizon spread.
+**Investment returns:** lognormal with the input treated as a **compound (geometric)** annual return `g` (`logMean = log(1+g)`; `R = exp(logMean + σZ) − 1`), so the portfolio compounds at `g` on the median path — the basis on which capital market assumptions are quoted. The default (6.0%) is an 80/20 global index portfolio after ~0.2% fund fees. (Before Nov 2026 the input was treated as the arithmetic mean, `logMean = log(1+μ) − σ²/2`, which compounded ~σ²/2 too low.) Annual volatility comes from the **entered** return (`investmentAnnualVolPct`), not the scenario's drawn mean: uncertainty about the long-run return doesn't change the portfolio's risk level. iid shocks — no AR(1). Long-run-mean uncertainty dominates long-horizon spread.
 
-**Mortgage renewals:** at 5yr multiples, rate redrawn with inflation shock, balance re-amortized over remaining years.
+**Home price growth:** same convention — lognormal around the scenario's compound rate (plus the inflation factor), 6% idiosyncratic annual σ, so the median home compounds at the entered rate. Both sides of the comparison read their growth input the same way. (Before Nov 2026 the home input was an arithmetic mean while the investment input was geometric, which cost the owner ~0.18%/yr on the median path.)
+
+**Mortgage renewals:** years 1–5 use the entered rate exactly. At 5yr multiples the rate is redrawn (long-run mean + inflation shock) and the balance re-amortized over remaining years.
 
 **Renter/owner share same scenario path** — enables fair pairwise comparison. Draws come from a fixed seed (`src/utils/rng.ts`), so identical inputs give identical results and the 60/70% tier boundaries don't flicker between renders.
 

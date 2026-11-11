@@ -67,6 +67,40 @@ describe("runMonteCarlo", () => {
   });
 });
 
+describe("market draws", () => {
+  test("the first mortgage term uses the entered rate; uncertainty starts at renewal", () => {
+    const certain = runMonteCarlo({ ...DEFAULTS, mortgageRateSigma: 0 }, SIMS);
+    const uncertain = runMonteCarlo({ ...DEFAULTS, mortgageRateSigma: 3 }, SIMS);
+    for (let y = 0; y < 5; y++) expect(uncertain[y]).toEqual(certain[y]);
+    expect(uncertain[9].ownerP25).not.toBe(certain[9].ownerP25);
+  });
+
+  test("the median home compounds at the entered growth rate", () => {
+    // All cash, no costs, no rent: owner net worth is the home value alone.
+    const input = {
+      ...DEFAULTS,
+      downPaymentPercentage: 100,
+      monthlyRent: 0,
+      propertyTaxRate: 0,
+      maintPct: 0,
+      sellerClosingCostsPct: 0,
+      homePriceGrowthRate: 3,
+      homePriceGrowthSigma: 0,
+    };
+    const last = runMonteCarlo(input, 4000)[29];
+    const expected = input.initialHomePrice * 1.03 ** 30;
+    // An arithmetic-mean reading would sit ~5% lower (σ²/2 a year for 30 years).
+    expect(Math.abs(last.ownerMedian / expected - 1)).toBeLessThan(0.025);
+  });
+
+  test("uncertainty about the long-run return doesn't move the median portfolio", () => {
+    const sure = runMonteCarlo({ ...DEFAULTS, investmentReturnSigma: 0 }, 4000)[29];
+    const unsure = runMonteCarlo({ ...DEFAULTS, investmentReturnSigma: 2 }, 4000)[29];
+    expect(Math.abs(unsure.renterMedian / sure.renterMedian - 1)).toBeLessThan(0.06);
+    expect(unsure.renterP75 - unsure.renterP25).toBeGreaterThan(sure.renterP75 - sure.renterP25);
+  });
+});
+
 describe("insured mortgages", () => {
   test("the insurance premium lowers the owner's net worth", () => {
     const at20 = runMonteCarlo({ ...DEFAULTS, downPaymentPercentage: 20 }, SIMS)[0];
