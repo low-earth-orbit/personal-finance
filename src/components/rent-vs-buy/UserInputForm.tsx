@@ -182,7 +182,7 @@ export default function UserInputForm({
               {perturbed("homePriceGrowthRate", "homePriceGrowthSigma", {
                 label: "Home price growth",
                 helperText:
-                  "Expected annual growth in the home's market value. Long-run world historical average is 0–2% above inflation (2–4% nominal).",
+                  "Expected compound annual growth in the home's market value. Long-run world historical average is 0–2% above inflation (2–4% nominal).",
               })}
 
               <UserInputFormItem
@@ -291,7 +291,7 @@ export default function UserInputForm({
                 {perturbed("annualMortgageInterestRate", "mortgageRateSigma", {
                   label: "Mortgage rate",
                   helperText:
-                    "Annual mortgage interest rate. The default reflects the Bank of Canada's neutral policy rate (2.75%) plus a typical lender spread (1.75%).",
+                    "Your rate for the first 5-year term. Renewals vary around it. The default reflects the Bank of Canada's neutral policy rate (2.75%) plus a typical lender spread (1.75%).",
                   disabled: userInput.downPaymentPercentage === 100,
                 })}
               </SimpleGrid>
@@ -312,7 +312,7 @@ export default function UserInputForm({
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {
                   label: "Compound return",
                   helperText:
-                    "Expected pre-tax compound annual return, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
+                    "Expected pre-tax compound annual return after fund fees, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
                 })}
                 {perturbed("dividendYield", "dividendYieldSigma", {
                   label: "Annual yield",

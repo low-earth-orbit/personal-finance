@@ -51,7 +51,12 @@ interface Scenario {
   investmentReturnMean: number;
   rentIncreaseMean: number;
   ownerCostGrowthMean: number;
+  /** Long-run mean that renewals are drawn around; the first term uses `mortgageRateNow`. */
   mortgageRateMean: number;
+  /** Today's rate, known when the mortgage is signed: fixed for the first term. */
+  mortgageRateNow: number;
+  /** Annual return volatility, set by the entered return (the portfolio's risk level). */
+  investmentVolPct: number;
   maintenanceMean: number;
   propertyTaxMean: number;
   dividendYieldMean: number;
@@ -88,6 +93,10 @@ function drawScenario(userInput: UserInput, normalRandom: Normal): Scenario {
       normalRandom() * (userInput.ownerCostGrowthSigma ?? 0.75),
     mortgageRateMean:
       userInput.annualMortgageInterestRate + normalRandom() * userInput.mortgageRateSigma,
+    mortgageRateNow: userInput.annualMortgageInterestRate,
+    // From the entered return, not the drawn mean: being wrong about the long-run return
+    // doesn't change how risky the portfolio is year to year.
+    investmentVolPct: investmentAnnualVolPct(userInput.investmentReturnRate),
     maintenanceMean: Math.max(0, userInput.maintPct),
     propertyTaxMean: Math.max(0, userInput.propertyTaxRate),
     dividendYieldMean: Math.max(
@@ -106,15 +115,20 @@ function drawPath(scenario: Scenario, horizon: number, normalRandom: Normal): Sc
     const inflShock = normalRandom() * ANNUAL_VOL.inflation;
     inflationShocks.push(inflShock);
 
-    const homePriceGrowth =
-      scenario.homePriceGrowthMean +
-      INFLATION_BETA.homePrice * inflShock +
-      normalRandom() * ANNUAL_VOL.homePriceIdio;
-
-    // Lognormal draw preserves the scenario compound (geometric) mean; the annual
+    // Home growth and investment returns are both lognormal around the scenario's compound
+    // (geometric) rate, so the median path of each compounds at the rate entered. The annual
     // shock is iid (drawn fresh each year, no serial correlation).
-    const investmentSigma = investmentAnnualVolPct(scenario.investmentReturnMean) / 100;
-    const logMean = Math.log(1 + scenario.investmentReturnMean / 100);
+    const homeLogMean = Math.log(
+      Math.max(
+        1 + (scenario.homePriceGrowthMean + INFLATION_BETA.homePrice * inflShock) / 100,
+        0.01,
+      ),
+    );
+    const homePriceGrowth =
+      (Math.exp(homeLogMean + (normalRandom() * ANNUAL_VOL.homePriceIdio) / 100) - 1) * 100;
+
+    const investmentSigma = scenario.investmentVolPct / 100;
+    const logMean = Math.log(Math.max(1 + scenario.investmentReturnMean / 100, 0.01));
 
     const investmentReturn = (Math.exp(logMean + normalRandom() * investmentSigma) - 1) * 100;
 
@@ -134,10 +148,11 @@ function drawPath(scenario: Scenario, horizon: number, normalRandom: Normal): Sc
     });
   }
 
-  // Mortgage rate: at each 5-year renewal, snaps to scenario mean plus that
-  // year's inflation pressure. Couples renewal cost to the inflation regime.
+  // Mortgage rate: the first term is today's rate, known at signing. At each 5-year renewal it
+  // snaps to the scenario's long-run mean plus that year's inflation pressure, which couples
+  // renewal cost to the inflation regime.
   const mortgageRates: number[] = [];
-  let currentRate = scenario.mortgageRateMean + INFLATION_BETA.mortgageRate * inflationShocks[0];
+  let currentRate = scenario.mortgageRateNow;
   for (let y = 0; y < horizon; y++) {
     if (y > 0 && y % MORTGAGE_TERM_YEARS === 0) {
       currentRate = scenario.mortgageRateMean + INFLATION_BETA.mortgageRate * inflationShocks[y];
