@@ -5,7 +5,13 @@ import { Container, Grid } from "@mantine/core";
 import InputForm from "./InputForm";
 import Result from "./Result";
 import { DEFAULTS, withFixedSettings } from "@/utils/glide-path/presets";
-import { loadInput, loadReturnMode, saveInput, saveReturnMode } from "@/utils/glide-path/storage";
+import {
+  DEFAULT_RETURN_MODE,
+  loadInput,
+  loadReturnMode,
+  saveInput,
+  saveReturnMode,
+} from "@/utils/glide-path/storage";
 import { validateGlidePathInput } from "@/utils/glide-path/validation";
 import type {
   GlidePathInput,
@@ -158,6 +164,8 @@ export default function Main() {
     const fresh: GlidePathInput = { ...DEFAULTS };
     setInput(fresh);
     saveInput(fresh);
+    setReturnMode(DEFAULT_RETURN_MODE);
+    saveReturnMode(DEFAULT_RETURN_MODE);
     setComputed(null);
     cancelPendingComputation();
     setError(false);

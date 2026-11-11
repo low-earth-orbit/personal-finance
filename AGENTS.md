@@ -61,7 +61,7 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 
 **New tool pattern:** `src/app/<tool>/` + `src/components/<tool>/`. Reuse `src/components/shared/` and `src/utils/`. Import alias: `@/` → `./src/`.
 
-**Glide-path detail:** Web + Python default to `iid-mc` (forward-CMA iid Monte Carlo — the no-recovery baseline); `forward-block` (JST pooled → forward-CMA rescaled → block bootstrap; bundle at `src/utils/glide-path/jstData.ts`) is the historical-sequencing scenario toggle. Python: `analysis/recommend_glide.py` also supports `historical-iid`/`historical-block`; `--dataset pooled|world`; `--exclude-countries/years`. Regenerate bundle: `python3 -m analysis.glide_path.generate_bundle`. Web fixes 5yr interval, no bequest weight, one equity ceiling for all years (`withFixedSettings`), browser caps, ≥$10k guaranteed income. Python keeps research controls.
+**Glide-path detail:** Web + Python default to `iid-mc` (forward-CMA iid Monte Carlo — the no-recovery baseline); `forward-block` (JST pooled → forward-CMA rescaled → block bootstrap; bundle at `src/utils/glide-path/jstData.ts`) is the historical-sequencing scenario toggle. Python: `analysis/recommend_glide.py` also supports `historical-iid`/`historical-block`; `--dataset pooled|world`; `--exclude-countries/years`. Regenerate bundle: `python3 -m analysis.glide_path.generate_bundle`. Web fixes 5yr interval, no bequest weight, one equity ceiling for all years, 2.1% inflation (`withFixedSettings`), browser caps, ≥$10k guaranteed income. Python keeps research controls.
 
 ## Architecture
 

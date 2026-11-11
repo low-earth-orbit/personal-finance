@@ -30,9 +30,9 @@ export const DEFAULT_ALLOC_CURVE: AllocAnchor[] = [
 
 /**
  * Default inputs. Rates are percentages; dollars are today's (real) dollars.
- * `numPaths` is exposed because this is a nerds tool. `bequestWeight`, `retirementMaxEquityPct`
- * and `interval` are engine settings the web app fixes (see `withFixedSettings`); the Python CLI
- * keeps them as research controls.
+ * `numPaths` is exposed because this is a nerds tool. `bequestWeight`, `retirementMaxEquityPct`,
+ * `interval` and `inflation` are engine settings the web app fixes (see `withFixedSettings`); the
+ * Python CLI keeps them as research controls.
  */
 export const DEFAULTS = {
   // ── About you ─────────────────────────────────────────────
@@ -89,15 +89,17 @@ export const GRID_STEP = 0.05;
 export const GAMMA_PRESETS = [2, 3, 4, 5] as const;
 
 /**
- * Settings the web app does not expose: no bequest weight, a 5-year glide step, and one equity
- * ceiling for all years. Applied to every loaded or edited input so a value saved by an older
- * version cannot linger unseen.
+ * Settings the web app does not expose: no bequest weight, a 5-year glide step, one equity
+ * ceiling for all years, and the default inflation (the forward-block bundle is rescaled at that
+ * rate, so another value would move only the iid mode). Applied to every loaded or edited input
+ * so a value saved by an older version cannot linger unseen.
  */
 export function withFixedSettings<T extends { maxEquityPct: unknown }>(input: T): T {
   return {
     ...input,
     bequestWeight: DEFAULTS.bequestWeight,
     interval: DEFAULTS.interval,
+    inflation: DEFAULTS.inflation,
     retirementMaxEquityPct: input.maxEquityPct,
   };
 }

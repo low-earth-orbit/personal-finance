@@ -22,14 +22,27 @@ export const DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD = 0.15;
 export const FULLPATH_RISK_HIGHLIGHT_THRESHOLD = 0.3;
 export const LOW_DRAWDOWN_SHORTFALL_THRESHOLD = 0.05;
 
+/** Guaranteed income below this (real $/yr) leaves consumption free to hit the numerical floor. */
+const DEGENERATE_CE_FLOOR = 1000;
+
 /**
  * A CE income this far below the target is the FLOOR=1 / CRRA artifact (the certainty-equivalent
  * collapses toward zero when consumption hits the floor in a meaningful share of paths), not a
  * real planning figure. We use it to suppress percentage comparisons against a degenerate
  * denominator; the shortfall rate is the pass/fail signal.
+ *
+ * The artifact needs guaranteed income near zero. With a real guaranteed income, consumption
+ * never falls below it (bridge years included), so a low CE is a real figure for a plan that
+ * mostly lives on that income. The web app requires at least $10,000, so this guards direct
+ * engine callers.
  */
-export function ceIsDegenerate(income: number, targetIncome: number): boolean {
-  return income < Math.max(1000, 0.05 * targetIncome);
+export function ceIsDegenerate(
+  income: number,
+  targetIncome: number,
+  guaranteedIncome: number,
+): boolean {
+  if (guaranteedIncome >= DEGENERATE_CE_FLOOR) return false;
+  return income < Math.max(DEGENERATE_CE_FLOOR, 0.05 * targetIncome);
 }
 
 export interface Recommendation {
@@ -46,8 +59,8 @@ export interface Recommendation {
  * allocation that avoids the near-zero-income tail.
  */
 export function pickRecommendation(input: GlidePathInput, result: GlidePathResult): Recommendation {
-  const glideBad = ceIsDegenerate(result.ceIncome, input.targetIncome);
-  const flatBad = ceIsDegenerate(result.flatCeIncome, input.targetIncome);
+  const glideBad = ceIsDegenerate(result.ceIncome, input.targetIncome, input.guaranteedIncome);
+  const flatBad = ceIsDegenerate(result.flatCeIncome, input.targetIncome, input.guaranteedIncome);
   if (glideBad && flatBad) {
     return { preferConstant: false, inconclusive: true, glideBad, flatBad };
   }

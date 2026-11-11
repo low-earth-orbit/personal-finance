@@ -68,9 +68,9 @@ export default function InputForm({
   const isCustomGamma = !GAMMA_PRESETS.some((gamma) => isSame(input.gamma, gamma));
   const leveraged = typeof input.maxEquityPct === "number" && input.maxEquityPct > 100;
   const gammaDescription =
-    "How well you tolerate market volatility — pick the investor that sounds like you. 1 to 2 = very aggressive, 3 to 5 = moderate, 6 to 10 = very cautious." +
+    "How much you dislike uncertain retirement spending. 1 to 2 = very aggressive, 3 to 5 = moderate, 6 to 10 = very cautious." +
     (flex === 0
-      ? " With constant-dollar spending (flexibility 0), γ barely changes the allocation — the plan is driven by avoiding shortfall years; γ matters once spending is flexible."
+      ? " With constant-dollar spending, γ barely changes the allocation, because the plan is driven by avoiding shortfall years. It matters once spending is flexible."
       : "");
 
   return (
@@ -219,7 +219,7 @@ export default function InputForm({
               <Stack gap={4}>
                 <FieldHeader
                   label="Return model"
-                  description="Independent (IID Monte Carlo, default) draws each year independently from our forward capital-market assumptions. Historical sequences (forward-block) replays real historical return sequences rescaled to the same assumptions, preserving multi-year patterns like mean reversion and inflation decades."
+                  description="Independent (the default) draws each year's return separately from our forward capital-market assumptions. Historical sequences replays real multi-year return sequences rescaled to the same assumptions, which keeps patterns such as recoveries after crashes and inflation decades. The two can disagree on the equity level, so compare both."
                 />
                 <SegmentedControl
                   value={returnMode}

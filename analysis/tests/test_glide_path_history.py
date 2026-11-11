@@ -6,6 +6,7 @@ import os
 import runpy
 import shlex
 import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -21,7 +22,7 @@ from analysis.glide_path.markets import (
     build_market,
     forward_anchors,
 )
-from analysis.glide_path.recommender import recommend_glide_path
+from analysis.glide_path.recommender import BlockLayout, describe_shape, recommend_glide_path
 from analysis.glide_path.simulate import Lifecycle, tie_middle_argmax
 from analysis.shared.returns import arithmetic_to_geometric, geometric_to_arithmetic
 from analysis.shared.jst_history import (
@@ -471,6 +472,60 @@ class GlidePathMarketTests(unittest.TestCase):
         with redirect_stderr(stderr), self.assertRaises(SystemExit):
             cli_main(["--mode", "historical-iid", "--curve", "curve.csv"])
         self.assertIn("--curve is only supported", stderr.getvalue())
+
+    def test_cli_forwards_custom_curve_to_forward_block(self):
+        # forward-block rescales history to the curve's endpoints, so a custom curve applies.
+        with tempfile.NamedTemporaryFile("w", suffix=".csv") as curve:
+            curve.write("equity_weight,mean,vol\n0,3.0,5.0\n1,7.0,13.0\n")
+            curve.flush()
+            with patch(
+                "analysis.glide_path.cli.recommend_glide_path", return_value={}
+            ) as recommend, patch("analysis.glide_path.cli.print_rec"):
+                cli_main(["--mode", "forward-block", "--curve", curve.name])
+        kwargs = recommend.call_args.kwargs
+        self.assertEqual(kwargs["return_mode"], "forward-block")
+        self.assertEqual(kwargs["alloc_curve"], [(0.0, 3.0, 5.0), (1.0, 7.0, 13.0)])
+
+    def test_cli_and_engine_reject_empty_or_negative_phases(self):
+        for argv, message in ((["--retire", "0"], "--retire must be >= 1"),
+                              (["--accum", "-5"], "--accum must be >= 0")):
+            stderr = io.StringIO()
+            with self.subTest(argv=argv), redirect_stderr(stderr), self.assertRaises(SystemExit):
+                cli_main(argv)
+            self.assertIn(message, stderr.getvalue())
+        for overrides in ({"retire_years": 0}, {"accum_years": -1}):
+            with self.subTest(overrides=overrides), self.assertRaisesRegex(
+                    ValueError, "retire_years must be >= 1"):
+                self._recommend(**overrides)
+        self._recommend(accum_years=0)  # retirement-only plans stay valid
+
+    def test_shape_leaves_out_the_final_retirement_step(self):
+        # 10 working years then 20 retirement years in 5-year steps.
+        layout = BlockLayout.build(10, 20, 5)
+        path = lambda steps: np.repeat(np.asarray(steps, dtype=float), 5)  # noqa: E731
+        shape = describe_shape(path([1, 1, 1, 1, 1, 0.2]), 10, layout, 0.10)
+        self.assertEqual(shape["retire_dir"], "Flat")
+        self.assertEqual(shape["tent_i"], 10)  # the 20% final step is not the tent
+        rising = describe_shape(path([1, 1, 0.5, 0.8, 1, 0.2]), 10, layout, 0.10)
+        self.assertEqual(rising["retire_dir"], "Rising")
+        # Two retirement steps: nothing to leave out.
+        short = describe_shape(path([1, 1, 1, 0.5]), 10, BlockLayout.build(10, 10, 5), 0.10)
+        self.assertEqual(short["retire_dir"], "Falling")
+
+    def test_tent_looks_both_sides_of_retirement(self):
+        layout = BlockLayout.build(10, 20, 5)
+        path = lambda steps: np.repeat(np.asarray(steps, dtype=float), 5)  # noqa: E731
+        # A dip before retirement is the tent; among tied years, the one nearest retirement.
+        self.assertEqual(describe_shape(path([1, 0.6, 0.9, 1, 1, 1]), 10, layout, 0.10)["tent_i"], 9)
+        # Ties across retirement go to the retirement side.
+        self.assertEqual(describe_shape(path([0.7, 0.7, 0.7, 1, 1, 0]), 10, layout, 0.10)["tent_i"], 10)
+        # Years more than 15 before retirement are outside the window.
+        weights = np.concatenate([np.full(5, 0.3), np.full(35, 0.8), np.full(2, 0.9)])
+        far = describe_shape(weights, 22, BlockLayout.build(22, 20, 8), 0.10)
+        self.assertEqual(far["tent_i"], 22)
+        rec = self._recommend(start_age=40)
+        # The reported tent is a year of the path, labelled by age.
+        self.assertEqual(rec["tent_pct"], rec["equity_by_year"][rec["tent_age"] - 40] * 100)
 
     def test_retirement_equity_ceiling_does_not_limit_accumulation(self):
         rec = self._recommend(

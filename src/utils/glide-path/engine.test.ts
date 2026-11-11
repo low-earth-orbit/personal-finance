@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULTS, DEFAULT_ALLOC_CURVE } from "./presets";
-import { buildEquityGrid, recommendGlidePath, tieMiddleArgmax } from "./engine";
+import { buildEquityGrid, describeShape, recommendGlidePath, tieMiddleArgmax } from "./engine";
 import type { GlidePathInput } from "./types";
 
 // Fast settings for tests: few paths; the default glide-step interval is 5 years.
@@ -56,6 +56,23 @@ describe("recommendGlidePath", () => {
     expect(r.flatDepletion).toBeLessThanOrEqual(1);
     expect(r.flatDrawdownDepletion).toBeGreaterThanOrEqual(0);
     expect(r.flatDrawdownDepletion).toBeLessThanOrEqual(1);
+  });
+
+  it("reports the expected balance and year-1 draw of each allocation", () => {
+    const r = recommendGlidePath(base());
+    expect(r.flatExpectedRetirementBalance).toBeGreaterThan(0);
+    // Constant-dollar spending: both allocations draw the same gap from different balances.
+    expect(r.flatInitialTargetDraw).toBe(r.initialTargetDraw);
+    expect(r.flatFundingRatio).toBeCloseTo(
+      r.flatInitialTargetDraw / r.flatExpectedRetirementBalance,
+      3,
+    );
+    // An over-funded plan ties everywhere, so the glide is the constant weight itself and
+    // reaches the same balance.
+    const flat = recommendGlidePath(base({ startSavings: 5_000_000 }));
+    expect(new Set(flat.equityByYear)).toEqual(new Set([flat.flatEquityPct / 100]));
+    expect(flat.flatExpectedRetirementBalance).toBe(flat.expectedRetirementBalance);
+    expect(flat.flatFundingRatio).toBe(flat.fundingRatio);
   });
 
   it("reports no shortfall when guaranteed income already covers the target", () => {
@@ -234,6 +251,103 @@ describe("recommendGlidePath", () => {
     expect(Math.max(...r.equityByYear.slice(0, retireStart))).toBeGreaterThan(0.5);
     expect(r.schedule.find((block) => block.yearStart === retireStart)?.phase).toBe("retire");
     expect(r.params.retirementMaxLeverage).toBe(0.5);
+  });
+});
+
+describe("recommendGlidePath (forward-block)", () => {
+  const run = (overrides: Partial<GlidePathInput> = {}, seed = 0) =>
+    recommendGlidePath(base(overrides), undefined, seed, "forward-block");
+
+  it("is deterministic per seed and reports the mode", () => {
+    const a = run();
+    const b = run();
+    expect(a).toEqual(b);
+    expect(a.params.returnMode).toBe("forward-block");
+    expect(run({}, 1)).not.toEqual(a);
+  });
+
+  it("samples different paths from iid-mc but the same kind of result", () => {
+    const block = run();
+    const iid = recommendGlidePath(base());
+    expect(block.ceIncome).not.toBe(iid.ceIncome);
+    expect(block.equityByYear).toHaveLength(iid.equityByYear.length);
+    expect(block.ceIncome).toBeGreaterThan(DEFAULTS.guaranteedIncome);
+    expect(block.ceIncome).toBeLessThanOrEqual(DEFAULTS.targetIncome);
+    for (const w of block.equityByYear) {
+      expect(w).toBeGreaterThanOrEqual(0);
+      expect(w).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("projects the median balance from the bundled history, not the curve", () => {
+    // Same constant weight in both modes; the deterministic balance differs only by the
+    // return source (curve geometric mean vs the bundle's realized geometric mean).
+    const block = run({ flexibility: 1 });
+    const iid = recommendGlidePath(base({ flexibility: 1 }));
+    expect(block.expectedRetirementBalance).toBeGreaterThan(0);
+    expect(block.expectedRetirementBalance / iid.expectedRetirementBalance).toBeCloseTo(1, 1);
+  });
+
+  it("borrows at the real borrowing cost above 100% equity", () => {
+    const r = run({ gamma: 1.5, maxEquityPct: 150, borrowCost: 0.5 });
+    expect(Math.max(...r.equityByYear)).toBeGreaterThan(1);
+    expect(Math.max(...r.equityByYear)).toBeLessThanOrEqual(1.5);
+  });
+});
+
+describe("constant-dollar utility shortcut", () => {
+  it("matches the general path for a negligible spending flexibility", () => {
+    // flexibility 0 reads a fully funded year's utility from a precomputed table; any
+    // flexibility > 0 computes it per path-year. A 1e-12 flexibility is the same plan.
+    const exact = recommendGlidePath(base());
+    const general = recommendGlidePath(base({ flexibility: 1e-12 }));
+    expect(general.equityByYear).toEqual(exact.equityByYear);
+    expect(general.ceIncome).toBe(exact.ceIncome);
+    expect(general.flatEquityPct).toBe(exact.flatEquityPct);
+    expect(general.depletion).toBe(exact.depletion);
+  });
+});
+
+describe("describeShape", () => {
+  // 10 working years then 20 retirement years in 5-year steps.
+  const blockStart = [0, 5, 10, 15, 20, 25];
+  const path = (steps: number[]) => steps.flatMap((w) => Array<number>(5).fill(w));
+
+  it("leaves the final retirement step out of the retirement slope", () => {
+    const shape = describeShape(path([1, 1, 1, 1, 1, 0.2]), blockStart, 10);
+    expect(shape.retireDir).toBe("Flat");
+    expect(describeShape(path([1, 1, 0.5, 0.8, 1, 0.2]), blockStart, 10).retireDir).toBe("Rising");
+  });
+
+  it("keeps the final step when fewer than three retirement steps exist", () => {
+    // 10 working years + 10 retirement years: two retirement steps, nothing to trim.
+    const shape = describeShape(path([1, 1, 1, 0.5]), [0, 5, 10, 15], 10);
+    expect(shape.retireDir).toBe("Falling");
+  });
+
+  it("finds a tent bottom before retirement", () => {
+    const shape = describeShape(path([1, 0.6, 0.9, 1, 1, 1]), blockStart, 10);
+    // Lowest within 15 years either side of retirement; among ties, the year nearest it.
+    expect(shape.tentYear).toBe(9);
+    expect(shape.accumDir).toBe("Falling");
+  });
+
+  it("prefers the retirement side on a tie and ignores the final step", () => {
+    expect(describeShape(path([1, 1, 1, 1, 1, 1]), blockStart, 10).tentYear).toBe(10);
+    expect(describeShape(path([0.7, 0.7, 0.7, 1, 1, 0]), blockStart, 10).tentYear).toBe(10);
+  });
+
+  it("looks no further than 15 years from retirement", () => {
+    // Retirement at year 22; the 30% years (0-4) end more than 15 years before it.
+    const weights = [...Array<number>(5).fill(0.3), ...Array<number>(35).fill(0.8), 0.9, 0.9];
+    expect(describeShape(weights, [0, 5, 22, 30, 40], 22).tentYear).toBe(22);
+    // Moved inside the window, the same dip is the tent.
+    const near = [
+      ...Array<number>(10).fill(0.8),
+      ...Array<number>(5).fill(0.3),
+      ...weights.slice(15),
+    ];
+    expect(describeShape(near, [0, 10, 15, 22, 30, 40], 22).tentYear).toBe(14);
   });
 });
 
