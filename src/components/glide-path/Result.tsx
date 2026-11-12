@@ -513,7 +513,13 @@ export default function Result({
 
         {showNeutralOptions ? (
           (glideIsConstant ? [constant] : [glide, constant]).map((option) => (
-            <Card key={option.kind} withBorder radius="md" padding="lg">
+            <Card
+              key={option.kind}
+              withBorder
+              radius="md"
+              padding="lg"
+              style={{ borderTop: "1px solid var(--pf-ink)" }}
+            >
               <Stack gap="md">
                 <Title order={3} fz={{ base: 22, sm: 26 }} style={{ letterSpacing: "-0.01em" }}>
                   {option.title}
@@ -532,7 +538,12 @@ export default function Result({
         ) : (
           <>
             {/* Primary — the model's preferred allocation, with its own outcomes inline. */}
-            <Card withBorder radius="md" padding="md">
+            <Card
+              withBorder
+              radius="md"
+              padding="md"
+              style={{ borderTop: "1px solid var(--pf-ink)" }}
+            >
               <Stack gap="md">
                 <Stack gap="xs">
                   <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
@@ -563,7 +574,12 @@ export default function Result({
 
             {/* Secondary — the alternative, compact. */}
             {!glideIsConstant && (
-              <Card withBorder radius="md" padding="md">
+              <Card
+                withBorder
+                radius="md"
+                padding="md"
+                style={{ borderTop: "1px solid var(--pf-hairline)" }}
+              >
                 <Stack gap="xs">
                   <Eyebrow>Alternative — {secondary.title}</Eyebrow>
                   <ShapeSummary

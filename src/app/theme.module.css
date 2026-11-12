@@ -4,13 +4,13 @@
  */
 
 /*
- * Rule budget: one ink rule opens a column (form section, result block); everything below it is
- * separated by whitespace or a hairline. Cards read as sections under a hairline, not boxes.
+ * Rule budget: one ink rule opens a column (first form section, result block). Below it, sections
+ * are set apart by whitespace and their headings, with hairlines only where rows of data need
+ * them. Cards are plain sections, not boxes; pass a `borderTop` style where one needs a rule.
  */
 .card {
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--pf-hairline);
   border-radius: 0;
   padding-inline: 0;
 }
@@ -25,11 +25,15 @@
   background: transparent;
   border: 0;
   border-radius: 0;
-  border-top: 1px solid var(--pf-ink);
+  border-top: 1px solid var(--pf-hairline);
+}
+
+.accordionItem:first-of-type {
+  border-top-color: var(--pf-ink);
 }
 
 .accordionItem + .accordionItem {
-  margin-top: var(--mantine-spacing-md);
+  margin-top: var(--mantine-spacing-xs);
 }
 
 .accordionItem[data-active] {
@@ -86,13 +90,14 @@
   padding-inline: 0;
 }
 
-/* Alerts: a coloured top rule instead of a tinted box. */
+/* Alerts: a short coloured bar at the side instead of a tinted box. */
 .alert {
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--alert-color);
+  border-inline-start: 2px solid var(--alert-color);
   border-radius: 0;
-  padding-inline: 0;
+  padding-block: 0.25rem;
+  padding-inline: 0.875rem 0;
 }
 
 .alertTitle {
@@ -126,13 +131,12 @@
 }
 
 /*
- * In-flow bordered panels become ruled sections. Floating surfaces (chart tooltips, popovers) do
+ * In-flow bordered panels become plain sections. Floating surfaces (chart tooltips, popovers) do
  * not pass `withBorder`, so they keep their box.
  */
 .paper[data-with-border] {
   background: transparent;
   border: 0;
-  border-top: 1px solid var(--pf-hairline);
   border-radius: 0;
   padding-inline: 0;
 }

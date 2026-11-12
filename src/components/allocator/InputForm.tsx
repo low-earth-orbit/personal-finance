@@ -166,7 +166,7 @@ export default function InputForm({
                   suffix=" yrs"
                 />
                 <Select
-                  className={fieldRowClasses.frame}
+                  className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
                   classNames={fieldRowClassNames}
                   label="Province"
                   description="Only BC, ON, and NB tax rules are modeled"
@@ -185,7 +185,7 @@ export default function InputForm({
                 />
               </Stack>
               <Select
-                className={fieldRowClasses.frame}
+                className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
                 classNames={fieldRowClassNames}
                 label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
@@ -229,7 +229,7 @@ export default function InputForm({
                 Defaults are illustrations. Small changes can alter the suggested split.
               </Text>
               <Select
-                className={fieldRowClasses.frame}
+                className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
                 classNames={fieldRowClassNames}
                 label="Portfolio"
                 data={PORTFOLIO_PRESETS.map((preset) => ({

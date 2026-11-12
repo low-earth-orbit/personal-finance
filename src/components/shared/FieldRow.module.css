@@ -16,12 +16,18 @@
   align-items: center;
 }
 
+/* Selects need room for their longest option. */
+.root.wide {
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 14rem);
+}
+
 .label {
   grid-column: 1;
   grid-row: 1;
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 400;
+  line-height: 1.35;
 }
 
 .description {
@@ -59,6 +65,7 @@
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 400;
+  line-height: 1.35;
 }
 
 /* Row with a second narrow control at the end: [label + input | trailing]. */
