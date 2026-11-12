@@ -1,20 +1,12 @@
 "use client";
 
-import {
-  Accordion,
-  Box,
-  Button,
-  Group,
-  Popover,
-  SegmentedControl,
-  Slider,
-  Stack,
-} from "@mantine/core";
+import { Accordion, Box, Button, Popover, SegmentedControl, Slider, Stack } from "@mantine/core";
 import { IconChartLine } from "@tabler/icons-react";
 import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
 import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import FieldHeader from "@/components/shared/FieldHeader";
+import { fieldRowClasses } from "@/components/shared/fieldRow";
 import { GAMMA_PRESETS } from "@/utils/glide-path/presets";
 import { FIELD_CONSTRAINTS } from "@/utils/glide-path/validation";
 import type {
@@ -146,8 +138,8 @@ export default function InputForm({
             <SectionSummary>{`flexibility ${flex.toFixed(2)} · γ ${summaryValue(input.gamma)} · β ${summaryValue(input.beta)}`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Stack gap={4}>
+            <Stack gap={0}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader
                   label="Spending flexibility"
                   description="How much retirement spending responds to markets. 0 = fixed real dollars (spend the same after a crash); 1 = fully follows the portfolio (a 20% drop cuts that year's withdrawal ~20%). 0.5 sits halfway."
@@ -180,14 +172,14 @@ export default function InputForm({
                 />
               )}
 
-              <Stack gap={4}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader label="Risk aversion (γ)" description={gammaDescription} />
-                <Group gap="xs" mt="xs" role="group" aria-label="Risk aversion">
+                <Button.Group mt={6} aria-label="Risk aversion" style={{ flexWrap: "wrap" }}>
                   {GAMMA_PRESETS.map((g) => (
                     <Button
                       key={g}
                       variant={isSame(input.gamma, g) ? "filled" : "default"}
-                      size="xs"
+                      size="sm"
                       aria-pressed={isSame(input.gamma, g)}
                       onClick={() => onChange("gamma", g)}
                     >
@@ -198,7 +190,7 @@ export default function InputForm({
                     <Popover.Target>
                       <Button
                         variant={isCustomGamma ? "filled" : "default"}
-                        size="xs"
+                        size="sm"
                         aria-pressed={isCustomGamma}
                       >
                         Custom
@@ -212,7 +204,7 @@ export default function InputForm({
                       />
                     </Popover.Dropdown>
                   </Popover>
-                </Group>
+                </Button.Group>
               </Stack>
               <UserInputFormItem
                 {...num("beta")}
@@ -230,8 +222,8 @@ export default function InputForm({
             <SectionSummary>{`${returnMode === "iid-mc" ? "independent" : "historical"} · ${summaryValue(input.numPaths, (n) => n.toLocaleString())} paths · max ${summaryValue(input.maxEquityPct)}%`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Stack gap={4}>
+            <Stack gap={0}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader
                   label="Return model"
                   description="Independent (the default) draws each year's return separately from our forward capital-market assumptions. Historical sequences replays real multi-year return sequences rescaled to the same assumptions, which keeps patterns such as recoveries after crashes and inflation decades. The two can disagree on the equity level, so compare both."
@@ -244,6 +236,7 @@ export default function InputForm({
                     { value: "forward-block", label: "Historical sequences" },
                   ]}
                   size="sm"
+                  mt={6}
                 />
               </Stack>
               <Stack gap={0}>

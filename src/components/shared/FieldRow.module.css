@@ -10,6 +10,8 @@
 .root {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(8rem, 11rem);
+  /* The flexible first row keeps a lone label centred on the (taller) input. */
+  grid-template-rows: 1fr auto;
   column-gap: 0.75rem;
   align-items: center;
 }
@@ -40,6 +42,11 @@
   text-align: end;
 }
 
+/* A full-width control (slider, button group) under its own label, ruled like a row. */
+.block {
+  padding-block: 0.75rem;
+}
+
 /* Rows whose left side is custom (label + unit toggle) rather than a Mantine label. */
 .custom {
   display: grid;
@@ -52,6 +59,33 @@
   margin: 0;
   font-size: 0.9375rem;
   font-weight: 400;
+}
+
+/* Row with a second narrow control at the end: [label + input | trailing]. */
+.withTrailing {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5rem;
+  column-gap: 0.5rem;
+  align-items: center;
+}
+
+.trailingMain .root,
+.trailingMain .custom {
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, 8rem);
+}
+
+/* Column headings for a group of rows with trailing controls. */
+.trailingHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(6.5rem, 8rem) 5rem;
+  column-gap: 0.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+  text-align: end;
+}
+
+.trailingHeader > :first-child {
+  text-align: start;
 }
 
 .note {

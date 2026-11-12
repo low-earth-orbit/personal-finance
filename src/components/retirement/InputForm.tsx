@@ -1,10 +1,22 @@
 "use client";
 
-import { Accordion, Button, Group, Popover, SimpleGrid, Stack, Text } from "@mantine/core";
+import {
+  Accordion,
+  Button,
+  Group,
+  NumberInput,
+  Popover,
+  SimpleGrid,
+  Stack,
+  Text,
+} from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
 import { formatCADCompact } from "@/utils/format";
+import FieldHeader from "@/components/shared/FieldHeader";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
+import { Eyebrow } from "@/components/shared/Figures";
+import { fieldRowClasses } from "@/components/shared/fieldRow";
 import {
   RETURN_PRESETS,
   SUCCESS_RATE_PRESETS,
@@ -59,6 +71,25 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
     };
   };
 
+  /** Narrow start-age input shown at the end of a guaranteed-income row. */
+  const startAge = (key: RetirementInputKey, ariaLabel: string) => {
+    const c = FIELD_CONSTRAINTS[key];
+    return (
+      <NumberInput
+        id={key}
+        aria-label={ariaLabel}
+        value={input[key] as FieldValue}
+        onChange={bind(key)}
+        min={c.min}
+        max={c.max}
+        step={c.step}
+        error={Boolean(errors[key])}
+        allowNegative={false}
+        clampBehavior="none"
+      />
+    );
+  };
+
   return (
     <>
       <Accordion multiple defaultValue={["you", "goals", "assumptions"]} variant="contained">
@@ -107,7 +138,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
             <SectionSummary>{`${summaryValue(input.targetIncomePct)}% of income · to age ${summaryValue(input.planningAge)} · ${summaryValue(input.targetSuccessRate)}% confidence`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
+            <Stack gap={0}>
               <Stack gap={0}>
                 <UserInputFormItem
                   {...num("targetIncomePct")}
@@ -126,66 +157,63 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   labelHelperText="The age your savings should last to (life expectancy). 95 is a common planning horizon, longer than the average ~85 to account for longevity risk."
                   suffix=" yrs"
                 />
+              </Stack>
+
+              <div>
+                <div className={fieldRowClasses.trailingHeader}>
+                  <Eyebrow>Guaranteed income</Eyebrow>
+                  <Eyebrow>Per year</Eyebrow>
+                  <Eyebrow>Start age</Eyebrow>
+                </div>
                 <UserInputFormItem
                   {...num("cppAt65")}
+                  error={errors.cppAt65 ?? errors.cppStartAge}
                   label="CPP at 65"
-                  labelHelperText="The CPP pension you'd get if it started at 65, in today's dollars per year. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together."
+                  labelHelperText="The CPP pension you'd get if it started at 65, in today's dollars per year. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together. Start age: 60 to 70. Each year before 65 cuts CPP by 7.2% (−36% at 60); each year after adds 8.4% (+42% at 70), for life. If you retire before your first guaranteed income starts, your portfolio funds the full target until then (a 'bridge')."
                   prefix="$"
-                  suffix=" /yr"
                   thousandSeparator
-                />
-                <UserInputFormItem
-                  {...num("cppStartAge")}
-                  label="CPP start age"
-                  labelHelperText="60 to 70. Each year before 65 cuts CPP by 7.2% (−36% at 60); each year after adds 8.4% (+42% at 70), for life. If you retire before your first guaranteed income starts, your portfolio funds the full target until then (a 'bridge')."
-                  suffix=" yrs"
+                  trailing={startAge("cppStartAge", "CPP start age")}
                 />
                 <UserInputFormItem
                   {...num("oasAt65")}
+                  error={errors.oasAt65 ?? errors.oasStartAge}
                   label="OAS at 65"
-                  labelHelperText="Old Age Security starting at 65, in today's dollars per year — about $8,900 with 40 years in Canada after age 18, less with fewer years. It rises 10% at 75. The model ignores the OAS clawback on high incomes."
+                  labelHelperText="Old Age Security starting at 65, in today's dollars per year — about $8,900 with 40 years in Canada after age 18, less with fewer years. It rises 10% at 75. The model ignores the OAS clawback on high incomes. Start age: 65 to 70. Each year of deferral adds 7.2% (+36% at 70), for life."
                   prefix="$"
-                  suffix=" /yr"
                   thousandSeparator
-                />
-                <UserInputFormItem
-                  {...num("oasStartAge")}
-                  label="OAS start age"
-                  labelHelperText="65 to 70. Each year of deferral adds 7.2% (+36% at 70), for life."
-                  suffix=" yrs"
+                  trailing={startAge("oasStartAge", "OAS start age")}
                 />
                 <UserInputFormItem
                   {...num("guaranteedIncomePct")}
+                  error={errors.guaranteedIncomePct ?? errors.pensionStartAge}
                   label="Workplace pension"
                   labelHelperText="Annual defined-benefit (DB) or other guaranteed pension, as a dollar amount or a % of your current income. It begins at the pension start age."
                   percentToggle={{
                     base: +input.currentIncome || 0,
                     defaultUnit: "$",
+                    dollarSuffix: "",
                     amountStep: 1000,
                     unitAriaLabel: "Workplace pension input unit",
                   }}
+                  trailing={startAge("pensionStartAge", "Pension start age")}
                 />
-                <UserInputFormItem
-                  {...num("pensionStartAge")}
-                  label="Pension start age"
-                  labelHelperText="When your workplace pension begins."
-                  suffix=" yrs"
-                />
-              </Stack>
+              </div>
 
-              <Stack gap={4}>
-                <Text size="sm" fw={600}>
-                  Plan success rate
-                </Text>
-                <Text size="xs" c="dimmed">
-                  The share of simulated markets your savings must outlast to your planning age.
-                </Text>
-                <Group gap="xs" role="group" aria-label="Plan confidence target" mt="xs">
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
+                <FieldHeader
+                  label="Plan success rate"
+                  description="The share of simulated markets your savings must outlast to your planning age."
+                />
+                <Button.Group
+                  aria-label="Plan confidence target"
+                  mt={6}
+                  style={{ flexWrap: "wrap" }}
+                >
                   {SUCCESS_RATE_PRESETS.map((rate) => (
                     <Button
                       key={rate}
                       variant={isSameRate(input.targetSuccessRate, rate) ? "filled" : "default"}
-                      size="xs"
+                      size="sm"
                       aria-pressed={isSameRate(input.targetSuccessRate, rate)}
                       onClick={() => onChange("targetSuccessRate", rate)}
                     >
@@ -196,7 +224,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                     <Popover.Target>
                       <Button
                         variant={isCustomConfidence ? "filled" : "default"}
-                        size="xs"
+                        size="sm"
                         aria-pressed={isCustomConfidence}
                       >
                         Custom
@@ -211,7 +239,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                       />
                     </Popover.Dropdown>
                   </Popover>
-                </Group>
+                </Button.Group>
                 {input.targetSuccessRate < 90 && (
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle
@@ -228,18 +256,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
               </Stack>
 
               <Stack gap={4}>
-                <Text size="sm" fw={600}>
-                  Max spending cut
-                </Text>
-                <Text size="xs" c="dimmed">
-                  How much you&apos;d trim spending in a weak market instead of risking running out.
-                  Optimistic by nature: it assumes you&apos;ll actually make the cut, and your
-                  confidence is measured against the reduced floor.
-                </Text>
                 <UserInputFormItem
                   {...num("spendingFlexibilityPct")}
-                  label={undefined}
-                  aria-label="Max spending cut"
+                  label="Max spending cut"
+                  description="How much you'd trim spending in a weak market instead of risking running out. Optimistic by nature: it assumes you'll actually make the cut, and your confidence is measured against the reduced floor."
                   suffix="%"
                 />
                 {input.spendingFlexibilityPct > 20 && (
@@ -266,16 +286,12 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
             <SectionSummary>{`${activeReturnPreset?.label ?? "custom returns"} · ${summaryValue(input.inflationRate)}% inflation`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Stack gap={4}>
-                <Text size="sm" fw={600}>
-                  Expected return
-                </Text>
-                <Text size="xs" c="dimmed">
-                  Nominal compound (geometric) annual return, based on stock / bond mix — e.g. 80/20
-                  is 80% stocks — before and after retirement. For simplicity, two distinct
-                  allocations are used, no gradual transition in-between.
-                </Text>
+            <Stack gap={0}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
+                <FieldHeader
+                  label="Expected return"
+                  description="Nominal compound (geometric) annual return, based on stock / bond mix — e.g. 80/20 is 80% stocks — before and after retirement. For simplicity, two distinct allocations are used, no gradual transition in-between."
+                />
                 <SimpleGrid
                   cols={{ base: 2, xs: 3 }}
                   spacing="xs"

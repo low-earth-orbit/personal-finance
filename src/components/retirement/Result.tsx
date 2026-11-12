@@ -160,9 +160,14 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
 
   return (
     <Card withBorder radius="md" padding="md">
-      <Text size="sm" fw={600} mb="sm">
-        Retirement income {formatCAD(targetGrossIncome)} /yr
-      </Text>
+      <Group justify="space-between" align="baseline" mb="sm">
+        <Text fw={600} fz="lg">
+          Retirement income
+        </Text>
+        <Text ff="monospace" fw={500}>
+          {formatCAD(targetGrossIncome)} /yr
+        </Text>
+      </Group>
 
       {!single ? (
         <Stack gap="md">

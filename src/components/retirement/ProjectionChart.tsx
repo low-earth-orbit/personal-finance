@@ -1,6 +1,6 @@
 "use client";
 
-import { Alert, Box, Card, Group, Paper, Text } from "@mantine/core";
+import { Box, Card, Group, Paper, Text } from "@mantine/core";
 import {
   Area,
   ComposedChart,
@@ -52,13 +52,11 @@ function SuccessSummary({
   const pct = Math.round(successRate * 100);
 
   return (
-    <Alert variant="default" radius="md">
-      <Text size="sm">
-        Your savings last to age {planningAge} in about {pct}% of simulated markets — within your{" "}
-        {target}% confidence target.
-        {flexPct > 0 && ` Assumes you trim spending by up to ${flexPct}% in weak markets.`}
-      </Text>
-    </Alert>
+    <Text size="sm" maw="46rem">
+      Your savings last to age {planningAge} in about {pct}% of simulated markets — within your{" "}
+      {target}% confidence target.
+      {flexPct > 0 && ` Assumes you trim spending by up to ${flexPct}% in weak markets.`}
+    </Text>
   );
 }
 
@@ -122,7 +120,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
 
   return (
     <Card withBorder radius="md" padding="md">
-      <Text fw={600} mb="md">
+      <Text fw={600} fz="lg" mb="xs">
         Projected portfolio (in today&apos;s dollars)
       </Text>
       <SuccessSummary

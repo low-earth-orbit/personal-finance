@@ -31,6 +31,13 @@
   margin-top: -1px;
 }
 
+.figureLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 1.25rem;
+}
+
 .figureValue {
   font-family: var(--mantine-font-family-monospace);
   font-size: 1.625rem;
@@ -38,6 +45,10 @@
   line-height: 1.15;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
+}
+
+.figureValue[data-size="sm"] {
+  font-size: 1.25rem;
 }
 
 .figureValue[data-accent] {
@@ -51,6 +62,84 @@
 .figureNote {
   font-size: 0.8125rem;
   color: var(--pf-muted);
+}
+
+/* In-flow notice: a thin toned rule and a titled line of text, not a tinted box. */
+.notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.625rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--pf-ink);
+}
+
+.notice[data-tone="warn"] {
+  border-top-color: var(--pf-warn);
+}
+
+.notice[data-tone="accent"] {
+  border-top-color: var(--pf-accent);
+}
+
+.noticeIcon {
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
+  color: var(--pf-ink);
+}
+
+.notice[data-tone="warn"] .noticeIcon {
+  color: var(--pf-warn);
+}
+
+.notice[data-tone="accent"] .noticeIcon {
+  color: var(--pf-accent);
+}
+
+.noticeTitle {
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+
+.noticeBody {
+  grid-column: 2;
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--mantine-color-dimmed);
+}
+
+/* A row of small labelled cells under a chart (e.g. equity % at each age step). */
+.cells {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(3.75rem, 1fr));
+  border-block: 1px solid var(--pf-ink);
+  overflow: hidden;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.5rem 0.625rem;
+  margin: -1px -1px 0 0;
+  border-top: 1px solid var(--pf-hairline);
+  border-inline-end: 1px solid var(--pf-hairline);
+  font-family: var(--mantine-font-family-monospace);
+}
+
+.cell[data-shaded] {
+  background: var(--pf-surface);
+}
+
+.cellLabel {
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--pf-muted);
+}
+
+.cellValue {
+  font-size: 0.9375rem;
+  font-weight: 500;
 }
 
 /* Explanatory text under a tool: a ruled heading, then prose. */

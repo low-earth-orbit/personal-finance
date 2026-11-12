@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Container, Paper, Stack, Text } from "@mantine/core";
+import { Container, Stack, Text } from "@mantine/core";
 
 export default function TaxAssumptions() {
   const [opened, setOpened] = useState(false);
@@ -18,13 +18,13 @@ export default function TaxAssumptions() {
   }, []);
 
   return (
-    <Container size="xl" pt="xl" pb="xs" id="model-assumptions">
-      <Paper withBorder p="md" radius="md">
+    <Container size="xl" pt="xl" pb="xs" mt={48} id="model-assumptions">
+      <div style={{ borderTop: "2px solid var(--pf-ink)", paddingTop: "1rem" }}>
         <details open={opened} onToggle={(event) => setOpened(event.currentTarget.open)}>
-          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+          <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "1.25rem" }}>
             Detailed model assumptions
           </summary>
-          <Stack gap="xs" mt="sm">
+          <Stack gap="sm" mt="md" maw="60rem">
             <Text size="sm" c="dimmed">
               Uses 2026 federal, New Brunswick, Ontario, and British Columbia personal tax rules.
               All brackets, rates, credits, surtax thresholds, premium thresholds, and reduction
@@ -78,7 +78,7 @@ export default function TaxAssumptions() {
             </Text>
           </Stack>
         </details>
-      </Paper>
+      </div>
     </Container>
   );
 }

@@ -276,9 +276,9 @@ const Main = () => {
   // Shared between the gated Tabs layout and the no-tabs layout below.
   const holdingsPanel = (
     <Stack gap="lg">
-      <Paper withBorder p="md" radius="md">
+      <Paper withBorder pt="md">
         <Stack gap="sm">
-          <Title order={2} fz="lg">
+          <Title order={2} fz="xl">
             Holdings
           </Title>
           <Text c="dimmed" size="sm">
@@ -309,15 +309,15 @@ const Main = () => {
         </Stack>
       </Paper>
       {marginYears.length > 0 && (
-        <Paper withBorder p="md" radius="md">
+        <Paper withBorder pt="md">
           <Stack gap="sm">
-            <Title order={2} fz="lg">
-              Margin Interest Paid
+            <Title order={2} fz="xl">
+              Margin interest paid
             </Title>
             <Text c="dimmed" size="sm">
               Potentially deductible against taxable income (line 22100)
             </Text>
-            <Table striped withTableBorder>
+            <Table verticalSpacing="sm" horizontalSpacing={0}>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Tax Year</Table.Th>
@@ -342,30 +342,17 @@ const Main = () => {
   return (
     <Container size="xl" py="md">
       <Stack gap="lg">
-        <Paper withBorder p="md" radius="md">
-          <FileUpload
-            files={fileSummaries}
-            onFilesAdded={handleFilesAdded}
-            onRemoveFile={handleRemoveFile}
-            onPreview={setPreviewFileIndex}
-          />
-        </Paper>
-        {parseErrors.length > 0 && (
-          <Alert color="red" title="Could not read file(s)">
-            <List size="sm">
-              {parseErrors.map((error) => (
-                <List.Item key={error}>{error}</List.Item>
-              ))}
-            </List>
-          </Alert>
-        )}
-        {!hasFiles && (
-          <Paper withBorder p="md" radius="md">
+        <FileUpload
+          files={fileSummaries}
+          onFilesAdded={handleFilesAdded}
+          onRemoveFile={handleRemoveFile}
+          onPreview={setPreviewFileIndex}
+          empty={
             <Stack gap="sm">
-              <Title order={2} fz="lg">
+              <Title order={2} fz="1.0625rem">
                 How it works
               </Title>
-              <List type="ordered" size="sm" spacing="xs">
+              <List type="ordered" spacing="sm">
                 <List.Item>
                   Export your account activity (Wealthsimple CSV, Questrade spreadsheet, or IBKR
                   activity statement). You can combine brokerages — holdings pool across all of
@@ -381,7 +368,16 @@ const Main = () => {
                 </List.Item>
               </List>
             </Stack>
-          </Paper>
+          }
+        />
+        {parseErrors.length > 0 && (
+          <Alert color="red" title="Could not read file(s)">
+            <List size="sm">
+              {parseErrors.map((error) => (
+                <List.Item key={error}>{error}</List.Item>
+              ))}
+            </List>
+          </Alert>
         )}
         {overlappingFiles && (
           <Alert color="rust" title="Overlapping date ranges detected">
@@ -431,7 +427,7 @@ const Main = () => {
           />
         )}
         {hasFiles && showAccountTypeMarker && (
-          <Paper withBorder p="md" radius="md">
+          <Paper withBorder pt="md">
             <Stack gap="md">
               {hasDefaultedUnknownAccountTypes && (
                 <Alert color="rust" title="Mark account types">

@@ -38,6 +38,11 @@ interface UserInputFormItemProps {
    * "stacked": label above the input, for narrow containers such as popovers.
    */
   layout?: "row" | "stacked";
+  /**
+   * A second, narrow control at the end of the row (e.g. a start age beside an amount). Row layout
+   * only; give it its own `aria-label`.
+   */
+  trailing?: ReactNode;
 }
 
 export default function UserInputFormItem({
@@ -57,9 +62,23 @@ export default function UserInputFormItem({
   error,
   percentToggle,
   layout = "row",
+  trailing,
   ...rest
 }: UserInputFormItemProps) {
   const row = layout === "row";
+  // With a trailing control the row frame becomes [field | trailing]; the field keeps its own
+  // label/input grid inside the first cell.
+  const withTrailing = row && trailing != null;
+  const frame = (content: ReactNode) =>
+    withTrailing ? (
+      <div className={`${fieldRowClasses.frame} ${fieldRowClasses.withTrailing}`}>
+        <div className={fieldRowClasses.trailingMain}>{content}</div>
+        <div>{trailing}</div>
+      </div>
+    ) : (
+      content
+    );
+  const frameClass = row && !withTrailing ? fieldRowClasses.frame : "";
   const [unit, setUnit] = useState<string>(percentToggle?.defaultUnit ?? "$");
 
   if (percentToggle) {
@@ -84,8 +103,8 @@ export default function UserInputFormItem({
       onChange(Math.round(pct * 10000) / 10000);
     };
 
-    return (
-      <div className={row ? `${fieldRowClasses.frame} ${fieldRowClasses.custom}` : undefined}>
+    return frame(
+      <div className={row ? `${frameClass} ${fieldRowClasses.custom}` : undefined}>
         <Group justify={row ? "flex-start" : "space-between"} align="center" wrap="wrap" gap="xs">
           <Input.Label htmlFor={id} className={row ? fieldRowClasses.customLabel : undefined}>
             <FieldLabel label={label} helperText={labelHelperText} />
@@ -125,12 +144,12 @@ export default function UserInputFormItem({
           allowNegative={false}
           clampBehavior="none"
         />
-      </div>
+      </div>,
     );
   }
 
-  return (
-    <Stack gap={0} className={row ? fieldRowClasses.frame : undefined}>
+  return frame(
+    <Stack gap={0} className={frameClass || undefined}>
       <NumberInput
         id={id}
         classNames={row ? fieldRowClassNames : undefined}
@@ -154,6 +173,6 @@ export default function UserInputFormItem({
           {additionalText}
         </Text>
       )}
-    </Stack>
+    </Stack>,
   );
 }

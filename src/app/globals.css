@@ -8,6 +8,7 @@
 /* Ledger design tokens, shared by CSS modules, inline styles, and chart strokes. */
 :root {
   --pf-ink: #14181f;
+  --pf-on-ink: #fff;
   --pf-hairline: #e6e8ec;
   --pf-border: #c9ced6;
   --pf-muted: #4f5866;
@@ -20,6 +21,7 @@
 
 [data-mantine-color-scheme="dark"] {
   --pf-ink: #e6e9ee;
+  --pf-on-ink: #0d1014;
   --pf-hairline: #262c34;
   --pf-border: #363d47;
   --pf-muted: #9aa2ae;

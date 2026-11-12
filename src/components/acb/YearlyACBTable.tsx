@@ -21,7 +21,7 @@ type YearlyACBTableProps = {
  * parseable date and render as "Unknown".
  */
 const YearlyACBTable = ({ snapshots }: YearlyACBTableProps) => (
-  <Table striped withTableBorder>
+  <Table>
     <Table.Thead>
       <Table.Tr>
         <Table.Th>Year</Table.Th>

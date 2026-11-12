@@ -117,8 +117,8 @@ export default function InputForm({
             <SectionSummary>{`${summaryValue(input.lumpSum, formatCADCompact)} lump sum`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Text size="sm" c="dimmed">
+            <Stack gap={0}>
+              <Text size="sm" c="dimmed" mb="xs">
                 The full lump sum is invested now. Amounts above registered account room go to
                 non-registered.
               </Text>
@@ -152,7 +152,7 @@ export default function InputForm({
             <SectionSummary>{`${input.province} · age ${summaryValue(input.currentAge)} → ${summaryValue(input.retirementAge)}`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
+            <Stack gap={0}>
               <Stack gap={0}>
                 <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
@@ -195,7 +195,7 @@ export default function InputForm({
                 value={input.salaryCurve}
                 onChange={(value) => value && onChange("salaryCurve", value)}
               />
-              <Text size="xs" c="dimmed">
+              <Text size="xs" c="dimmed" py="xs">
                 {selectedCurve?.description}
               </Text>
               {input.salaryCurve === "custom" && (
@@ -224,8 +224,8 @@ export default function InputForm({
             <SectionSummary>{`${PORTFOLIO_PRESETS.find((preset) => preset.id === input.portfolioPresetId)?.label ?? "custom return"} · ${summaryValue(input.inflationPct)}% inflation`}</SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Text size="xs" c="dimmed">
+            <Stack gap={0}>
+              <Text size="sm" c="dimmed" mb="xs">
                 Defaults are illustrations. Small changes can alter the suggested split.
               </Text>
               <Select
@@ -287,7 +287,14 @@ export default function InputForm({
           The split updates automatically when inputs change.
         </Text>
       ) : (
-        <Button fullWidth mt="lg" onClick={showRecommendation} loading={loading} disabled={loading}>
+        <Button
+          fullWidth
+          size="md"
+          mt="lg"
+          onClick={showRecommendation}
+          loading={loading}
+          disabled={loading}
+        >
           Show split
         </Button>
       )}

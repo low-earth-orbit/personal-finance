@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { Alert, Card, Divider, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Alert, Group, Stack, Text, Title } from "@mantine/core";
+import { Eyebrow, Figure, FigureStrip } from "@/components/shared/Figures";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { formatCADCompact } from "@/utils/format";
 import SwrTechnicalNote from "./SwrTechnicalNote";
@@ -11,45 +11,6 @@ interface HeadlineProps {
   result: RetirementResult;
   /** Year-1 withdrawal rate (fraction); null when no feasible plan. */
   planSWR: number | null;
-}
-
-/** One cell in the metric strip below the retirement-age hero. */
-function Metric({
-  label,
-  value,
-  note,
-  info,
-}: {
-  label: string;
-  value: string;
-  note?: ReactNode;
-  /** Optional adornment shown next to the label (e.g. an info-icon button). */
-  info?: ReactNode;
-}) {
-  return (
-    <Stack gap={2}>
-      <Group gap={4} align="center" wrap="nowrap">
-        <Text
-          size="xs"
-          c="dimmed"
-          ff="monospace"
-          tt="uppercase"
-          style={{ letterSpacing: "0.06em" }}
-        >
-          {label}
-        </Text>
-      </Group>
-      <Text ff="monospace" fw={500} fz="xl">
-        {value}
-        {info}
-      </Text>
-      {note && (
-        <Text size="xs" c="dimmed">
-          {note}
-        </Text>
-      )}
-    </Stack>
-  );
 }
 
 export default function Headline({ input, result, planSWR }: HeadlineProps) {
@@ -78,88 +39,82 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
   const showCutRate = input.spendingFlexibilityPct > 0 && result.cutRate != null;
 
   return (
-    <Card withBorder radius="md" padding="lg">
-      <Stack gap="sm">
-        {/* Hero: the retirement age */}
-        <Stack gap={2}>
-          <Text size="sm" fw="600">
-            Projected earliest retirement
-          </Text>
-          <Group gap="xs" align="baseline" wrap="nowrap">
-            <Title
-              order={2}
-              ff="monospace"
-              fw={500}
-              fz={{ base: 44, sm: 64 }}
-              lh={1}
-              c="ledger"
-              style={{ letterSpacing: "-0.03em" }}
-            >
-              {retireNow ? "Now" : `Age ${earliestRetirementAge}`}
-            </Title>
-            {!retireNow && (
-              <Text size="sm">
-                in {yearsUntilRetirement} {yearsUntilRetirement === 1 ? "year" : "years"}
-              </Text>
-            )}
-          </Group>
-          <Text size="xs" c="dimmed" mt="xs">
-            {retireNow ? `Projected savings already cover the target income.` : ``}
-            {!retireNow && retirementAgeRange && (
-              <>
-                In half of the simulations, between ages {retirementAgeRange.p25} and{" "}
-                {retirementAgeRange.p75}.
-              </>
-            )}
-          </Text>
-          <Text size="xs" c="dimmed">
-            The {input.targetSuccessRate}% confidence covers market swings after you retire: your
-            savings are projected at the expected return until then. The age range above shows how
-            market luck while saving moves the date.
-          </Text>
-        </Stack>
-
-        <Divider />
-
-        {/* Metric strip */}
-        <SimpleGrid cols={{ base: 1, xs: 2, sm: 3 }} spacing="lg" verticalSpacing="md">
-          {result.portfolioAtRetirement != null && (
-            <Metric
-              label="Savings at retirement"
-              value={formatCADCompact(result.portfolioAtRetirement)}
-            />
+    <Stack gap="md" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+      {/* Hero: the retirement age */}
+      <Stack gap="xs">
+        <Eyebrow>Projected earliest retirement · {input.targetSuccessRate}% confidence</Eyebrow>
+        <Group gap="md" align="baseline" wrap="wrap">
+          <Title
+            order={2}
+            ff="monospace"
+            fw={500}
+            fz={{ base: 52, sm: 84 }}
+            lh={1}
+            c="ledger"
+            style={{ letterSpacing: "-0.04em" }}
+          >
+            {retireNow ? "Now" : `Age ${earliestRetirementAge}`}
+          </Title>
+          {!retireNow && (
+            <Text fz="lg">
+              in {yearsUntilRetirement} {yearsUntilRetirement === 1 ? "year" : "years"}
+            </Text>
           )}
-          {result.guaranteedIncome > 0 && (
-            <Metric
-              label="Guaranteed income"
-              value={`${formatCADCompact(result.guaranteedIncome)} /yr`}
-              note={`all started by age ${lastGuaranteedStartAge(input)}`}
-            />
+        </Group>
+        <Text maw="46rem">
+          {retireNow ? `Projected savings already cover the target income.` : ``}
+          {!retireNow && retirementAgeRange && (
+            <>
+              In half of the simulations, between ages {retirementAgeRange.p25} and{" "}
+              {retirementAgeRange.p75}.
+            </>
           )}
-          {planSWR != null && (
-            <Metric
-              label="Year-1 withdrawal"
-              value={`${(planSWR * 100).toFixed(1)}%`}
-              note="of savings"
-              info={<SwrTechnicalNote input={input} />}
-            />
-          )}
-          {medianLeft != null && (
-            <Metric
-              label={`Left at age ${input.planningAge}`}
-              value={formatCADCompact(medianLeft)}
-              note="median, today's dollars"
-            />
-          )}
-          {showCutRate && (
-            <Metric
-              label="Chance of trimming spending"
-              value={`${Math.round((result.cutRate ?? 0) * 100)}%`}
-              note="at least one year of reduced spending"
-            />
-          )}
-        </SimpleGrid>
+        </Text>
+        <Text size="sm" c="dimmed" maw="46rem">
+          The {input.targetSuccessRate}% confidence covers market swings after you retire: your
+          savings are projected at the expected return until then. The age range above shows how
+          market luck while saving moves the date.
+        </Text>
       </Stack>
-    </Card>
+
+      <FigureStrip>
+        {result.portfolioAtRetirement != null && (
+          <Figure
+            label="Savings at retirement"
+            value={formatCADCompact(result.portfolioAtRetirement)}
+            note="today's dollars"
+          />
+        )}
+        {result.guaranteedIncome > 0 && (
+          <Figure
+            label="Guaranteed income"
+            value={`${formatCADCompact(result.guaranteedIncome)} /yr`}
+            note={`all started by age ${lastGuaranteedStartAge(input)}`}
+          />
+        )}
+        {planSWR != null && (
+          <Figure
+            label="Year-1 withdrawal"
+            value={`${(planSWR * 100).toFixed(1)}%`}
+            note="of savings"
+            info={<SwrTechnicalNote input={input} />}
+          />
+        )}
+        {medianLeft != null && (
+          <Figure
+            label={`Left at age ${input.planningAge}`}
+            value={formatCADCompact(medianLeft)}
+            note="median, today's dollars"
+          />
+        )}
+        {showCutRate && (
+          <Figure
+            label="Chance of trimming spending"
+            value={`${Math.round((result.cutRate ?? 0) * 100)}%`}
+            note="at least one year of reduced spending"
+          />
+        )}
+      </FigureStrip>
+    </Stack>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { Alert, Group, Loader, Paper, Stack, Text } from "@mantine/core";
+import { Alert, Group, Loader, Stack, Text } from "@mantine/core";
 import { IconAlertCircle, IconInfoCircle } from "@tabler/icons-react";
 import AllocationSplit from "./AllocationSplit";
+import { Eyebrow } from "@/components/shared/Figures";
 import type { AllocatorStatus } from "./Main";
 import type { AllocationResult, AllocatorInput } from "@/utils/allocator/types";
 
@@ -17,12 +18,15 @@ export default function Result({
 }) {
   if (status === "idle") {
     return (
-      <Paper withBorder radius="md" p="lg">
-        <Text fw={700}>Review your numbers first</Text>
-        <Text size="sm" c="dimmed" mt={4}>
+      <Stack gap="xs" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+        <Eyebrow>Approximate account split</Eyebrow>
+        <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
+          Review your numbers first
+        </Text>
+        <Text c="dimmed" maw="36rem">
           The values shown are examples. Review the starting inputs, then show the split.
         </Text>
-      </Paper>
+      </Stack>
     );
   }
   if (status === "invalid" && !allocation) {

@@ -68,143 +68,146 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
   }
 
   return (
-    <Table striped highlightOnHover withTableBorder>
-      <Table.Thead>
-        <Table.Tr>
-          {expandable && <Table.Th w={36} aria-label="Year breakdown" />}
-          <Table.Th>Symbol</Table.Th>
-          <Table.Th ta="right">Shares</Table.Th>
-          <Table.Th ta="right">ACB per share</Table.Th>
-          <Table.Th ta="right">Total cost basis</Table.Th>
-          {adjustments && anyTransferred && <Table.Th>Transfer lots</Table.Th>}
-          {adjustments && <Table.Th>T3 slips</Table.Th>}
-        </Table.Tr>
-      </Table.Thead>
-      <Table.Tbody>
-        {visibleHoldings.map((holding) => {
-          const t3Net = adjustments
-            ? t3NetAdjustment(adjustments.t3Slips[holding.symbol] ?? [])
-            : 0;
-          const openingLot = adjustments ? (adjustments.openingLots[holding.symbol] ?? 0) : 0;
-          const { deemedGain, oversold } = adjustedMeta(holding);
-          const hasTransfers = holding.transferredShares > 0;
-          const expanded = expandedSymbols.has(holding.symbol);
-          return (
-            <Fragment key={holding.symbol}>
-              <Table.Tr>
-                {expandable && (
-                  <Table.Td>
-                    <ActionIcon
-                      variant="transparent"
-                      size="sm"
-                      aria-label={`Toggle year-by-year ACB for ${holding.symbol}`}
-                      aria-expanded={expanded}
-                      onClick={() => toggleExpanded(holding.symbol)}
-                    >
-                      {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
-                    </ActionIcon>
-                  </Table.Td>
-                )}
-                <Table.Td fw={600}>
-                  <Group gap="xs" wrap="nowrap">
-                    {holding.symbol}
-                    {hasTransfers && (
-                      <Tooltip
-                        label={`Includes ${sharesFormatter.format(holding.transferredShares)} transferred shares — no purchase history`}
-                      >
-                        <Badge color="rust" size="sm" variant="light">
-                          {sharesFormatter.format(holding.transferredShares)} transferred
-                        </Badge>
-                      </Tooltip>
-                    )}
-                    {oversold && (
-                      <Tooltip label="Sales exceed recorded purchases — missing buys or unentered transfers; pool reset to $0, so ACB is understated">
-                        <Badge color="red" size="sm" variant="light">
-                          missing history
-                        </Badge>
-                      </Tooltip>
-                    )}
-                  </Group>
-                </Table.Td>
-                <Table.Td ta="right">{sharesFormatter.format(holding.shares)}</Table.Td>
-                <Table.Td ta="right">
-                  {holding.acbPerShare === null ? (
-                    <Text component="span" c="dimmed">
-                      —
-                    </Text>
-                  ) : (
-                    formatCADDecimal(holding.acbPerShare)
-                  )}
-                </Table.Td>
-                <Table.Td ta="right">{formatCADDecimal(holding.costBasis)}</Table.Td>
-                {adjustments && anyTransferred && (
-                  <Table.Td>
-                    {hasTransfers ? (
-                      <Group gap="xs" wrap="nowrap">
-                        <Button
-                          variant="transparent"
-                          size="xs"
-                          onClick={() => adjustments.onEditTransfers(holding.symbol)}
-                        >
-                          Edit transfers
-                        </Button>
-                        {openingLot > 0 && (
-                          <Badge size="sm" variant="light" color="ledger">
-                            {`+${formatCADDecimal(openingLot)}`}
-                          </Badge>
-                        )}
-                      </Group>
-                    ) : (
-                      <Text component="span" c="dimmed">
-                        —
-                      </Text>
-                    )}
-                  </Table.Td>
-                )}
-                {adjustments && (
-                  <Table.Td>
-                    <Group gap="xs" wrap="nowrap">
-                      <Button
+    // Wide tables scroll inside their own container instead of widening the page on phones.
+    <Table.ScrollContainer minWidth={adjustments ? 720 : 480}>
+      <Table highlightOnHover verticalSpacing="sm">
+        <Table.Thead>
+          <Table.Tr>
+            {expandable && <Table.Th w={36} aria-label="Year breakdown" />}
+            <Table.Th>Symbol</Table.Th>
+            <Table.Th ta="right">Shares</Table.Th>
+            <Table.Th ta="right">ACB per share</Table.Th>
+            <Table.Th ta="right">Total cost basis</Table.Th>
+            {adjustments && anyTransferred && <Table.Th>Transfer lots</Table.Th>}
+            {adjustments && <Table.Th>T3 slips</Table.Th>}
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {visibleHoldings.map((holding) => {
+            const t3Net = adjustments
+              ? t3NetAdjustment(adjustments.t3Slips[holding.symbol] ?? [])
+              : 0;
+            const openingLot = adjustments ? (adjustments.openingLots[holding.symbol] ?? 0) : 0;
+            const { deemedGain, oversold } = adjustedMeta(holding);
+            const hasTransfers = holding.transferredShares > 0;
+            const expanded = expandedSymbols.has(holding.symbol);
+            return (
+              <Fragment key={holding.symbol}>
+                <Table.Tr>
+                  {expandable && (
+                    <Table.Td>
+                      <ActionIcon
                         variant="transparent"
-                        size="xs"
-                        onClick={() => adjustments.onEditT3(holding.symbol)}
+                        size="sm"
+                        aria-label={`Toggle year-by-year ACB for ${holding.symbol}`}
+                        aria-expanded={expanded}
+                        onClick={() => toggleExpanded(holding.symbol)}
                       >
-                        Edit T3
-                      </Button>
-                      {t3Net !== 0 && (
-                        <Badge size="sm" variant="light" color={t3Net > 0 ? "ledger" : "red"}>
-                          {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
-                        </Badge>
+                        {expanded ? <IconChevronDown size={16} /> : <IconChevronRight size={16} />}
+                      </ActionIcon>
+                    </Table.Td>
+                  )}
+                  <Table.Td fw={600}>
+                    <Group gap="xs" wrap="nowrap">
+                      {holding.symbol}
+                      {hasTransfers && (
+                        <Tooltip
+                          label={`Includes ${sharesFormatter.format(holding.transferredShares)} transferred shares — no purchase history`}
+                        >
+                          <Badge color="rust" size="sm" variant="light">
+                            {sharesFormatter.format(holding.transferredShares)} transferred
+                          </Badge>
+                        </Tooltip>
                       )}
-                      {deemedGain > 0 && (
-                        <Tooltip label="ROC exceeded ACB — deemed capital gain to report on Schedule 3; pool reset to $0">
-                          <Badge size="sm" variant="light" color="red">
-                            {`+${formatCADDecimal(deemedGain)} deemed gain`}
+                      {oversold && (
+                        <Tooltip label="Sales exceed recorded purchases — missing buys or unentered transfers; pool reset to $0, so ACB is understated">
+                          <Badge color="red" size="sm" variant="light">
+                            missing history
                           </Badge>
                         </Tooltip>
                       )}
                     </Group>
                   </Table.Td>
-                )}
-              </Table.Tr>
-              {expandable && expanded && (
-                <Table.Tr>
-                  <Table.Td colSpan={columnCount} p="sm">
-                    <YearlyACBTable
-                      snapshots={computeYearlyACB(
-                        transactions,
-                        holding.symbol,
-                        adjustments?.dated?.[holding.symbol] ?? [],
-                      )}
-                    />
+                  <Table.Td ta="right">{sharesFormatter.format(holding.shares)}</Table.Td>
+                  <Table.Td ta="right">
+                    {holding.acbPerShare === null ? (
+                      <Text component="span" c="dimmed">
+                        —
+                      </Text>
+                    ) : (
+                      formatCADDecimal(holding.acbPerShare)
+                    )}
                   </Table.Td>
+                  <Table.Td ta="right">{formatCADDecimal(holding.costBasis)}</Table.Td>
+                  {adjustments && anyTransferred && (
+                    <Table.Td>
+                      {hasTransfers ? (
+                        <Group gap="xs" wrap="nowrap">
+                          <Button
+                            variant="default"
+                            size="compact-sm"
+                            onClick={() => adjustments.onEditTransfers(holding.symbol)}
+                          >
+                            Edit transfers
+                          </Button>
+                          {openingLot > 0 && (
+                            <Badge size="sm" variant="light" color="ledger">
+                              {`+${formatCADDecimal(openingLot)}`}
+                            </Badge>
+                          )}
+                        </Group>
+                      ) : (
+                        <Text component="span" c="dimmed">
+                          —
+                        </Text>
+                      )}
+                    </Table.Td>
+                  )}
+                  {adjustments && (
+                    <Table.Td>
+                      <Group gap="xs" wrap="nowrap">
+                        <Button
+                          variant="default"
+                          size="compact-sm"
+                          onClick={() => adjustments.onEditT3(holding.symbol)}
+                        >
+                          Edit T3
+                        </Button>
+                        {t3Net !== 0 && (
+                          <Badge size="sm" variant="light" color={t3Net > 0 ? "ledger" : "red"}>
+                            {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
+                          </Badge>
+                        )}
+                        {deemedGain > 0 && (
+                          <Tooltip label="ROC exceeded ACB — deemed capital gain to report on Schedule 3; pool reset to $0">
+                            <Badge size="sm" variant="light" color="red">
+                              {`+${formatCADDecimal(deemedGain)} deemed gain`}
+                            </Badge>
+                          </Tooltip>
+                        )}
+                      </Group>
+                    </Table.Td>
+                  )}
                 </Table.Tr>
-              )}
-            </Fragment>
-          );
-        })}
-      </Table.Tbody>
-    </Table>
+                {expandable && expanded && (
+                  <Table.Tr>
+                    <Table.Td colSpan={columnCount} p="sm">
+                      <YearlyACBTable
+                        snapshots={computeYearlyACB(
+                          transactions,
+                          holding.symbol,
+                          adjustments?.dated?.[holding.symbol] ?? [],
+                        )}
+                      />
+                    </Table.Td>
+                  </Table.Tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </Table.Tbody>
+      </Table>
+    </Table.ScrollContainer>
   );
 };
 

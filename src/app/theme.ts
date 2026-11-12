@@ -12,9 +12,11 @@ import {
   Select,
   Table,
   createTheme,
+  defaultVariantColorsResolver,
   virtualColor,
   type CSSVariablesResolver,
   type MantineColorsTuple,
+  type VariantColorsResolver,
 } from "@mantine/core";
 import classes from "./theme.module.css";
 
@@ -92,10 +94,32 @@ const dark: MantineColorsTuple = [
   "#08090c",
 ];
 
+const INK_TEXT_VARIANTS = new Set(["subtle", "transparent", "light", "outline"]);
+
+/**
+ * Ink flips between schemes (near-black in light, near-white in dark), but Mantine derives a
+ * variant's text colour from fixed shades: filled ink gets light-mode contrast text, and text-only
+ * variants get a shade that vanishes on the dark ground. Point both at scheme-aware tokens.
+ */
+const variantColorResolver: VariantColorsResolver = (input) => {
+  const resolved = defaultVariantColorsResolver(input);
+  if (input.color !== "ink") return resolved;
+  if (input.variant === "filled") return { ...resolved, color: "var(--pf-on-ink)" };
+  if (INK_TEXT_VARIANTS.has(input.variant)) {
+    return {
+      ...resolved,
+      color: "var(--pf-ink)",
+      ...(input.variant === "outline" ? { border: "1px solid var(--pf-ink)" } : {}),
+    };
+  }
+  return resolved;
+};
+
 export const theme = createTheme({
   primaryColor: "ink",
   primaryShade: { light: 8, dark: 4 },
   autoContrast: true,
+  variantColorResolver,
   black: "#14181f",
   colors: {
     ledger,
@@ -174,5 +198,13 @@ export const cssVariablesResolver: CSSVariablesResolver = () => ({
   dark: {
     "--mantine-color-dimmed": "#9aa2ae",
     "--mantine-color-default-border": "#363d47",
+    // With primaryShade.dark = 4, Mantine derives light/outline text from shade 0 (near-white),
+    // which drops the hue from warnings and status badges. Restore it.
+    "--mantine-color-ledger-light-color": "var(--pf-accent)",
+    "--mantine-color-ledger-outline": "var(--pf-accent)",
+    "--mantine-color-rust-light-color": "var(--pf-warn)",
+    "--mantine-color-rust-outline": "var(--pf-warn)",
+    "--mantine-color-red-light-color": "var(--mantine-color-red-4)",
+    "--mantine-color-red-outline": "var(--mantine-color-red-4)",
   },
 });
