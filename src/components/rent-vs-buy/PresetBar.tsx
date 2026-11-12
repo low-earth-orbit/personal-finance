@@ -4,6 +4,7 @@ import { IconDeviceFloppy, IconPlus, IconSettings } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import ManagePresetsModal, { type ImportSummary } from "./ManagePresetsModal";
 import type { PresetFileEntry } from "@/utils/presetFile";
+import { Eyebrow } from "@/components/shared/Figures";
 import type { Preset } from "@/types";
 
 interface PresetBarProps {
@@ -67,7 +68,34 @@ export default function PresetBar({
 
   return (
     <Stack gap={6}>
-      <Group gap="xs" role="group" aria-label="Scenario presets">
+      <Group
+        justify="space-between"
+        align="center"
+        gap="xs"
+        pb={4}
+        style={{ borderBottom: "1px solid var(--pf-ink)" }}
+      >
+        <Eyebrow>Scenario</Eyebrow>
+        <Group gap={4}>
+          <Button
+            variant="subtle"
+            size="compact-sm"
+            leftSection={<IconPlus size={12} />}
+            onClick={startSave}
+          >
+            Save as preset
+          </Button>
+          <Button
+            variant="subtle"
+            size="compact-sm"
+            leftSection={<IconSettings size={12} />}
+            onClick={openManage}
+          >
+            Manage
+          </Button>
+        </Group>
+      </Group>
+      <Group gap={6} pt={6} role="group" aria-label="Scenario presets">
         {presets.map((preset) => {
           const active = activePreset?.id === preset.id;
           const isBase = edited && basePreset?.id === preset.id;
@@ -75,7 +103,7 @@ export default function PresetBar({
             <Button
               key={preset.id}
               variant={active ? "filled" : isBase ? "outline" : "default"}
-              size="xs"
+              size="sm"
               aria-pressed={active}
               onClick={() => onSelect(preset)}
             >
@@ -84,24 +112,6 @@ export default function PresetBar({
             </Button>
           );
         })}
-        <Button
-          variant="subtle"
-          size="xs"
-          color="gray"
-          leftSection={<IconPlus size={12} />}
-          onClick={startSave}
-        >
-          Save as preset
-        </Button>
-        <Button
-          variant="subtle"
-          size="xs"
-          color="gray"
-          leftSection={<IconSettings size={12} />}
-          onClick={openManage}
-        >
-          Manage
-        </Button>
       </Group>
 
       {/* Status slot: always reserves one row (compact-xs button height) so the "edited" / "undo"

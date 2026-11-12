@@ -2,6 +2,8 @@
 
 import { Accordion, Button, Group, Popover, SimpleGrid, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
+import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import {
   RETURN_PRESETS,
@@ -61,7 +63,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
     <>
       <Accordion multiple defaultValue={["you", "goals", "assumptions"]} variant="contained">
         <Accordion.Item value="you">
-          <Accordion.Control>About you</Accordion.Control>
+          <Accordion.Control>
+            About you
+            <SectionSummary>{`age ${summaryValue(input.currentAge)} · ${summaryValue(input.currentSavings, formatCADCompact)} saved`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={0}>
@@ -97,7 +102,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
         </Accordion.Item>
 
         <Accordion.Item value="goals">
-          <Accordion.Control>Retirement goals</Accordion.Control>
+          <Accordion.Control>
+            Retirement goals
+            <SectionSummary>{`${summaryValue(input.targetIncomePct)}% of income · to age ${summaryValue(input.planningAge)} · ${summaryValue(input.targetSuccessRate)}% confidence`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={0}>
@@ -253,7 +261,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
         </Accordion.Item>
 
         <Accordion.Item value="assumptions">
-          <Accordion.Control>Market assumptions</Accordion.Control>
+          <Accordion.Control>
+            Market assumptions
+            <SectionSummary>{`${activeReturnPreset?.label ?? "custom returns"} · ${summaryValue(input.inflationRate)}% inflation`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={4}>

@@ -1,4 +1,5 @@
-import { Anchor, Container, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Anchor, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import ToolNotes from "@/components/shared/ToolNotes";
 import type { ReactNode } from "react";
 
 function Point({ heading, children }: { heading: string; children: ReactNode }) {
@@ -29,11 +30,8 @@ function Strong({ children }: { children: ReactNode }) {
  */
 export default function Methodology() {
   return (
-    <Container size="xl" py="xl">
+    <ToolNotes title="How this research model works">
       <Stack gap="lg">
-        <Title order={2} fz="xl">
-          How this research model works
-        </Title>
         {/* Two columns on wide screens (how it works | what it finds) keep lines readable. */}
         <SimpleGrid cols={{ base: 1, md: 2 }} spacing={48} verticalSpacing="lg">
           <Stack gap="md">
@@ -179,6 +177,6 @@ export default function Methodology() {
           not financial advice or a recommendation for any portfolio.
         </Text>
       </Stack>
-    </Container>
+    </ToolNotes>
   );
 }

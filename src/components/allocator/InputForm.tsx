@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Accordion, Button, Select, Stack, Text } from "@mantine/core";
 import FormResetButton from "@/components/shared/FormResetButton";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
+import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import { fieldRowClassNames, fieldRowClasses } from "@/components/shared/fieldRow";
 import { PORTFOLIO_PRESETS, PROVINCES, SALARY_CURVE_PRESETS } from "@/utils/allocator/presets";
@@ -110,7 +112,10 @@ export default function InputForm({
     <>
       <Accordion multiple value={openedSections} onChange={setOpenedSections} variant="contained">
         <Accordion.Item value="money">
-          <Accordion.Control>Money to invest</Accordion.Control>
+          <Accordion.Control>
+            Money to invest
+            <SectionSummary>{`${summaryValue(input.lumpSum, formatCADCompact)} lump sum`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="sm" c="dimmed">
@@ -142,7 +147,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="profile">
-          <Accordion.Control>Tax profile &amp; timeline</Accordion.Control>
+          <Accordion.Control>
+            Tax profile &amp; timeline
+            <SectionSummary>{`${input.province} · age ${summaryValue(input.currentAge)} → ${summaryValue(input.retirementAge)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={0}>
@@ -211,7 +219,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="investment">
-          <Accordion.Control>Investment assumptions</Accordion.Control>
+          <Accordion.Control>
+            Investment assumptions
+            <SectionSummary>{`${PORTFOLIO_PRESETS.find((preset) => preset.id === input.portfolioPresetId)?.label ?? "custom return"} · ${summaryValue(input.inflationPct)}% inflation`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
@@ -249,7 +260,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="retirement-tax">
-          <Accordion.Control>Retirement tax assumptions</Accordion.Control>
+          <Accordion.Control>
+            Retirement tax assumptions
+            <SectionSummary>{`RRSP ${summaryValue(input.retirementWithdrawalRatePct)}% · gains ${summaryValue(input.capitalGainsTaxRatePct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem

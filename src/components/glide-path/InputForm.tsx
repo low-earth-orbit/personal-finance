@@ -11,6 +11,8 @@ import {
   Stack,
 } from "@mantine/core";
 import { IconChartLine } from "@tabler/icons-react";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
+import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import FieldHeader from "@/components/shared/FieldHeader";
 import { GAMMA_PRESETS } from "@/utils/glide-path/presets";
@@ -76,7 +78,10 @@ export default function InputForm({
     <>
       <Accordion multiple defaultValue={["you", "retirement", "prefs"]} variant="contained">
         <Accordion.Item value="you">
-          <Accordion.Control>About you</Accordion.Control>
+          <Accordion.Control>
+            About you
+            <SectionSummary>{`age ${summaryValue(input.startAge)} → ${summaryValue(input.retirementAge)} · ${summaryValue(input.startSavings, formatCADCompact)} saved`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem {...num("startAge")} label="Current age" suffix=" yrs" />
@@ -99,7 +104,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="retirement">
-          <Accordion.Control>Retirement targets</Accordion.Control>
+          <Accordion.Control>
+            Retirement targets
+            <SectionSummary>{`${summaryValue(input.targetIncome, formatCADCompact)}/yr · to age ${summaryValue(input.planningAge)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem
@@ -133,7 +141,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="prefs">
-          <Accordion.Control>Spending &amp; risk</Accordion.Control>
+          <Accordion.Control>
+            Spending &amp; risk
+            <SectionSummary>{`flexibility ${flex.toFixed(2)} · γ ${summaryValue(input.gamma)} · β ${summaryValue(input.beta)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={4}>
@@ -214,7 +225,10 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="engine">
-          <Accordion.Control>Simulation</Accordion.Control>
+          <Accordion.Control>
+            Simulation
+            <SectionSummary>{`${returnMode === "iid-mc" ? "independent" : "historical"} · ${summaryValue(input.numPaths, (n) => n.toLocaleString())} paths · max ${summaryValue(input.maxEquityPct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Stack gap={4}>

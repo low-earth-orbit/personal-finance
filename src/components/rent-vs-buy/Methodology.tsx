@@ -1,4 +1,5 @@
-import { Anchor, Container, Text } from "@mantine/core";
+import { Anchor, Text } from "@mantine/core";
+import ToolNotes from "@/components/shared/ToolNotes";
 
 /**
  * Rent-vs-buy-specific explanation of the cash-flow comparison method.
@@ -6,8 +7,8 @@ import { Anchor, Container, Text } from "@mantine/core";
  */
 const Methodology = () => {
   return (
-    <Container size="xl" pt="xl" pb="xs">
-      <Text size="sm" c="dimmed">
+    <ToolNotes title="Methodology">
+      <Text size="sm" c="dimmed" maw="60rem">
         This calculator uses a cash-flow method to compare renting and buying on an equal footing.
         Each year, whoever has the lower housing cost invests the difference: the renter invests
         what the buyer spends on ownership costs (mortgage payments, property tax, maintenance, and
@@ -30,7 +31,7 @@ const Methodology = () => {
         </Anchor>{" "}
         calculators.
       </Text>
-    </Container>
+    </ToolNotes>
   );
 };
 

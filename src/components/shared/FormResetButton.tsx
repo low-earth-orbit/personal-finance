@@ -1,4 +1,4 @@
-import { Button } from "@mantine/core";
+import { Button, Group } from "@mantine/core";
 import { IconRotate } from "@tabler/icons-react";
 
 export default function FormResetButton({
@@ -20,16 +20,15 @@ export default function FormResetButton({
     onReset();
   };
   return (
-    <Button
-      variant="transparent"
-      color="red"
-      leftSection={<IconRotate size={14} />}
-      onClick={handleClick}
-      size="xs"
-      mt={mt}
-      mb={mb}
-    >
-      Reset to defaults
-    </Button>
+    <Group justify="flex-end" mt={mt} mb={mb}>
+      <Button
+        variant="default"
+        leftSection={<IconRotate size={14} />}
+        onClick={handleClick}
+        size="sm"
+      >
+        Reset to defaults
+      </Button>
+    </Group>
   );
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Accordion, Alert, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconRotate } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
 import { FIELD_CONSTRAINTS } from "@/utils/validation";
@@ -141,7 +142,10 @@ export default function UserInputForm({
 
       <Accordion multiple defaultValue={["rent", "property"]} variant="contained">
         <Accordion.Item value="rent">
-          <Accordion.Control>Rent</Accordion.Control>
+          <Accordion.Control>
+            Rent
+            <SectionSummary>{`${summaryValue(userInput.monthlyRent, formatCAD)}/mo · +${summaryValue(userInput.rentIncreaseRate)}%/yr`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem
@@ -165,7 +169,10 @@ export default function UserInputForm({
         </Accordion.Item>
 
         <Accordion.Item value="property">
-          <Accordion.Control>Property</Accordion.Control>
+          <Accordion.Control>
+            Property
+            <SectionSummary>{`${summaryValue(userInput.initialHomePrice, formatCAD)} · ${summaryValue(userInput.holdingPeriod)} yr hold`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem
@@ -260,7 +267,10 @@ export default function UserInputForm({
         </Accordion.Item>
 
         <Accordion.Item value="mortgage">
-          <Accordion.Control>Mortgage</Accordion.Control>
+          <Accordion.Control>
+            Mortgage
+            <SectionSummary>{`${summaryValue(userInput.downPaymentPercentage)}% down · ${summaryValue(userInput.amortization)} yr · ${summaryValue(userInput.annualMortgageInterestRate)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
@@ -300,7 +310,10 @@ export default function UserInputForm({
         </Accordion.Item>
 
         <Accordion.Item value="investment">
-          <Accordion.Control>Investment</Accordion.Control>
+          <Accordion.Control>
+            Investment
+            <SectionSummary>{`${summaryValue(userInput.investmentReturnRate)}% return · ${summaryValue(userInput.taxShelteredPct)}% sheltered`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Alert variant="default" color="gray">
@@ -355,7 +368,10 @@ export default function UserInputForm({
         </Accordion.Item>
 
         <Accordion.Item value="costs">
-          <Accordion.Control>Transaction costs</Accordion.Control>
+          <Accordion.Control>
+            Transaction costs
+            <SectionSummary>{`buy ${summaryValue(userInput.buyerClosingCostsPct)}% · sell ${summaryValue(userInput.sellerClosingCostsPct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <UserInputFormItem
@@ -383,12 +399,11 @@ export default function UserInputForm({
         </Accordion.Item>
       </Accordion>
       <Button
-        variant="transparent"
-        size="xs"
-        color="red"
+        variant="default"
+        size="sm"
         onClick={openReset}
         leftSection={<IconRotate size={14} />}
-        style={{ alignSelf: "flex-start" }}
+        style={{ alignSelf: "flex-end" }}
       >
         Reset all
       </Button>

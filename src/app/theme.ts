@@ -4,8 +4,12 @@ import {
   Badge,
   Button,
   Card,
+  FileInput,
+  List,
   NumberInput,
+  Paper,
   SegmentedControl,
+  Select,
   Table,
   createTheme,
   virtualColor,
@@ -132,8 +136,23 @@ export const theme = createTheme({
     Card: Card.extend({
       classNames: { root: classes.card },
     }),
+    FileInput: FileInput.extend({
+      defaultProps: { size: "md" },
+    }),
+    List: List.extend({
+      classNames: { root: classes.list, item: classes.listItem },
+    }),
     NumberInput: NumberInput.extend({
+      // Ledger figures have no stepper chrome; arrow keys still step the value.
+      defaultProps: { size: "md", hideControls: true },
       classNames: { input: classes.numberInput },
+    }),
+    Paper: Paper.extend({
+      classNames: { root: classes.paper },
+    }),
+    Select: Select.extend({
+      defaultProps: { size: "md" },
+      classNames: { input: classes.selectInput },
     }),
     SegmentedControl: SegmentedControl.extend({
       defaultProps: { color: "ink" },

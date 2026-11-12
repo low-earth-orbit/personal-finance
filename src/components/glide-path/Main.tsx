@@ -181,7 +181,7 @@ export default function Main() {
   return (
     <Container size="xl" pb="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 2, lg: 1 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }} order={{ base: 2, lg: 1 }}>
           <InputForm
             input={input}
             errors={errors}
@@ -193,7 +193,7 @@ export default function Main() {
             generating={computing}
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, lg: 2 }} ref={resultRef}>
+        <Grid.Col span={{ base: 12, lg: 7 }} order={{ base: 1, lg: 2 }} ref={resultRef}>
           <Result
             input={computed?.input ?? input}
             result={computed?.data ?? null}

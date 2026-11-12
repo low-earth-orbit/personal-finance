@@ -49,8 +49,29 @@
 }
 
 .accordionLabel {
+  display: flex;
+  align-items: baseline;
   font-size: 1.0625rem;
   font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Collapsed sections recap their values at the right of the header (see SectionSummary). */
+.sectionSummary {
+  flex: 1;
+  min-width: 0;
+  margin-inline-start: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: end;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--pf-muted);
+}
+
+.accordionItem[data-active] .sectionSummary {
+  display: none;
 }
 
 .accordion[data-variant="contained"] .accordionLabel::before {
@@ -100,12 +121,71 @@
 /* Figures in inputs line up like a ledger column. */
 .numberInput {
   font-family: var(--mantine-font-family-monospace);
+  font-size: 0.9375rem;
   text-align: right;
 }
 
-/* Keep right-aligned figures clear of the stepper controls. */
+/* Keep right-aligned figures clear of a right section (e.g. a unit or loader). */
 [data-with-right-section] > .numberInput {
   padding-inline-end: calc(var(--input-right-section-size) + 0.5rem);
+}
+
+.selectInput {
+  font-size: 0.9375rem;
+}
+
+/*
+ * In-flow bordered panels become ruled sections. Floating surfaces (chart tooltips, popovers) do
+ * not pass `withBorder`, so they keep their box.
+ */
+.paper[data-with-border] {
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--pf-ink);
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+/* A panel nested in a ruled section only needs a hairline. */
+.card .paper[data-with-border],
+.paper[data-with-border] .paper[data-with-border] {
+  border-top: 1px solid var(--pf-hairline);
+  padding-bottom: 0;
+}
+
+/*
+ * Tailwind's preflight strips list markers and Mantine does not restore them, so draw ledger
+ * markers: mono numbers for ordered lists, a dash for unordered ones.
+ */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: pf-li;
+}
+
+.listItem {
+  position: relative;
+  padding-inline-start: 1.75rem;
+  counter-increment: pf-li;
+}
+
+.listItem::before {
+  position: absolute;
+  inset-inline-start: 0;
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.8125em;
+  line-height: inherit;
+}
+
+ol.list > .listItem::before {
+  content: counter(pf-li, decimal-leading-zero);
+  color: var(--pf-accent);
+}
+
+ul.list > .listItem::before {
+  content: "—";
+  color: var(--pf-muted);
 }
 
 .segmented {

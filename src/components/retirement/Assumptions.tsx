@@ -1,12 +1,13 @@
-import { Container, Text, Anchor } from "@mantine/core";
+import { Text, Anchor } from "@mantine/core";
+import ToolNotes from "@/components/shared/ToolNotes";
 
 /**
  * Transparency note on the (intentionally simplified) prototype model.
  */
 const Assumptions = () => {
   return (
-    <Container size="xl" pt="xl" pb="xs">
-      <Text size="sm" pb="xs" c="dimmed">
+    <ToolNotes title="Assumptions">
+      <Text size="sm" pb="xs" c="dimmed" maw="60rem">
         This is a quick reality check, not a full retirement plan. Results are shown in today&apos;s
         dollars and use a simple glide path — one expected return while you&apos;re working and
         another (usually lower) in retirement. It finds the earliest age at which your savings can
@@ -28,7 +29,7 @@ const Assumptions = () => {
         </Anchor>
         .
       </Text>
-    </Container>
+    </ToolNotes>
   );
 };
 

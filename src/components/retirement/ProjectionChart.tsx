@@ -67,7 +67,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   const p = payload[0].payload;
   const inRetirement = p.median != null;
   return (
-    <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+    <Paper px="md" py="sm" shadow="md" style={{ border: "1px solid var(--pf-border)" }}>
       <Text fw={600} mb={4}>
         Age {p.age}
       </Text>

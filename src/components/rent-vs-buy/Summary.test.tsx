@@ -119,9 +119,9 @@ describe("rent-vs-buy Summary", () => {
     const close = [point(1, 0.52, 500)];
     const { container, rerender } = render(<Summary data={close} holdingPeriod={1} />);
     expect(screen.getByText("Too close to call")).toBeInTheDocument();
-    expect(container.querySelector(".mantine-Alert-icon svg")).not.toBeNull();
+    expect(container.querySelector("[data-testid='verdict-icon'] svg")).not.toBeNull();
 
     rerender(<Summary data={[point(1, 0.9, 5000)]} holdingPeriod={1} />);
-    expect(container.querySelector(".mantine-Alert-icon svg")).not.toBeNull();
+    expect(container.querySelector("[data-testid='verdict-icon'] svg")).not.toBeNull();
   });
 });

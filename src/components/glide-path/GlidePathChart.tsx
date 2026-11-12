@@ -96,7 +96,7 @@ function ChartTooltip({
   const p = payload[0].payload;
   const value = view === "smoothed" ? p.equitySmooth : p.equity;
   return (
-    <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+    <Paper px="md" py="sm" shadow="md" style={{ border: "1px solid var(--pf-border)" }}>
       <Text fw={600} mb={2}>
         Age {p.age}
       </Text>

@@ -1,4 +1,4 @@
-import { Anchor, Group, NumberInput, Stack, Text } from "@mantine/core";
+import { Button, Group, NumberInput, Stack, Text } from "@mantine/core";
 import { IconArrowBackUp, IconPlusMinus } from "@tabler/icons-react";
 import FieldLabel from "./FieldLabel";
 import { fieldRowClassNames, fieldRowClasses } from "./fieldRow";
@@ -46,33 +46,32 @@ export default function UserInputRangeItem({
   const rangeKnown = baseValue !== "" && baseValue != null && sigma !== "" && sigma != null;
 
   const composedLabel = (
-    <Group justify="space-between" wrap="nowrap" gap="xs">
+    <Group justify="flex-start" wrap="wrap" gap="xs">
       <FieldLabel label={label} helperText={helperText} />
-      <Anchor
-        component="button"
-        type="button"
-        size="xs"
-        c="dimmed"
-        onClick={onToggleExpand}
+      <Button
+        variant={expanded ? "filled" : "default"}
+        size="compact-xs"
+        onClick={(event) => {
+          // The toggle sits inside the field's <label>; don't let the click focus the input.
+          event.preventDefault();
+          onToggleExpand();
+        }}
         disabled={disabled}
-        underline="never"
         aria-label={
           expanded ? `Reset uncertainty range for ${label}` : `Add uncertainty range for ${label}`
         }
         aria-expanded={expanded}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center" }}>
-          {expanded ? (
-            <>
-              <IconArrowBackUp stroke={2} size={12} aria-hidden="true" /> Reset
-            </>
+        leftSection={
+          expanded ? (
+            <IconArrowBackUp stroke={2} size={12} aria-hidden="true" />
           ) : (
-            <>
-              <IconPlusMinus stroke={2} size={12} aria-hidden="true" /> Range
-            </>
-          )}
-        </span>
-      </Anchor>
+            <IconPlusMinus stroke={2} size={12} aria-hidden="true" />
+          )
+        }
+        styles={{ section: { marginInlineEnd: 4 } }}
+      >
+        {expanded ? "Reset" : "Range"}
+      </Button>
     </Group>
   );
 

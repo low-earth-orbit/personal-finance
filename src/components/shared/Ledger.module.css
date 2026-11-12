@@ -1,0 +1,67 @@
+/* Shared Ledger building blocks: mono eyebrow labels, the key-figure strip, ruled notes. */
+
+.eyebrow {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+}
+
+/* Key figures in a ruled row; cells wrap on narrow screens and keep their separators. */
+.figures {
+  border-block: 1px solid var(--pf-ink);
+  overflow: hidden;
+}
+
+.figuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  margin-inline: -1.25rem -1px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  border-inline-end: 1px solid var(--pf-hairline);
+  border-top: 1px solid var(--pf-hairline);
+  margin-top: -1px;
+}
+
+.figureValue {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 1.625rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.figureValue[data-accent] {
+  color: var(--pf-accent);
+}
+
+.figureValue[data-warn] {
+  color: var(--pf-warn);
+}
+
+.figureNote {
+  font-size: 0.8125rem;
+  color: var(--pf-muted);
+}
+
+/* Explanatory text under a tool: a ruled heading, then prose. */
+.notes {
+  margin-top: 4.5rem;
+}
+
+.notesHeading {
+  padding-bottom: 0.625rem;
+  margin-bottom: 1rem;
+  border-bottom: 2px solid var(--pf-ink);
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
