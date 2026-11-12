@@ -114,9 +114,10 @@ export default function UserInputFormItem({
             value={unit}
             onChange={setUnit}
             aria-label={unitAriaLabel}
+            ff="monospace"
             styles={{
-              root: { height: 22, padding: 2, flexShrink: 0 },
-              label: { padding: "0 6px", lineHeight: "18px" },
+              root: { flexShrink: 0 },
+              label: { padding: "0 7px", lineHeight: "20px", fontSize: 12 },
             }}
             data={[
               { label: "$", value: "$" },

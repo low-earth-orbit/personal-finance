@@ -167,8 +167,7 @@ export const theme = createTheme({
       classNames: { root: classes.list, item: classes.listItem },
     }),
     NumberInput: NumberInput.extend({
-      // Ledger figures have no stepper chrome; arrow keys still step the value.
-      defaultProps: { size: "md", hideControls: true },
+      defaultProps: { size: "md" },
       classNames: { input: classes.numberInput },
     }),
     Paper: Paper.extend({
@@ -179,8 +178,12 @@ export const theme = createTheme({
       classNames: { input: classes.selectInput },
     }),
     SegmentedControl: SegmentedControl.extend({
-      defaultProps: { color: "ink" },
-      classNames: { root: classes.segmented, label: classes.segmentedLabel },
+      defaultProps: { color: "ink", withItemsBorders: false },
+      classNames: {
+        root: classes.segmented,
+        label: classes.segmentedLabel,
+        indicator: classes.segmentedIndicator,
+      },
     }),
     Table: Table.extend({
       classNames: { table: classes.table, th: classes.th, td: classes.td },

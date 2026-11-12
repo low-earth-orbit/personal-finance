@@ -19,7 +19,7 @@ export default function TaxAssumptions() {
 
   return (
     <Container size="xl" pt="xl" pb="xs" mt={48} id="model-assumptions">
-      <div style={{ borderTop: "2px solid var(--pf-ink)", paddingTop: "1rem" }}>
+      <div style={{ borderTop: "1px solid var(--pf-hairline)", paddingTop: "1rem" }}>
         <details open={opened} onToggle={(event) => setOpened(event.currentTarget.open)}>
           <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "1.25rem" }}>
             Detailed model assumptions

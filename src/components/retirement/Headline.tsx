@@ -39,7 +39,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
   const showCutRate = input.spendingFlexibilityPct > 0 && result.cutRate != null;
 
   return (
-    <Stack gap="md" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+    <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
       {/* Hero: the retirement age */}
       <Stack gap="xs">
         <Eyebrow>Projected earliest retirement · {input.targetSuccessRate}% confidence</Eyebrow>

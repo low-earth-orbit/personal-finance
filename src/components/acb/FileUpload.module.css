@@ -4,8 +4,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
   gap: 2rem;
-  padding-top: 1.5rem;
-  border-top: 2px solid var(--pf-ink);
 }
 
 .dropzone {
@@ -21,10 +19,6 @@
 .dropzone[data-dragging] {
   border-color: var(--pf-accent);
   background: var(--pf-accent-soft);
-}
-
-.files {
-  border-bottom: 1px solid var(--pf-ink);
 }
 
 .filesHeader {

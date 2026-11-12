@@ -36,9 +36,8 @@ const SummaryBar = ({
 }: SummaryBarProps) => (
   <div
     style={{
-      borderTop: "2px solid var(--pf-ink)",
-      borderBottom: "1px solid var(--pf-ink)",
-      paddingBlock: "var(--mantine-spacing-md)",
+      borderTop: "1px solid var(--pf-ink)",
+      paddingTop: "var(--mantine-spacing-md)",
     }}
   >
     <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">

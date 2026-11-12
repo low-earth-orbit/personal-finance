@@ -128,7 +128,7 @@ export default function AllocationSplit({
 
   return (
     <Stack gap={36}>
-      <Stack gap="sm" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+      <Stack gap="sm" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
         <Eyebrow>Approximate account split</Eyebrow>
         <Title order={2} fz={{ base: 28, sm: 34 }} lh={1.15} style={{ letterSpacing: "-0.02em" }}>
           Invest about{" "}
@@ -154,7 +154,7 @@ export default function AllocationSplit({
             <span key={row.label} data-account={row.account} style={{ flex: row.amount }} />
           ))}
         </div>
-        <div className={classes.rows}>
+        <div>
           {rows.map((row) => (
             <div key={row.label} className={classes.row}>
               <span className={classes.swatch} data-account={row.account} aria-hidden />

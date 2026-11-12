@@ -79,7 +79,7 @@ const FileUpload = ({ files, onFilesAdded, onRemoveFile, onPreview, empty }: Fil
           <span className={classes.filesHeader}>
             <Eyebrow>Files</Eyebrow>
           </span>
-          <div className={classes.files}>
+          <div>
             {files.map((file, index) => (
               <div key={`${file.name}-${index}`} className={classes.file}>
                 <span className={classes.fileName}>

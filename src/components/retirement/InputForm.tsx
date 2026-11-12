@@ -363,18 +363,6 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                     </Popover.Dropdown>
                   </Popover>
                 </SimpleGrid>
-                {!activeReturnPreset && (
-                  <Group gap={6} wrap="nowrap" align="flex-start">
-                    <IconAlertTriangle
-                      size={14}
-                      color="var(--pf-warn)"
-                      style={{ marginTop: 2, flexShrink: 0 }}
-                    />
-                    <Text size="xs" c="rust">
-                      Using custom return assumptions — make sure they&apos;re reasonable.
-                    </Text>
-                  </Group>
-                )}
               </Stack>
               <Stack gap={4}>
                 <UserInputFormItem {...num("inflationRate")} label="Inflation" suffix="%" />

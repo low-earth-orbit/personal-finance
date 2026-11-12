@@ -5,7 +5,7 @@ const Footer = () => {
 
   return (
     <Container component="footer" size="xl" mt={64}>
-      <Stack gap="xs" pt="xl" pb={48} style={{ borderTop: "2px solid var(--pf-ink)" }}>
+      <Stack gap="xs" pt="xl" pb={48} style={{ borderTop: "1px solid var(--pf-ink)" }}>
         <Text size="sm" c="dimmed">
           Not financial advice — general educational information, provided as-is.
         </Text>

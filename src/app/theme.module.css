@@ -3,11 +3,14 @@
  * (globals.css), so these unlayered rules win without extra specificity.
  */
 
-/* Cards read as ruled sections, not boxes. */
+/*
+ * Rule budget: one ink rule opens a column (form section, result block); everything below it is
+ * separated by whitespace or a hairline. Cards read as sections under a hairline, not boxes.
+ */
 .card {
   background: transparent;
   border: 0;
-  border-top: 2px solid var(--pf-ink);
+  border-top: 1px solid var(--pf-hairline);
   border-radius: 0;
   padding-inline: 0;
 }
@@ -27,10 +30,6 @@
 
 .accordionItem + .accordionItem {
   margin-top: var(--mantine-spacing-md);
-}
-
-.accordionItem:last-of-type {
-  border-bottom: 1px solid var(--pf-ink);
 }
 
 .accordionItem[data-active] {
@@ -91,7 +90,7 @@
 .alert {
   background: transparent;
   border: 0;
-  border-top: 2px solid var(--alert-color);
+  border-top: 1px solid var(--alert-color);
   border-radius: 0;
   padding-inline: 0;
 }
@@ -133,7 +132,7 @@
 .paper[data-with-border] {
   background: transparent;
   border: 0;
-  border-top: 2px solid var(--pf-ink);
+  border-top: 1px solid var(--pf-hairline);
   border-radius: 0;
   padding-inline: 0;
 }
@@ -180,10 +179,17 @@ ul.list > .listItem::before {
   color: var(--pf-muted);
 }
 
+/* An outlined pill whose active segment fills its cell edge to edge. */
 .segmented {
+  overflow: hidden;
   background: transparent;
   border: 1px solid var(--pf-ink);
   padding: 0;
+}
+
+.segmentedIndicator {
+  border-radius: 0;
+  box-shadow: none;
 }
 
 /* The active segment sits on an ink fill; see variantColorResolver in theme.ts. */

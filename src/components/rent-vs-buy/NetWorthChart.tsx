@@ -227,7 +227,7 @@ export function Summary({
     winnerPct < 60 ? "var(--pf-muted)" : renterFavored ? "var(--pf-accent)" : "var(--pf-ink)";
 
   return (
-    <Stack gap="md" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+    <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
       <Eyebrow>Result · sale at year {decision.year}</Eyebrow>
       <Group gap="sm" wrap="nowrap" align="center">
         <span data-testid="verdict-icon" style={{ display: "inline-flex", color: verdictColor }}>

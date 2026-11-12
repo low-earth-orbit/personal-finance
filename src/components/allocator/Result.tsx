@@ -18,7 +18,7 @@ export default function Result({
 }) {
   if (status === "idle") {
     return (
-      <Stack gap="xs" pt="md" style={{ borderTop: "2px solid var(--pf-ink)" }}>
+      <Stack gap="xs" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
         <Eyebrow>Approximate account split</Eyebrow>
         <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
           Review your numbers first

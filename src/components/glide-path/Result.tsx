@@ -496,7 +496,7 @@ export default function Result({
         )}
 
         {reco.inconclusive && (
-          <Stack gap="xs" pt="md" style={{ borderTop: "2px solid var(--pf-warn)" }}>
+          <Stack gap="xs" pt="md" style={{ borderTop: "1px solid var(--pf-warn)" }}>
             <Eyebrow>Comparison inconclusive</Eyebrow>
             <Group gap="sm" wrap="nowrap" align="center">
               <IconAlertTriangle size={24} color="var(--pf-warn)" style={{ flexShrink: 0 }} />
@@ -604,7 +604,7 @@ export default function Result({
           align="center"
           gap="md"
           py="md"
-          style={{ borderBlock: "1px solid var(--pf-hairline)" }}
+          style={{ borderTop: "1px solid var(--pf-hairline)" }}
         >
           <Text size="sm" c="dimmed" style={{ flex: "1 1 16rem" }}>
             {seed > 0
