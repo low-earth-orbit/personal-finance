@@ -34,6 +34,7 @@ import {
 } from "recharts";
 import { SIMULATION_HORIZON_YEARS } from "@/utils/monteCarlo";
 import { formatCAD, formatCADCompact } from "@/utils/format";
+import { CHART_AXIS } from "@/utils/charts";
 import type {
   BreakEven,
   MonteCarloResponse,
@@ -102,7 +103,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
       <Text fw={600} mb={4}>
         Year {point.year}
       </Text>
-      <Text size="sm" c="teal">
+      <Text size="sm" c="ledger">
         Rent: {formatCAD(renter)}
         {point.renterP25 != null && (
           <Text size="xs" c="dimmed" span>
@@ -111,7 +112,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
           </Text>
         )}
       </Text>
-      <Text size="sm" c="indigo">
+      <Text size="sm" c="ink">
         Buy: {formatCAD(owner)}
         {point.ownerP25 != null && (
           <Text size="xs" c="dimmed" span>
@@ -196,10 +197,10 @@ export function Summary({
   let color: string;
   if (winnerPct >= 70) {
     title = `${winner} clearly leads`;
-    color = renterFavored ? "teal" : "indigo";
+    color = renterFavored ? "ledger" : "ink";
   } else if (winnerPct >= 60) {
     title = `${winner} likely leads`;
-    color = renterFavored ? "teal" : "indigo";
+    color = renterFavored ? "ledger" : "ink";
   } else {
     title = "Too close to call";
     color = "gray";
@@ -372,14 +373,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                 position: "bottom",
                 fontSize: 12,
               }}
-              tick={{ fontSize: 12 }}
+              {...CHART_AXIS}
             />
-            <YAxis
-              domain={yDomain}
-              tickFormatter={formatCADCompact}
-              tick={{ fontSize: 12 }}
-              width={70}
-            />
+            <YAxis domain={yDomain} tickFormatter={formatCADCompact} {...CHART_AXIS} width={70} />
             <Tooltip content={<ChartTooltip />} />
 
             <Area
@@ -398,7 +394,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="renterBandWidth"
               stackId="renter"
-              fill="#12b886"
+              fill="var(--pf-accent)"
               fillOpacity={0.18}
               stroke="none"
               legendType="none"
@@ -423,7 +419,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="ownerBandWidth"
               stackId="owner"
-              fill="#4c6ef5"
+              fill="var(--pf-ink)"
               fillOpacity={0.18}
               stroke="none"
               legendType="none"
@@ -437,7 +433,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="renterMedian"
               name="Rent"
-              stroke="#12b886"
+              stroke="var(--pf-accent)"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
@@ -449,8 +445,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="ownerMedian"
               name="Buy"
-              stroke="#4c6ef5"
+              stroke="var(--pf-ink)"
               strokeWidth={2}
+              strokeDasharray="6 4"
               dot={false}
               activeDot={{ r: 4 }}
               isAnimationActive
@@ -465,7 +462,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               label={{
                 value: "Rent",
                 position: "right",
-                fill: "#12b886",
+                fill: "var(--pf-accent)",
                 fontSize: 11,
                 fontWeight: 600,
               }}
@@ -478,20 +475,20 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               label={{
                 value: "Buy",
                 position: "right",
-                fill: "#4c6ef5",
+                fill: "var(--pf-ink)",
                 fontSize: 11,
                 fontWeight: 600,
               }}
             />
             <ReferenceLine
               x={saleYear}
-              stroke="#fd7e14"
+              stroke="var(--pf-warn)"
               strokeWidth={1.5}
               label={{
                 value: `Sale (Yr ${saleYear})`,
                 position: "top",
                 fontSize: 11,
-                fill: "#fd7e14",
+                fill: "var(--pf-warn)",
                 fontWeight: 600,
               }}
             />
@@ -500,18 +497,18 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       </div>
       <Group gap="lg" wrap="wrap">
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#12b886" }} aria-hidden="true" />
+          <Box w={18} h={2} style={{ backgroundColor: "var(--pf-accent)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="teal">
+            <Text span fw={600} c="ledger">
               Rent
             </Text>{" "}
             — median
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#4c6ef5" }} aria-hidden="true" />
+          <Box w={18} h={0} style={{ borderTop: "2px dashed var(--pf-ink)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="indigo">
+            <Text span fw={600} c="ink">
               Buy
             </Text>{" "}
             — median
@@ -522,7 +519,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           <Box
             w={18}
             h={10}
-            style={{ backgroundColor: "#12b886", opacity: 0.18 }}
+            style={{ backgroundColor: "var(--pf-accent)", opacity: 0.18 }}
             aria-hidden="true"
           />
           <Text size="xs" c="dimmed">
@@ -533,7 +530,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           <Box
             w={18}
             h={10}
-            style={{ backgroundColor: "#4c6ef5", opacity: 0.18 }}
+            style={{ backgroundColor: "var(--pf-ink)", opacity: 0.18 }}
             aria-hidden="true"
           />
           <Text size="xs" c="dimmed">
@@ -542,9 +539,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         </Group>
 
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#fd7e14" }} aria-hidden="true" />
+          <Box w={18} h={2} style={{ backgroundColor: "var(--pf-warn)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="orange.7">
+            <Text span fw={600} c="rust">
               Sale
             </Text>{" "}
             — year you sell
@@ -608,22 +605,22 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th scope="col">Year</Table.Th>
-                  <Table.Th scope="col" c="teal">
+                  <Table.Th scope="col" c="ledger">
                     Rent median
                   </Table.Th>
-                  <Table.Th scope="col" c="teal">
+                  <Table.Th scope="col" c="ledger">
                     <abbr title="25th percentile">Rent P25</abbr>
                   </Table.Th>
-                  <Table.Th scope="col" c="teal">
+                  <Table.Th scope="col" c="ledger">
                     <abbr title="75th percentile">Rent P75</abbr>
                   </Table.Th>
-                  <Table.Th scope="col" c="indigo">
+                  <Table.Th scope="col" c="ink">
                     Buy median
                   </Table.Th>
-                  <Table.Th scope="col" c="indigo">
+                  <Table.Th scope="col" c="ink">
                     <abbr title="25th percentile">Buy P25</abbr>
                   </Table.Th>
-                  <Table.Th scope="col" c="indigo">
+                  <Table.Th scope="col" c="ink">
                     <abbr title="75th percentile">Buy P75</abbr>
                   </Table.Th>
                   <Table.Th scope="col">

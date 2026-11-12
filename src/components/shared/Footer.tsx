@@ -4,8 +4,8 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <Container component="footer" size="xl" pt="xl" pb="xl">
-      <Stack gap="sm">
+    <Container component="footer" size="xl" mt={64}>
+      <Stack gap="xs" pt="xl" pb={48} style={{ borderTop: "2px solid var(--pf-ink)" }}>
         <Text size="sm" c="dimmed">
           Not financial advice — general educational information, provided as-is.
         </Text>
@@ -15,7 +15,7 @@ const Footer = () => {
             href="https://github.com/low-earth-orbit/personal-finance"
             target="_blank"
             rel="noreferrer"
-            c="dimmed"
+            c="ledger"
           >
             GitHub
           </Anchor>

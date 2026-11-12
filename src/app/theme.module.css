@@ -1,0 +1,138 @@
+/*
+ * Ledger overrides for Mantine components. Mantine's own styles sit in the `mantine` cascade layer
+ * (globals.css), so these unlayered rules win without extra specificity.
+ */
+
+/* Cards read as ruled sections, not boxes. */
+.card {
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--pf-ink);
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+/* Form accordions become numbered ledger sections: 01 Rent, 02 Property, ... */
+.accordion {
+  counter-reset: pf-section;
+}
+
+.accordionItem {
+  counter-increment: pf-section;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--pf-ink);
+}
+
+.accordionItem + .accordionItem {
+  margin-top: var(--mantine-spacing-md);
+}
+
+.accordionItem:last-of-type {
+  border-bottom: 1px solid var(--pf-ink);
+}
+
+.accordionItem[data-active] {
+  background: transparent;
+}
+
+.accordionControl {
+  padding-inline: 0;
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .accordionControl:hover {
+    background: transparent;
+  }
+}
+
+.accordionLabel {
+  font-size: 1.0625rem;
+  font-weight: 600;
+}
+
+.accordion[data-variant="contained"] .accordionLabel::before {
+  content: counter(pf-section, decimal-leading-zero);
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--pf-accent);
+  margin-inline-end: 0.75rem;
+}
+
+.accordionContent {
+  padding-inline: 0;
+}
+
+/* Alerts: a coloured top rule instead of a tinted box. */
+.alert {
+  background: transparent;
+  border: 0;
+  border-top: 2px solid var(--alert-color);
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+.alertTitle {
+  font-weight: 600;
+}
+
+.badge {
+  font-family: var(--mantine-font-family-monospace);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.button {
+  font-weight: 500;
+}
+
+/*
+ * Dark mode fills use light shades (primaryShade.dark = 4), but Mantine derives auto-contrast text
+ * from the light-mode shade, which leaves white text on a light fill. Use dark text instead.
+ */
+[data-mantine-color-scheme="dark"] .button[data-variant="filled"]:not(:disabled, [data-disabled]) {
+  color: var(--mantine-color-dark-8);
+}
+
+/* Figures in inputs line up like a ledger column. */
+.numberInput {
+  font-family: var(--mantine-font-family-monospace);
+  text-align: right;
+}
+
+/* Keep right-aligned figures clear of the stepper controls. */
+[data-with-right-section] > .numberInput {
+  padding-inline-end: calc(var(--input-right-section-size) + 0.5rem);
+}
+
+.segmented {
+  background: transparent;
+  border: 1px solid var(--pf-ink);
+  padding: 0;
+}
+
+[data-mantine-color-scheme="dark"] .segmentedLabel[data-active] {
+  color: var(--mantine-color-dark-8);
+}
+
+.table {
+  --table-border-color: var(--pf-hairline);
+  font-variant-numeric: tabular-nums;
+}
+
+.th {
+  font-family: var(--mantine-font-family-monospace);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dimmed);
+  border-bottom: 1px solid var(--pf-ink);
+}
+
+.td {
+  font-family: var(--mantine-font-family-monospace);
+}

@@ -74,9 +74,8 @@ export default function PresetBar({
           return (
             <Button
               key={preset.id}
-              variant={active ? "filled" : isBase ? "outline" : "light"}
+              variant={active ? "filled" : isBase ? "outline" : "default"}
               size="xs"
-              radius="lg"
               aria-pressed={active}
               onClick={() => onSelect(preset)}
             >

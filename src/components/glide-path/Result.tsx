@@ -70,8 +70,8 @@ const SAME_ALLOCATION_NOTE = "The optimized glide path is this same constant all
 const STALE_OPACITY = 0.55;
 
 const DIR_COLOR: Record<SlopeDir, string> = {
-  Rising: "teal",
-  Falling: "indigo",
+  Rising: "ledger",
+  Falling: "ink",
   Flat: "gray",
   "n/a": "gray",
 };
@@ -183,7 +183,7 @@ function MetricItem({
         <Text fw={700} fz="lg">
           {value}
         </Text>
-        {flagged && <IconAlertTriangle size={15} color="var(--mantine-color-yellow-6)" />}
+        {flagged && <IconAlertTriangle size={15} color="var(--pf-warn)" />}
       </Group>
       {note && (
         <Text size="xs" c="dimmed">
@@ -212,7 +212,7 @@ function CompactStat({
       <Text size="sm" fw={600}>
         {value}
       </Text>
-      {flagged && <IconAlertTriangle size={13} color="var(--mantine-color-yellow-6)" />}
+      {flagged && <IconAlertTriangle size={13} color="var(--pf-warn)" />}
     </Group>
   );
 }
@@ -353,7 +353,7 @@ export default function Result({
     return (
       <Center mih={400} visibleFrom="lg">
         <Stack align="center" gap="md">
-          <ThemeIcon size={56} variant="light" color="teal" radius="xl">
+          <ThemeIcon size={56} variant="light" color="ledger" radius="xl">
             <IconChartLine size={30} />
           </ThemeIcon>
           <Stack gap={4} align="center">
@@ -457,8 +457,8 @@ export default function Result({
       )}
       {stale && (
         <Group gap="xs" wrap="nowrap" aria-live="polite">
-          <IconRefresh size={16} color="var(--mantine-color-orange-6)" style={{ flexShrink: 0 }} />
-          <Text size="sm" c="orange" fw={600}>
+          <IconRefresh size={16} color="var(--pf-warn)" style={{ flexShrink: 0 }} />
+          <Text size="sm" c="rust" fw={600}>
             {hasErrors
               ? "Inputs changed: fix the highlighted fields, then generate again."
               : "Inputs changed. Generate allocation paths to refresh this result."}
@@ -479,7 +479,7 @@ export default function Result({
         {planNeedsAdjustment && (
           <Card withBorder radius="md" padding="md">
             <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="yellow" variant="light" size={34} radius="xl">
+              <ThemeIcon color="rust" variant="light" size={34} radius="xl">
                 <IconAlertTriangle size={19} />
               </ThemeIcon>
               <Stack gap={2}>
@@ -504,7 +504,7 @@ export default function Result({
         {result.overFunded && (
           <Card withBorder radius="md" padding="md">
             <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="blue" variant="light" size={34} radius="xl">
+              <ThemeIcon color="ink" variant="light" size={34} radius="xl">
                 <IconInfoCircle size={19} />
               </ThemeIcon>
               <Stack gap={2}>
@@ -524,16 +524,16 @@ export default function Result({
             radius="md"
             padding="lg"
             style={{
-              borderColor: "var(--mantine-color-yellow-5)",
+              borderColor: "var(--pf-warn)",
               borderWidth: 2,
             }}
           >
             <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="yellow" variant="light" size={38} radius="xl">
+              <ThemeIcon color="rust" variant="light" size={38} radius="xl">
                 <IconAlertTriangle size={22} />
               </ThemeIcon>
               <Stack gap={2}>
-                <Text size="xs" fw={700} c="yellow.7" tt="uppercase">
+                <Text size="xs" fw={700} c="rust" tt="uppercase">
                   Comparison inconclusive
                 </Text>
                 <Title order={3} fz="lg">
@@ -575,17 +575,17 @@ export default function Result({
               radius="md"
               padding="lg"
               style={{
-                borderColor: "var(--mantine-color-teal-5)",
+                borderColor: "var(--pf-accent)",
                 borderWidth: 2,
               }}
             >
               <Stack gap="md">
                 <Group gap="sm" wrap="nowrap" align="flex-start">
-                  <ThemeIcon color="teal" size={38} radius="xl">
+                  <ThemeIcon color="ledger" size={38} radius="xl">
                     <IconCheck size={22} />
                   </ThemeIcon>
                   <Stack gap={0}>
-                    <Text size="xs" fw={700} c="teal" tt="uppercase">
+                    <Text size="xs" fw={700} c="ledger" tt="uppercase">
                       Model&apos;s preferred allocation
                     </Text>
                     <Title order={3} fz="lg">
@@ -634,7 +634,7 @@ export default function Result({
         {hasRoomToAdjustPlan && (
           <Card withBorder radius="md" padding="md">
             <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="teal" variant="light" size={34} radius="xl">
+              <ThemeIcon color="ledger" variant="light" size={34} radius="xl">
                 <IconInfoCircle size={19} />
               </ThemeIcon>
               <Stack gap={2}>

@@ -101,29 +101,27 @@ export default function AllocationSplit({
           Invest the full lump sum now. Only RRSP deduction claims may be delayed. Account split and
           action amounts are rounded to the nearest {formatCAD(displayIncrement)}.
         </Text>
-        <Title order={2} c="teal">
+        <Title order={2} c="ledger">
           Invest about {formatApproxCAD(input.lumpSum, displayIncrement)}
         </Title>
-        <Stack gap={6}>
+        <Stack gap={0} style={{ borderTop: "1px solid var(--pf-ink)" }}>
           {rows.map((row) => (
             <Group
               key={row.label}
               justify="space-between"
               wrap="wrap"
-              px="sm"
-              py={6}
-              bg="var(--mantine-color-teal-light)"
-              style={{ borderLeft: "4px solid var(--mantine-color-teal-6)" }}
+              py="xs"
+              style={{ borderBottom: "1px solid var(--pf-hairline)" }}
             >
-              <Text size="sm">{row.label}</Text>
-              <Text size="sm" fw={700}>
+              <Text>{row.label}</Text>
+              <Text ff="monospace" fw={500}>
                 {formatCAD(row.amount)}
               </Text>
             </Group>
           ))}
         </Stack>
         {registeredRoomFull && (
-          <Text size="sm" c="orange" fw={600}>
+          <Text size="sm" c="rust" fw={600}>
             {registeredRoom <= 0.01
               ? "No registered room: the full amount goes to non-registered."
               : "Registered room is full; the remainder goes to non-registered."}
@@ -274,7 +272,7 @@ export default function AllocationSplit({
           <Text size="sm" fw={600}>
             Modeled after-tax value at retirement
           </Text>
-          <Text fw={700} c="teal">
+          <Text fw={700} c="ledger">
             About {formatApproxCAD(allocation.projectedAfterTaxTotalNominal, 1_000)}
           </Text>
         </Group>

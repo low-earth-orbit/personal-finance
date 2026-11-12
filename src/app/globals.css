@@ -5,8 +5,34 @@
 @import "tailwindcss/utilities.css" layer(tailwind-utilities);
 @import "tailwindcss/theme.css";
 
+/* Ledger design tokens, shared by CSS modules, inline styles, and chart strokes. */
+:root {
+  --pf-ink: #14181f;
+  --pf-hairline: #e6e8ec;
+  --pf-border: #c9ced6;
+  --pf-muted: #4f5866;
+  --pf-surface: #f6f7f9;
+  --pf-accent: #0f5c45;
+  --pf-accent-soft: rgb(15 92 69 / 14%);
+  --pf-warn: #9a4a0b;
+  --pf-warn-soft: #fbf1e9;
+}
+
+[data-mantine-color-scheme="dark"] {
+  --pf-ink: #e6e9ee;
+  --pf-hairline: #262c34;
+  --pf-border: #363d47;
+  --pf-muted: #9aa2ae;
+  --pf-surface: #1b2027;
+  --pf-accent: #5fb396;
+  --pf-accent-soft: rgb(95 179 150 / 18%);
+  --pf-warn: #e0915a;
+  --pf-warn-soft: rgb(224 145 90 / 12%);
+}
+
 body {
-  font-family: var(--font-lato), sans-serif;
+  font-family: var(--font-plex-sans), system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

@@ -7,7 +7,6 @@ import {
   Group,
   Popover,
   SegmentedControl,
-  SimpleGrid,
   Slider,
   Stack,
 } from "@mantine/core";
@@ -79,7 +78,7 @@ export default function InputForm({
         <Accordion.Item value="you">
           <Accordion.Control>About you</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem {...num("startAge")} label="Current age" suffix=" yrs" />
               <UserInputFormItem {...num("retirementAge")} label="Retirement age" suffix=" yrs" />
               <UserInputFormItem
@@ -95,14 +94,14 @@ export default function InputForm({
                 prefix="$"
                 thousandSeparator
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="retirement">
           <Accordion.Control>Retirement targets</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 {...num("targetIncome")}
                 label="Target retirement income"
@@ -129,7 +128,7 @@ export default function InputForm({
                 labelHelperText="If this is after your retirement age, the portfolio funds your whole target until then (a bridge). At or before retirement means it is paid from retirement."
                 suffix=" yrs"
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
@@ -176,9 +175,8 @@ export default function InputForm({
                   {GAMMA_PRESETS.map((g) => (
                     <Button
                       key={g}
-                      variant={isSame(input.gamma, g) ? "filled" : "light"}
+                      variant={isSame(input.gamma, g) ? "filled" : "default"}
                       size="xs"
-                      radius="lg"
                       aria-pressed={isSame(input.gamma, g)}
                       onClick={() => onChange("gamma", g)}
                     >
@@ -188,16 +186,19 @@ export default function InputForm({
                   <Popover width={220} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
                       <Button
-                        variant={isCustomGamma ? "filled" : "light"}
+                        variant={isCustomGamma ? "filled" : "default"}
                         size="xs"
-                        radius="lg"
                         aria-pressed={isCustomGamma}
                       >
                         Custom
                       </Button>
                     </Popover.Target>
                     <Popover.Dropdown>
-                      <UserInputFormItem {...num("gamma")} label="Custom risk aversion" />
+                      <UserInputFormItem
+                        {...num("gamma")}
+                        label="Custom risk aversion"
+                        layout="stacked"
+                      />
                     </Popover.Dropdown>
                   </Popover>
                 </Group>
@@ -231,7 +232,7 @@ export default function InputForm({
                   size="sm"
                 />
               </Stack>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   {...num("maxEquityPct")}
                   label="Max equity"
@@ -252,7 +253,7 @@ export default function InputForm({
                     suffix="%"
                   />
                 )}
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>

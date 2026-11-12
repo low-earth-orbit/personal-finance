@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Group, Input, NumberInput, SegmentedControl, Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import FieldLabel from "./FieldLabel";
+import { fieldRowClassNames, fieldRowClasses } from "./fieldRow";
 import type { FieldValue } from "@/types";
 
 interface PercentToggleOptions {
@@ -32,6 +33,11 @@ interface UserInputFormItemProps {
   /** Accessible name, for fields whose visible heading sits outside the input. */
   "aria-label"?: string;
   percentToggle?: PercentToggleOptions;
+  /**
+   * "row" (default): ledger row with the label left and the input right.
+   * "stacked": label above the input, for narrow containers such as popovers.
+   */
+  layout?: "row" | "stacked";
 }
 
 export default function UserInputFormItem({
@@ -50,8 +56,10 @@ export default function UserInputFormItem({
   allowNegative,
   error,
   percentToggle,
+  layout = "row",
   ...rest
 }: UserInputFormItemProps) {
+  const row = layout === "row";
   const [unit, setUnit] = useState<string>(percentToggle?.defaultUnit ?? "$");
 
   if (percentToggle) {
@@ -77,9 +85,9 @@ export default function UserInputFormItem({
     };
 
     return (
-      <Stack gap={0}>
-        <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-          <Input.Label htmlFor={id}>
+      <div className={row ? `${fieldRowClasses.frame} ${fieldRowClasses.custom}` : undefined}>
+        <Group justify={row ? "flex-start" : "space-between"} align="center" wrap="wrap" gap="xs">
+          <Input.Label htmlFor={id} className={row ? fieldRowClasses.customLabel : undefined}>
             <FieldLabel label={label} helperText={labelHelperText} />
           </Input.Label>
           <SegmentedControl
@@ -117,14 +125,15 @@ export default function UserInputFormItem({
           allowNegative={false}
           clampBehavior="none"
         />
-      </Stack>
+      </div>
     );
   }
 
   return (
-    <Stack gap={4}>
+    <Stack gap={0} className={row ? fieldRowClasses.frame : undefined}>
       <NumberInput
         id={id}
+        classNames={row ? fieldRowClassNames : undefined}
         label={<FieldLabel label={label} helperText={labelHelperText} />}
         description={description}
         value={value}
@@ -141,7 +150,7 @@ export default function UserInputFormItem({
         {...rest}
       />
       {additionalText && (
-        <Text size="xs" c="dimmed" aria-live="polite">
+        <Text size="xs" c="dimmed" aria-live="polite" mt={4}>
           {additionalText}
         </Text>
       )}

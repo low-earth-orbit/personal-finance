@@ -57,7 +57,7 @@ export default function Result({
         </Group>
       )}
       {status === "invalid" && (
-        <Text size="xs" c="orange" fw={600} aria-live="polite">
+        <Text size="xs" c="rust" fw={600} aria-live="polite">
           Update paused: fix the highlighted fields.
         </Text>
       )}

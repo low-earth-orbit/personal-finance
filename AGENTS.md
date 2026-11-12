@@ -65,9 +65,11 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 
 ## Architecture
 
-**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, Lato font) → `providers.tsx` (MantineProvider, teal theme, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
+**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, IBM Plex Sans/Mono) → `providers.tsx` (MantineProvider, Ledger theme from `theme.ts`, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
 
 **CSS:** Tailwind v4 + Mantine via `@layer(tailwind-base, mantine, tailwind-utilities)` — Tailwind preflight never overrides Mantine.
+
+**Design system ("Ledger"):** ink on paper, hairline rules instead of boxes. `src/app/theme.ts` defines `ledger` (green accent), `rust` (warnings) and `ink` (virtual light/dark) palettes, primary color `ink`; `theme.module.css` restyles Card/Accordion/Alert/Table/NumberInput globally. Shared tokens (`--pf-ink`, `--pf-accent`, `--pf-warn`, `--pf-hairline`, …) live in `globals.css` with dark overrides — use them for chart strokes and inline styles, not Mantine `teal`/`indigo`. Form fields render as label-left rows (`UserInputFormItem`, `fieldRowClassNames`); pass `layout="stacked"` inside popovers.
 
 **UI (`src/components/`):**
 

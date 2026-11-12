@@ -1,4 +1,4 @@
-import { Paper, SimpleGrid, Text } from "@mantine/core";
+import { SimpleGrid, Text } from "@mantine/core";
 import { formatCAD } from "@/utils/format";
 
 type SummaryBarProps = {
@@ -18,10 +18,12 @@ type StatProps = {
 
 const Stat = ({ label, value }: StatProps) => (
   <div>
-    <Text size="xs" c="dimmed">
+    <Text size="xs" c="dimmed" ff="monospace" tt="uppercase" style={{ letterSpacing: "0.06em" }}>
       {label}
     </Text>
-    <Text fw={600}>{value}</Text>
+    <Text ff="monospace" fz="xl" fw={500}>
+      {value}
+    </Text>
   </div>
 );
 
@@ -32,14 +34,20 @@ const SummaryBar = ({
   transactionCount,
   dateRange,
 }: SummaryBarProps) => (
-  <Paper withBorder p="md" radius="md">
+  <div
+    style={{
+      borderTop: "2px solid var(--pf-ink)",
+      borderBottom: "1px solid var(--pf-ink)",
+      paddingBlock: "var(--mantine-spacing-md)",
+    }}
+  >
     <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
       <Stat label="Total cost basis" value={formatCAD(totalCostBasis)} />
       <Stat label="Holdings" value={String(holdingsCount)} />
       <Stat label="Transactions" value={String(transactionCount)} />
       <Stat label="Coverage" value={dateRange ? `${dateRange.min} – ${dateRange.max}` : "—"} />
     </SimpleGrid>
-  </Paper>
+  </div>
 );
 
 export default SummaryBar;

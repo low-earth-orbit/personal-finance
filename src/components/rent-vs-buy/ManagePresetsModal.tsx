@@ -290,7 +290,7 @@ export default function ManagePresetsModal({
             </FileButton>
           </Group>
           {message && (
-            <Text size="xs" c={message.ok ? "teal" : "red"} aria-live="polite">
+            <Text size="xs" c={message.ok ? "ledger" : "red"} aria-live="polite">
               {message.text}
             </Text>
           )}

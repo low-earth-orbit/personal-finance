@@ -64,7 +64,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
           <Accordion.Control>About you</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
                   {...num("currentIncome")}
@@ -91,7 +91,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                     unitAriaLabel: "Annual savings input unit",
                   }}
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -100,7 +100,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
           <Accordion.Control>Retirement goals</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   {...num("targetIncomePct")}
                   label="Target income"
@@ -163,7 +163,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   labelHelperText="When your workplace pension begins."
                   suffix=" yrs"
                 />
-              </SimpleGrid>
+              </Stack>
 
               <Stack gap={4}>
                 <Text size="sm" fw={600}>
@@ -176,9 +176,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   {SUCCESS_RATE_PRESETS.map((rate) => (
                     <Button
                       key={rate}
-                      variant={isSameRate(input.targetSuccessRate, rate) ? "filled" : "light"}
+                      variant={isSameRate(input.targetSuccessRate, rate) ? "filled" : "default"}
                       size="xs"
-                      radius="lg"
                       aria-pressed={isSameRate(input.targetSuccessRate, rate)}
                       onClick={() => onChange("targetSuccessRate", rate)}
                     >
@@ -188,9 +187,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Popover width={220} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
                       <Button
-                        variant={isCustomConfidence ? "filled" : "light"}
+                        variant={isCustomConfidence ? "filled" : "default"}
                         size="xs"
-                        radius="lg"
                         aria-pressed={isCustomConfidence}
                       >
                         Custom
@@ -200,6 +198,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                       <UserInputFormItem
                         {...num("targetSuccessRate")}
                         label="Confidence target"
+                        layout="stacked"
                         suffix="%"
                       />
                     </Popover.Dropdown>
@@ -209,10 +208,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle
                       size={14}
-                      color="var(--mantine-color-yellow-7)"
+                      color="var(--pf-warn)"
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
-                    <Text size="xs" c="yellow.8">
+                    <Text size="xs" c="rust">
                       Below 90% leans optimistic — it accepts more sequence-of-returns risk. Many
                       planners use 90% or higher.
                     </Text>
@@ -239,10 +238,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle
                       size={14}
-                      color="var(--mantine-color-yellow-7)"
+                      color="var(--pf-warn)"
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
-                    <Text size="xs" c="yellow.8">
+                    <Text size="xs" c="rust">
                       Cutting more than 20% is a big lifestyle reduction — the result assumes the
                       reduced floor is livable for many years if markets stay weak.
                     </Text>
@@ -276,9 +275,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   {RETURN_PRESETS.map((preset) => (
                     <Button
                       key={preset.id}
-                      variant={activeReturnPreset?.id === preset.id ? "filled" : "light"}
+                      variant={activeReturnPreset?.id === preset.id ? "filled" : "default"}
                       size="xs"
-                      radius="lg"
                       h={44}
                       aria-pressed={activeReturnPreset?.id === preset.id}
                       onClick={() => applyReturnPreset(preset)}
@@ -298,9 +296,8 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Popover width={300} position="bottom" withArrow shadow="md">
                     <Popover.Target>
                       <Button
-                        variant={activeReturnPreset ? "light" : "filled"}
+                        variant={activeReturnPreset ? "default" : "filled"}
                         size="xs"
-                        radius="lg"
                         h={44}
                         aria-pressed={!activeReturnPreset}
                       >
@@ -326,11 +323,13 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                         <UserInputFormItem
                           {...num("accumReturn")}
                           label="While working"
+                          layout="stacked"
                           suffix="%"
                         />
                         <UserInputFormItem
                           {...num("retireReturn")}
                           label="In retirement"
+                          layout="stacked"
                           suffix="%"
                         />
                       </Stack>
@@ -341,10 +340,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle
                       size={14}
-                      color="var(--mantine-color-yellow-7)"
+                      color="var(--pf-warn)"
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
-                    <Text size="xs" c="yellow.8">
+                    <Text size="xs" c="rust">
                       Using custom return assumptions — make sure they&apos;re reasonable.
                     </Text>
                   </Group>
@@ -356,10 +355,10 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   <Group gap={6} wrap="nowrap" align="flex-start">
                     <IconAlertTriangle
                       size={14}
-                      color="var(--mantine-color-yellow-7)"
+                      color="var(--pf-warn)"
                       style={{ marginTop: 2, flexShrink: 0 }}
                     />
-                    <Text size="xs" c="yellow.8">
+                    <Text size="xs" c="rust">
                       Most planners use 2–2.5% inflation assumptions.
                       {input.inflationRate > 2.5
                         ? " Higher rates can make your plan look more conservative."

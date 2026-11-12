@@ -112,7 +112,7 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                       <Tooltip
                         label={`Includes ${sharesFormatter.format(holding.transferredShares)} transferred shares — no purchase history`}
                       >
-                        <Badge color="yellow" size="sm" variant="light">
+                        <Badge color="rust" size="sm" variant="light">
                           {sharesFormatter.format(holding.transferredShares)} transferred
                         </Badge>
                       </Tooltip>
@@ -149,7 +149,7 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                           Edit transfers
                         </Button>
                         {openingLot > 0 && (
-                          <Badge size="sm" variant="light" color="teal">
+                          <Badge size="sm" variant="light" color="ledger">
                             {`+${formatCADDecimal(openingLot)}`}
                           </Badge>
                         )}
@@ -172,7 +172,7 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                         Edit T3
                       </Button>
                       {t3Net !== 0 && (
-                        <Badge size="sm" variant="light" color={t3Net > 0 ? "teal" : "red"}>
+                        <Badge size="sm" variant="light" color={t3Net > 0 ? "ledger" : "red"}>
                           {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
                         </Badge>
                       )}

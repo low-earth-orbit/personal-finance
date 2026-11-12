@@ -29,9 +29,17 @@ function Metric({
   return (
     <Stack gap={2}>
       <Group gap={4} align="center" wrap="nowrap">
-        <Text size="sm">{label}</Text>
+        <Text
+          size="xs"
+          c="dimmed"
+          ff="monospace"
+          tt="uppercase"
+          style={{ letterSpacing: "0.06em" }}
+        >
+          {label}
+        </Text>
       </Group>
-      <Text fw={600} fz="md">
+      <Text ff="monospace" fw={500} fz="xl">
         {value}
         {info}
       </Text>
@@ -78,7 +86,15 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
             Projected earliest retirement
           </Text>
           <Group gap="xs" align="baseline" wrap="nowrap">
-            <Title order={2} fz={{ base: 30, sm: 36 }} c="teal">
+            <Title
+              order={2}
+              ff="monospace"
+              fw={500}
+              fz={{ base: 44, sm: 64 }}
+              lh={1}
+              c="ledger"
+              style={{ letterSpacing: "-0.03em" }}
+            >
               {retireNow ? "Now" : `Age ${earliestRetirementAge}`}
             </Title>
             {!retireNow && (
@@ -87,7 +103,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
               </Text>
             )}
           </Group>
-          <Text size="xs" c="dimmed">
+          <Text size="xs" c="dimmed" mt="xs">
             {retireNow ? `Projected savings already cover the target income.` : ``}
             {!retireNow && retirementAgeRange && (
               <>

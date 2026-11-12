@@ -1,15 +1,22 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { Lato } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import Providers from "./providers";
 
-const lato = Lato({
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-lato",
+  variable: "--font-plex-sans",
+});
+
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-plex-mono",
 });
 
 export const metadata: Metadata = {
@@ -27,11 +34,11 @@ export const viewport: Viewport = {
 };
 
 const FAVICON =
-  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 100 100"><text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-size="90">🤑</text></svg>';
+  'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="6" fill="%2314181f"/><path d="M8 10h11M8 16h16M8 22h16" stroke="%23ffffff" stroke-width="2.5" stroke-linecap="round"/><circle cx="24" cy="10" r="2.5" fill="%234a9a80"/></svg>';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" {...mantineHtmlProps} className={lato.variable}>
+    <html lang="en" {...mantineHtmlProps} className={`${plexSans.variable} ${plexMono.variable}`}>
       <head>
         <ColorSchemeScript
           defaultColorScheme="auto"

@@ -16,9 +16,9 @@ import {
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import { NUM_SIMULATIONS } from "@/utils/retirement/monteCarlo";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
-import { generateTicks } from "@/utils/charts";
+import { CHART_AXIS, generateTicks } from "@/utils/charts";
 
-const TEAL = "var(--mantine-color-teal-6)";
+const ACCENT = "var(--pf-accent)";
 
 interface ProjectionChartProps {
   input: RetirementInput;
@@ -73,7 +73,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
       </Text>
       {inRetirement ? (
         <>
-          <Text size="sm" c="teal">
+          <Text size="sm" c="ledger">
             Median: {formatCAD(p.median ?? 0)}
           </Text>
           <Text size="xs" c="dimmed">
@@ -81,7 +81,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
           </Text>
         </>
       ) : (
-        <Text size="sm" c="teal">
+        <Text size="sm" c="ledger">
           Projected: {formatCAD(p.accum ?? 0)}
         </Text>
       )}
@@ -147,7 +147,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
               label={{
                 value: "Retirement",
                 position: "insideTopRight",
-                fill: "var(--mantine-color-gray-6)",
+                fill: "var(--pf-muted)",
                 fontSize: 12,
               }}
             />
@@ -158,14 +158,10 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
               ticks={ageTicks}
               tickMargin={8}
               label={{ value: "Age", position: "bottom", fontSize: 12 }}
-              tick={{ fontSize: 12 }}
+              {...CHART_AXIS}
               interval={0}
             />
-            <YAxis
-              width={50}
-              tickFormatter={(v) => formatCADCompact(Number(v))}
-              tick={{ fontSize: 12 }}
-            />
+            <YAxis width={50} tickFormatter={(v) => formatCADCompact(Number(v))} {...CHART_AXIS} />
             <Tooltip content={<ChartTooltip />} />
             {/* Stacked-area band: transparent base to P10, shaded width to P90. */}
             <Area
@@ -182,7 +178,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
               dataKey="bandWidth"
               stackId="band"
               stroke="none"
-              fill={TEAL}
+              fill={ACCENT}
               fillOpacity={0.18}
               connectNulls={false}
               isAnimationActive={false}
@@ -190,7 +186,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
             <Line
               type="monotone"
               dataKey="accum"
-              stroke={TEAL}
+              stroke={ACCENT}
               strokeWidth={2}
               dot={false}
               connectNulls={false}
@@ -199,7 +195,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
             <Line
               type="monotone"
               dataKey="median"
-              stroke={TEAL}
+              stroke={ACCENT}
               strokeWidth={2}
               dot={false}
               connectNulls={false}
@@ -207,14 +203,14 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
             />
             <ReferenceLine
               x={retireAge}
-              stroke={TEAL}
+              stroke={ACCENT}
               strokeDasharray="4 4"
               label={{
                 value: `Age ${retireAge}`,
                 position: "insideTopLeft",
                 fontSize: 12,
                 fontWeight: 600,
-                fill: "var(--mantine-color-teal-7)",
+                fill: "var(--pf-accent)",
               }}
             />
             {result.portfolioAtRetirement != null && (
@@ -222,8 +218,8 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
                 x={retireAge}
                 y={Math.max(0, Math.round(result.portfolioAtRetirement))}
                 r={5}
-                fill={TEAL}
-                stroke="white"
+                fill={ACCENT}
+                stroke="var(--mantine-color-body)"
                 strokeWidth={2}
               />
             )}
@@ -232,13 +228,13 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
       </div>
       <Group gap="lg" mt="sm" wrap="wrap">
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: TEAL }} aria-hidden />
+          <Box w={18} h={2} style={{ backgroundColor: ACCENT }} aria-hidden />
           <Text size="xs" c="dimmed">
             Median
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={10} style={{ backgroundColor: TEAL, opacity: 0.18 }} aria-hidden />
+          <Box w={18} h={10} style={{ backgroundColor: ACCENT, opacity: 0.18 }} aria-hidden />
           <Text size="xs" c="dimmed">
             10–90% range
           </Text>

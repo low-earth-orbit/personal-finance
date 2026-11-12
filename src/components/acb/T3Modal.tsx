@@ -54,7 +54,7 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
       size="lg"
     >
       <Stack gap="sm">
-        <Alert color="yellow" title="Don't enter full Box 21">
+        <Alert color="rust" title="Don't enter full Box 21">
           <Text size="sm">
             Box 21 mixes cash gains with phantom (reinvested) gains — only the phantom, non-cash
             portion increases ACB. Use the fund&apos;s year-end breakdown: reinvested $/unit × units

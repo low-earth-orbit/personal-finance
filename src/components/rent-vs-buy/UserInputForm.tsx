@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Accordion, Alert, Button, Group, Modal, SimpleGrid, Stack, Text } from "@mantine/core";
+import { Accordion, Alert, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconRotate } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
@@ -143,7 +143,7 @@ export default function UserInputForm({
         <Accordion.Item value="rent">
           <Accordion.Control>Rent</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="monthlyRent"
                 label="Monthly rent"
@@ -160,14 +160,14 @@ export default function UserInputForm({
                 helperText:
                   "Expected annual growth in rent payments. Typically at or slightly above inflation (2–2.5%).",
               })}
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="property">
           <Accordion.Control>Property</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="initialHomePrice"
                 label="Purchase price"
@@ -255,7 +255,7 @@ export default function UserInputForm({
                 suffix=" Years"
                 {...c("holdingPeriod")}
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
@@ -266,7 +266,7 @@ export default function UserInputForm({
               <Text size="xs" c="dimmed">
                 {`Down payment amount ${formatCAD((userInput.downPaymentPercentage / 100) * userInput.initialHomePrice)}. Est. mortgage payment: ${monthlyMortgage} /mo.${premiumText}`}
               </Text>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   id="downPaymentPercentage"
                   label="Down payment"
@@ -294,7 +294,7 @@ export default function UserInputForm({
                     "Your rate for the first 5-year term. Renewals vary around it. The default reflects the Bank of Canada's neutral policy rate (2.75%) plus a typical lender spread (1.75%).",
                   disabled: userInput.downPaymentPercentage === 100,
                 })}
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -308,7 +308,7 @@ export default function UserInputForm({
                 capital gains (taxed at sale). Use Annual Yield Tax to set a blended rate that
                 reflects your mix of interest, dividends and realized capital gains.
               </Alert>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {
                   label: "Compound return",
                   helperText:
@@ -349,7 +349,7 @@ export default function UserInputForm({
                   suffix="%"
                   {...c("taxShelteredPct")}
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -357,7 +357,7 @@ export default function UserInputForm({
         <Accordion.Item value="costs">
           <Accordion.Control>Transaction costs</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="buyerClosingCostsPct"
                 label="Buyer closing costs"
@@ -378,7 +378,7 @@ export default function UserInputForm({
                 suffix="%"
                 {...c("sellerClosingCostsPct")}
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>

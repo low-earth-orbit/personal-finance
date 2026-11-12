@@ -384,7 +384,7 @@ const Main = () => {
           </Paper>
         )}
         {overlappingFiles && (
-          <Alert color="yellow" title="Overlapping date ranges detected">
+          <Alert color="rust" title="Overlapping date ranges detected">
             <Text size="sm">
               Overlapping date ranges detected across files — transactions may be duplicated. Check
               that each file covers a distinct date range.
@@ -392,7 +392,7 @@ const Main = () => {
           </Alert>
         )}
         {mixedCurrencySymbols.length > 0 && (
-          <Alert color="yellow" title="Mixed currencies detected">
+          <Alert color="rust" title="Mixed currencies detected">
             <Text size="sm">
               {mixedCurrencySymbols.join(", ")}: transactions span more than one currency. ACB
               assumes a single currency per holding — convert each transaction to CAD using the
@@ -402,7 +402,7 @@ const Main = () => {
           </Alert>
         )}
         {oversoldSymbols.length > 0 && (
-          <Alert color="yellow" title="Sales exceed recorded purchases">
+          <Alert color="rust" title="Sales exceed recorded purchases">
             <Text size="sm">
               {oversoldSymbols.join(", ")}: more shares were sold than the uploads account for —
               purchase history is missing (an older file, or a transfer whose opening ACB was never
@@ -434,7 +434,7 @@ const Main = () => {
           <Paper withBorder p="md" radius="md">
             <Stack gap="md">
               {hasDefaultedUnknownAccountTypes && (
-                <Alert color="yellow" title="Mark account types">
+                <Alert color="rust" title="Mark account types">
                   <Text size="sm">
                     Some uploaded accounts do not say whether they are registered. Mark each unknown
                     account so registered accounts are excluded from ACB.
@@ -464,7 +464,7 @@ const Main = () => {
             </Tabs.Panel>
             <Tabs.Panel value="byAccount" pt="lg">
               <Stack gap="lg">
-                <Alert color="yellow" title="For reconciliation only">
+                <Alert color="rust" title="For reconciliation only">
                   <Text size="sm">
                     Book costs below are per account and unadjusted — no T3 or opening-lot
                     adjustments — matching what your account statements show. The CRA requires ACB

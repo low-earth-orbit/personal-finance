@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Accordion, Button, Select, SimpleGrid, Stack, Text } from "@mantine/core";
+import { Accordion, Button, Select, Stack, Text } from "@mantine/core";
 import FormResetButton from "@/components/shared/FormResetButton";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
+import { fieldRowClassNames, fieldRowClasses } from "@/components/shared/fieldRow";
 import { PORTFOLIO_PRESETS, PROVINCES, SALARY_CURVE_PRESETS } from "@/utils/allocator/presets";
 import { TAX_YEAR } from "@/utils/allocator/taxConstants";
 import type {
@@ -122,7 +123,7 @@ export default function InputForm({
                 prefix="$"
                 thousandSeparator
               />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   {...num("availableRrspRoom")}
                   label="Available RRSP room"
@@ -135,7 +136,7 @@ export default function InputForm({
                   prefix="$"
                   thousandSeparator
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -144,7 +145,7 @@ export default function InputForm({
           <Accordion.Control>Tax profile &amp; timeline</Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
                   {...num("retirementAge")}
@@ -157,6 +158,8 @@ export default function InputForm({
                   suffix=" yrs"
                 />
                 <Select
+                  className={fieldRowClasses.frame}
+                  classNames={fieldRowClassNames}
                   label="Province"
                   description="Only BC, ON, and NB tax rules are modeled"
                   data={PROVINCES}
@@ -172,8 +175,10 @@ export default function InputForm({
                   prefix="$"
                   thousandSeparator
                 />
-              </SimpleGrid>
+              </Stack>
               <Select
+                className={fieldRowClasses.frame}
+                classNames={fieldRowClassNames}
                 label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
                   value,
@@ -186,7 +191,7 @@ export default function InputForm({
                 {selectedCurve?.description}
               </Text>
               {input.salaryCurve === "custom" && (
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                <Stack gap={0}>
                   <UserInputFormItem
                     {...num("salaryGrowthPct")}
                     label="Real income growth"
@@ -199,7 +204,7 @@ export default function InputForm({
                     description="Years income grows before leveling off."
                     suffix=" yrs"
                   />
-                </SimpleGrid>
+                </Stack>
               )}
             </Stack>
           </Accordion.Panel>
@@ -213,6 +218,8 @@ export default function InputForm({
                 Defaults are illustrations. Small changes can alter the suggested split.
               </Text>
               <Select
+                className={fieldRowClasses.frame}
+                classNames={fieldRowClassNames}
                 label="Portfolio"
                 data={PORTFOLIO_PRESETS.map((preset) => ({
                   value: preset.id,
@@ -221,7 +228,7 @@ export default function InputForm({
                 value={input.portfolioPresetId}
                 onChange={setPortfolio}
               />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 {input.portfolioPresetId === "custom" && (
                   <UserInputFormItem
                     {...num("portfolioReturn")}
@@ -236,7 +243,7 @@ export default function InputForm({
                   label="Non-reg distribution yield"
                   suffix="%"
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -244,7 +251,7 @@ export default function InputForm({
         <Accordion.Item value="retirement-tax">
           <Accordion.Control>Retirement tax assumptions</Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 {...num("retirementWithdrawalRatePct")}
                 label="Effective RRSP withdrawal tax rate"
@@ -257,7 +264,7 @@ export default function InputForm({
                 description="Effective tax on the full capital gain after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
                 suffix="%"
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>

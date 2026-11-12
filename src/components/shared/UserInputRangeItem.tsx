@@ -1,6 +1,7 @@
 import { Anchor, Group, NumberInput, Stack, Text } from "@mantine/core";
 import { IconArrowBackUp, IconPlusMinus } from "@tabler/icons-react";
 import FieldLabel from "./FieldLabel";
+import { fieldRowClassNames, fieldRowClasses } from "./fieldRow";
 import type { FieldConstraint, FieldValue } from "@/types";
 
 const fmt = (n: FieldValue) => String(Number(Number(n).toFixed(2)));
@@ -76,9 +77,10 @@ export default function UserInputRangeItem({
   );
 
   return (
-    <Stack gap={4}>
+    <Stack gap={0} className={fieldRowClasses.frame}>
       <NumberInput
         id={baseField}
+        classNames={fieldRowClassNames}
         label={composedLabel}
         value={baseValue}
         onChange={onBaseChange}
@@ -93,7 +95,10 @@ export default function UserInputRangeItem({
         styles={{ label: { display: "block" } }}
       />
       {expanded && (
-        <>
+        <div className={`${fieldRowClasses.custom} ${fieldRowClasses.subRow}`}>
+          <Text size="xs" c="dimmed" aria-live="polite">
+            {rangeKnown ? `range ${fmt(low)}% to ${fmt(high)}%` : "range —"}
+          </Text>
           <NumberInput
             id={sigmaField}
             aria-label={`${label} uncertainty — 95% confidence spread`}
@@ -115,10 +120,7 @@ export default function UserInputRangeItem({
             clampBehavior="none"
             allowNegative={false}
           />
-          <Text size="xs" c="dimmed" aria-live="polite">
-            {rangeKnown ? `range ${fmt(low)}% to ${fmt(high)}%` : "range —"}
-          </Text>
-        </>
+        </div>
       )}
     </Stack>
   );

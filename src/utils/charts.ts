@@ -10,3 +10,13 @@ export const generateTicks = (min: number, max: number, step = 5) => {
   }
   return ticks;
 };
+
+/** Shared Recharts axis styling: mono tick labels in the muted ledger ink. */
+export const CHART_AXIS = {
+  stroke: "var(--pf-border)",
+  tick: {
+    fontSize: 12,
+    fontFamily: "var(--font-plex-mono), ui-monospace, monospace",
+    fill: "var(--pf-muted)",
+  },
+};
