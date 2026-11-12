@@ -7,12 +7,19 @@ import {
   Group,
   Paper,
   ScrollArea,
+  Skeleton,
   Stack,
   Table,
   Text,
   VisuallyHidden,
 } from "@mantine/core";
-import { IconChevronDown, IconChevronUp, IconDownload, IconHeart } from "@tabler/icons-react";
+import {
+  IconChevronDown,
+  IconChevronUp,
+  IconDownload,
+  IconHeart,
+  IconScale,
+} from "@tabler/icons-react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ComposedChart,
@@ -160,6 +167,10 @@ function breakEvenInputsText(be: BreakEven): string | null {
   return `It would be a 50/50 call at year ${be.year} with ${parts.join(" or ")}, other inputs unchanged.`;
 }
 
+/** Typical tie sentence, only used (hidden) to size the skeleton while the tie is computing. */
+const TIE_PLACEHOLDER =
+  "It would be a 50/50 call at year 25 with a rent of $4,500/mo (now $3,500) or a price of $1,000,000 (now $1,200,000), other inputs unchanged.";
+
 export function Summary({
   data,
   holdingPeriod,
@@ -200,17 +211,30 @@ export function Summary({
   const breakEvenLine = breakEvenText(data, decision.year);
   const breakEvenInput = breakEven ? breakEvenInputsText(breakEven) : null;
   const close = winnerPct < 60 ? " Small changes in your assumptions could flip the outcome." : "";
-  const tie = breakEvenInput ? ` ${breakEvenInput}` : "";
-  const body = `${sims} ${gap} ${breakEvenLine}${close}${tie}`;
+  const body = `${sims} ${gap} ${breakEvenLine}${close}`;
 
   return (
     <Alert
-      icon={winnerPct >= 60 && <IconHeart size={16} />}
+      icon={winnerPct >= 60 ? <IconHeart size={16} /> : <IconScale size={16} />}
       color={color}
       title={title}
       radius="md"
     >
       <Text size="sm">{body}</Text>
+      {breakEven === null ? (
+        // The tie line arrives ~1 s after the chart. Wrap a typical-length sentence in a skeleton
+        // (its text is hidden) so it wraps at this container's width and reserves the height the
+        // real line will take, instead of the alert and everything below it jumping.
+        <Skeleton mt={4} aria-hidden data-testid="break-even-pending">
+          <Text size="sm">{TIE_PLACEHOLDER}</Text>
+        </Skeleton>
+      ) : (
+        breakEvenInput && (
+          <Text size="sm" mt={4}>
+            {breakEvenInput}
+          </Text>
+        )
+      )}
     </Alert>
   );
 }

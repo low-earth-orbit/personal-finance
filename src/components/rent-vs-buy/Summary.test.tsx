@@ -92,4 +92,36 @@ describe("rent-vs-buy Summary", () => {
     expect(screen.queryByText(/a rent of/)).toBeNull();
     expect(screen.getByText(/with a price of \$600,000/)).toBeInTheDocument();
   });
+
+  it("reserves space for the tie line while it is still computing", () => {
+    const data = [point(1, 0.7, 1000), point(2, 0.65, 2000)];
+    const { rerender } = render(<Summary data={data} holdingPeriod={2} breakEven={null} />);
+    expect(screen.getByTestId("break-even-pending")).toBeInTheDocument();
+
+    rerender(
+      <Summary
+        data={data}
+        holdingPeriod={2}
+        breakEven={{
+          year: 2,
+          currentRent: 3500,
+          currentPrice: 1000000,
+          monthlyRent: 4460,
+          homePrice: 784000,
+        }}
+      />,
+    );
+    expect(screen.queryByTestId("break-even-pending")).toBeNull();
+    expect(screen.getByText(/50\/50 call at year 2/)).toBeInTheDocument();
+  });
+
+  it("shows an icon on every tier, including too close to call", () => {
+    const close = [point(1, 0.52, 500)];
+    const { container, rerender } = render(<Summary data={close} holdingPeriod={1} />);
+    expect(screen.getByText("Too close to call")).toBeInTheDocument();
+    expect(container.querySelector(".mantine-Alert-icon svg")).not.toBeNull();
+
+    rerender(<Summary data={[point(1, 0.9, 5000)]} holdingPeriod={1} />);
+    expect(container.querySelector(".mantine-Alert-icon svg")).not.toBeNull();
+  });
 });
