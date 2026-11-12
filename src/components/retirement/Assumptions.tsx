@@ -6,8 +6,8 @@ import ToolNotes from "@/components/shared/ToolNotes";
  */
 const Assumptions = () => {
   return (
-    <ToolNotes title="Assumptions">
-      <Text size="sm" pb="xs" c="dimmed" maw="60rem">
+    <ToolNotes title="Assumptions" columns>
+      <Text size="sm" pb="xs" c="dimmed">
         This is a quick reality check, not a full retirement plan. Results are shown in today&apos;s
         dollars and use a simple glide path — one expected return while you&apos;re working and
         another (usually lower) in retirement. It finds the earliest age at which your savings can

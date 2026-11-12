@@ -15,6 +15,8 @@ python3 -m unittest discover -s analysis -p 'test_*.py' -v
 
 `dev`/`build` set `NODE_OPTIONS=--max-old-space-size=8192`. Turbopack dev server grows over session — restart on OOM. Always use `npm run …`.
 
+The Turbopack on-disk dev cache is disabled in `next.config.ts` (`turbopackFileSystemCacheForDev: false`): a corrupt cache twice made `next dev` unusable (runaway worker processes; `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`). If dev ever misbehaves, stop it and `rm -rf .next`. Don't run `npm run build` against a `.next` that a dev server is using; build in a copy if you need both.
+
 Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 ## Agent Workflow

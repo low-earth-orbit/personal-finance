@@ -269,13 +269,13 @@ export default function InputForm({
               <UserInputFormItem
                 {...num("retirementWithdrawalRatePct")}
                 label="Effective RRSP withdrawal tax rate"
-                description="Estimated average tax applied to RRSP withdrawals at retirement. Consider pensions, CPP/OAS, other taxable income, and possible OAS clawback."
+                labelHelperText="Your average tax on RRSP withdrawals in retirement. Consider pensions, CPP/OAS, other taxable income, and possible OAS clawback."
                 suffix="%"
               />
               <UserInputFormItem
                 {...num("capitalGainsTaxRatePct")}
                 label="Capital gains tax rate at retirement"
-                description="Effective tax on the full capital gain after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
+                labelHelperText="Effective tax on the whole gain, after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
                 suffix="%"
               />
             </Stack>

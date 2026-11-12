@@ -128,6 +128,18 @@
   text-align: right;
 }
 
+/*
+ * Steppers read as one attached control: a single hairline on the input's edge, no split between
+ * the up and down halves.
+ */
+.controls {
+  border-inline-start: 1px solid var(--pf-border);
+}
+
+.control {
+  border: 0;
+}
+
 /* Keep right-aligned figures clear of a right section (e.g. a unit or loader). */
 [data-with-right-section] > .numberInput {
   padding-inline-end: calc(var(--input-right-section-size) + 0.5rem);
@@ -190,16 +202,18 @@ ul.list > .listItem::before {
   color: var(--pf-muted);
 }
 
-/* An outlined pill whose active segment fills its cell edge to edge. */
+/*
+ * An outlined pill: the active segment is a chip inset inside the outline, so the control reads as
+ * one piece rather than two halves.
+ */
 .segmented {
-  overflow: hidden;
   background: transparent;
   border: 1px solid var(--pf-ink);
-  padding: 0;
+  padding: 2px;
 }
 
 .segmentedIndicator {
-  border-radius: 0;
+  border-radius: 2px;
   box-shadow: none;
 }
 

@@ -7,8 +7,8 @@ import ToolNotes from "@/components/shared/ToolNotes";
  */
 const Methodology = () => {
   return (
-    <ToolNotes title="Methodology">
-      <Text size="sm" c="dimmed" maw="60rem">
+    <ToolNotes title="Methodology" columns>
+      <Text size="sm" c="dimmed">
         This calculator uses a cash-flow method to compare renting and buying on an equal footing.
         Each year, whoever has the lower housing cost invests the difference: the renter invests
         what the buyer spends on ownership costs (mortgage payments, property tax, maintenance, and

@@ -24,7 +24,7 @@ export default function TaxAssumptions() {
           <summary style={{ cursor: "pointer", fontWeight: 600, fontSize: "1.25rem" }}>
             Detailed model assumptions
           </summary>
-          <Stack gap="sm" mt="md" maw="60rem">
+          <Stack gap="sm" mt="md" style={{ columns: "2 22rem", columnGap: "3rem" }}>
             <Text size="sm" c="dimmed">
               Uses 2026 federal, New Brunswick, Ontario, and British Columbia personal tax rules.
               All brackets, rates, credits, surtax thresholds, premium thresholds, and reduction

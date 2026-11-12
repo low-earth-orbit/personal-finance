@@ -131,7 +131,9 @@ export const theme = createTheme({
     dark,
   },
   fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
-  fontFamilyMonospace: "var(--font-plex-mono), ui-monospace, monospace",
+  // Figures use the text face with tabular numerals; a monospace face made numbers and % look
+  // like code. The token name is kept so existing `ff="monospace"` call sites stay valid.
+  fontFamilyMonospace: "var(--font-plex-sans), system-ui, sans-serif",
   headings: {
     fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
     fontWeight: "600",
@@ -172,7 +174,11 @@ export const theme = createTheme({
     }),
     NumberInput: NumberInput.extend({
       defaultProps: { size: "md" },
-      classNames: { input: classes.numberInput },
+      classNames: {
+        input: classes.numberInput,
+        controls: classes.controls,
+        control: classes.control,
+      },
     }),
     Paper: Paper.extend({
       classNames: { root: classes.paper },

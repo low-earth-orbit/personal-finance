@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import Providers from "./providers";
 
@@ -10,13 +10,6 @@ const plexSans = IBM_Plex_Sans({
   weight: ["400", "500", "600", "700"],
   display: "swap",
   variable: "--font-plex-sans",
-});
-
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  display: "swap",
-  variable: "--font-plex-mono",
 });
 
 export const metadata: Metadata = {
@@ -38,7 +31,7 @@ const FAVICON =
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" {...mantineHtmlProps} className={`${plexSans.variable} ${plexMono.variable}`}>
+    <html lang="en" {...mantineHtmlProps} className={plexSans.variable}>
       <head>
         <ColorSchemeScript
           defaultColorScheme="auto"
