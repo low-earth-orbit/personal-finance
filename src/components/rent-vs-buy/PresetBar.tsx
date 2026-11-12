@@ -124,7 +124,7 @@ export default function PresetBar({
             </Text>
             {basePreset.custom ? (
               <Button
-                variant="light"
+                variant="default"
                 size="compact-xs"
                 leftSection={<IconDeviceFloppy size={12} />}
                 onClick={() => onUpdate(basePreset)}
@@ -133,7 +133,7 @@ export default function PresetBar({
               </Button>
             ) : (
               <Button
-                variant="light"
+                variant="default"
                 size="compact-xs"
                 leftSection={<IconDeviceFloppy size={12} />}
                 onClick={startSave}

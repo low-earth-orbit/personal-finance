@@ -127,7 +127,7 @@ const T3Modal = ({ symbol, entries, onChange, onClose }: T3ModalProps) => {
             </Table.Tbody>
           </Table>
         )}
-        <Button variant="light" size="xs" w="fit-content" onClick={addEntry}>
+        <Button variant="default" size="xs" w="fit-content" onClick={addEntry}>
           + Add year
         </Button>
         <Group justify="space-between" mt="xs">

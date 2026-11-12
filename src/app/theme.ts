@@ -6,6 +6,7 @@ import {
   Card,
   FileInput,
   List,
+  Modal,
   NumberInput,
   Paper,
   SegmentedControl,
@@ -165,6 +166,9 @@ export const theme = createTheme({
     }),
     List: List.extend({
       classNames: { root: classes.list, item: classes.listItem },
+    }),
+    Modal: Modal.extend({
+      classNames: { title: classes.modalTitle },
     }),
     NumberInput: NumberInput.extend({
       defaultProps: { size: "md" },

@@ -114,6 +114,13 @@
   font-weight: 500;
 }
 
+/* Every dialog title reads as a section heading. */
+.modalTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 /* Figures in inputs line up like a ledger column. */
 .numberInput {
   font-family: var(--mantine-font-family-monospace);

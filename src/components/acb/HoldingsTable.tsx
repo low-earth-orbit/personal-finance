@@ -114,14 +114,14 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                         <Tooltip
                           label={`Includes ${sharesFormatter.format(holding.transferredShares)} transferred shares — no purchase history`}
                         >
-                          <Badge color="rust" size="sm" variant="light">
+                          <Badge color="rust" size="sm" variant="outline">
                             {sharesFormatter.format(holding.transferredShares)} transferred
                           </Badge>
                         </Tooltip>
                       )}
                       {oversold && (
                         <Tooltip label="Sales exceed recorded purchases — missing buys or unentered transfers; pool reset to $0, so ACB is understated">
-                          <Badge color="red" size="sm" variant="light">
+                          <Badge color="red" size="sm" variant="outline">
                             missing history
                           </Badge>
                         </Tooltip>
@@ -151,7 +151,7 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                             Edit transfers
                           </Button>
                           {openingLot > 0 && (
-                            <Badge size="sm" variant="light" color="ledger">
+                            <Badge size="sm" variant="outline" color="ledger">
                               {`+${formatCADDecimal(openingLot)}`}
                             </Badge>
                           )}
@@ -174,13 +174,13 @@ const HoldingsTable = ({ holdings, transactions, adjustments }: HoldingsTablePro
                           Edit T3
                         </Button>
                         {t3Net !== 0 && (
-                          <Badge size="sm" variant="light" color={t3Net > 0 ? "ledger" : "red"}>
+                          <Badge size="sm" variant="outline" color={t3Net > 0 ? "ledger" : "red"}>
                             {`${t3Net < 0 ? "−" : "+"}${formatCADDecimal(Math.abs(t3Net))}`}
                           </Badge>
                         )}
                         {deemedGain > 0 && (
                           <Tooltip label="ROC exceeded ACB — deemed capital gain to report on Schedule 3; pool reset to $0">
-                            <Badge size="sm" variant="light" color="red">
+                            <Badge size="sm" variant="outline" color="red">
                               {`+${formatCADDecimal(deemedGain)} deemed gain`}
                             </Badge>
                           </Tooltip>

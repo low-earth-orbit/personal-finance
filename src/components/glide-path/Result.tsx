@@ -1,21 +1,8 @@
 "use client";
 
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Group,
-  Loader,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import { Alert, Badge, Button, Card, Group, Loader, Stack, Text, Title } from "@mantine/core";
 import {
   IconInfoCircle,
-  IconChartLine,
   IconTrendingDown,
   IconTrendingUp,
   IconMinus,
@@ -103,7 +90,7 @@ function GlideShape({
     <Stack gap={compact ? 4 : "xs"}>
       <Group gap="xs" wrap="wrap">
         <Badge
-          variant="light"
+          variant="outline"
           color={DIR_COLOR[result.accumDir]}
           leftSection={slopeIcon(result.accumDir)}
           size={compact ? "sm" : "lg"}
@@ -111,7 +98,7 @@ function GlideShape({
           Accumulation: {result.accumDir}
         </Badge>
         <Badge
-          variant="light"
+          variant="outline"
           color={DIR_COLOR[result.retireDir]}
           leftSection={slopeIcon(result.retireDir)}
           size={compact ? "sm" : "lg"}
@@ -325,16 +312,18 @@ export default function Result({
 
   if (computing && !result) {
     return (
-      <Center mih={400}>
-        <Stack align="center" gap="md">
-          <Loader size="xl" />
-          <Text size="sm" c="dimmed" ta="center">
+      <Stack gap="sm" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }} aria-live="polite">
+        <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
+        <Group gap="sm" wrap="nowrap" align="center">
+          <Loader size="sm" color="ink" />
+          <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
             Running the optimizer…
-            <br />
-            This may take a few moments.
           </Text>
-        </Stack>
-      </Center>
+        </Group>
+        <Text c="dimmed" maw="36rem">
+          This may take a few moments.
+        </Text>
+      </Stack>
     );
   }
 
@@ -342,23 +331,19 @@ export default function Result({
     // Below lg the result sits above the form; an empty placeholder there only pushes the form
     // down, so it is shown beside the form on wide screens only.
     return (
-      <Center mih={400} visibleFrom="lg">
-        <Stack align="center" gap="md">
-          <ThemeIcon size={56} variant="light" color="ledger" radius="xl">
-            <IconChartLine size={30} />
-          </ThemeIcon>
-          <Stack gap={4} align="center">
-            <Text fw={600}>Ready to optimize</Text>
-            <Text size="sm" c="dimmed" ta="center" maw={300}>
-              Fill in your details, then click{" "}
-              <Text span fw={600}>
-                Generate allocation paths
-              </Text>{" "}
-              to run the model on these inputs.
-            </Text>
-          </Stack>
-        </Stack>
-      </Center>
+      <Stack gap="xs" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }} visibleFrom="lg">
+        <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
+        <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
+          Ready to optimize
+        </Text>
+        <Text c="dimmed" maw="36rem">
+          Fill in your details, then click{" "}
+          <Text span fw={600} c="var(--pf-ink)">
+            Generate allocation paths
+          </Text>{" "}
+          to run the model on these inputs.
+        </Text>
+      </Stack>
     );
   }
 

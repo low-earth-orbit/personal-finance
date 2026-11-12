@@ -146,7 +146,7 @@ export default function ManagePresetsModal({
             autoFocus
           />
           <ActionIcon
-            variant="light"
+            variant="default"
             onClick={submitRename}
             disabled={!canRename}
             aria-label="Save name"
