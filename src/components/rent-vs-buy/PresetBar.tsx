@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Anchor, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
+import { Anchor, Box, Button, Group, Modal, Stack, Text, TextInput } from "@mantine/core";
 import { IconDeviceFloppy, IconPlus, IconSettings } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import ManagePresetsModal, { type ImportSummary } from "./ManagePresetsModal";
@@ -105,46 +105,50 @@ export default function PresetBar({
         </Button>
       </Group>
 
-      {edited && basePreset && (
-        <Group gap="xs" aria-live="polite">
-          <Text size="xs" c="dimmed">
-            Edited from {basePreset.label}.
-          </Text>
-          {basePreset.custom ? (
-            <Button
-              variant="light"
-              size="compact-xs"
-              leftSection={<IconDeviceFloppy size={12} />}
-              onClick={() => onUpdate(basePreset)}
-            >
-              Save to {basePreset.label}
-            </Button>
-          ) : (
-            <Button
-              variant="light"
-              size="compact-xs"
-              leftSection={<IconDeviceFloppy size={12} />}
-              onClick={startSave}
-            >
-              Save as new preset
-            </Button>
-          )}
-          <Anchor component="button" type="button" size="xs" onClick={() => onSelect(basePreset)}>
-            Revert
-          </Anchor>
-        </Group>
-      )}
+      {/* Status slot: always reserves one row (compact-xs button height) so the "edited" / "undo"
+          messages appearing and disappearing don't push the form below them up and down. */}
+      <Box mih={22}>
+        {edited && basePreset && (
+          <Group gap="xs" aria-live="polite">
+            <Text size="xs" c="dimmed">
+              Edited from {basePreset.label}.
+            </Text>
+            {basePreset.custom ? (
+              <Button
+                variant="light"
+                size="compact-xs"
+                leftSection={<IconDeviceFloppy size={12} />}
+                onClick={() => onUpdate(basePreset)}
+              >
+                Save to {basePreset.label}
+              </Button>
+            ) : (
+              <Button
+                variant="light"
+                size="compact-xs"
+                leftSection={<IconDeviceFloppy size={12} />}
+                onClick={startSave}
+              >
+                Save as new preset
+              </Button>
+            )}
+            <Anchor component="button" type="button" size="xs" onClick={() => onSelect(basePreset)}>
+              Revert
+            </Anchor>
+          </Group>
+        )}
 
-      {recentlyDeleted && !manageOpen && (
-        <Group gap="xs" aria-live="polite">
-          <Text size="xs" c="dimmed">
-            {recentlyDeleted.custom ? "Deleted" : "Hid"} {recentlyDeleted.label}.
-          </Text>
-          <Anchor component="button" type="button" size="xs" onClick={onUndoDelete}>
-            Undo
-          </Anchor>
-        </Group>
-      )}
+        {recentlyDeleted && !manageOpen && (
+          <Group gap="xs" aria-live="polite">
+            <Text size="xs" c="dimmed">
+              {recentlyDeleted.custom ? "Deleted" : "Hid"} {recentlyDeleted.label}.
+            </Text>
+            <Anchor component="button" type="button" size="xs" onClick={onUndoDelete}>
+              Undo
+            </Anchor>
+          </Group>
+        )}
+      </Box>
 
       <ManagePresetsModal
         opened={manageOpen}
