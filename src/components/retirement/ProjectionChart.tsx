@@ -16,7 +16,7 @@ import {
 import { formatCAD, formatCADCompact } from "@/utils/format";
 import { NUM_SIMULATIONS } from "@/utils/retirement/monteCarlo";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
-import { CHART_AXIS, generateTicks } from "@/utils/charts";
+import { CHART_AXIS, generateTicks, niceTicks } from "@/utils/charts";
 
 const ACCENT = "var(--pf-accent)";
 
@@ -117,6 +117,8 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
   const lastAge = data[data.length - 1]?.age ?? retireAge;
 
   const ageTicks = generateTicks(input.currentAge, input.planningAge, 5);
+  // Round money ticks ($0 / $1M / $2M) from $0 to just above the highest balance or band.
+  const yTicks = niceTicks(0, Math.max(1, ...data.map((d) => Math.max(d.accum ?? 0, d.p90 ?? 0))));
 
   return (
     <Card withBorder radius="md" padding="md">
@@ -163,7 +165,13 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
               {...CHART_AXIS}
               interval={0}
             />
-            <YAxis width={50} tickFormatter={(v) => formatCADCompact(Number(v))} {...CHART_AXIS} />
+            <YAxis
+              width={50}
+              domain={[yTicks[0], yTicks[yTicks.length - 1]]}
+              ticks={yTicks}
+              tickFormatter={(v) => formatCADCompact(Number(v))}
+              {...CHART_AXIS}
+            />
             <Tooltip content={<ChartTooltip />} />
             {/* Stacked-area band: transparent base to P10, shaded width to P90. */}
             <Area

@@ -98,7 +98,7 @@ export default function Main() {
           <ColumnHeader title="Inputs" />
           <InputForm input={input} errors={errors} onChange={handleChange} onReset={handleReset} />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result} id="result">
           <ColumnHeader title="Result" note="Updates as you change inputs" />
           <Result input={input} result={result} loading={loading} />
         </Grid.Col>

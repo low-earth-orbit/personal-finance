@@ -4,6 +4,7 @@ import { Alert, Box, Card, Center, Group, Loader, Stack, Text } from "@mantine/c
 import { IconInfoCircle } from "@tabler/icons-react";
 import Headline from "./Headline";
 import ProjectionChart from "./ProjectionChart";
+import JumpToResult from "@/components/shared/JumpToResult";
 import { formatCAD } from "@/utils/format";
 import { incomePhases, type IncomePhase } from "@/utils/retirement/projection";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
@@ -239,8 +240,17 @@ export default function Result({ input, result, loading = false }: ResultProps) 
     );
   }
 
+  const age = result.earliestRetirementAge;
+  const jumpText =
+    age === null
+      ? "Doesn't reach the target yet"
+      : result.yearsUntilRetirement === 0
+        ? `Retire now · ${input.targetSuccessRate}% confidence`
+        : `Retire at ${age} · ${input.targetSuccessRate}% confidence`;
+
   return (
     <Stack gap="lg">
+      <JumpToResult targetId="result">{jumpText}</JumpToResult>
       <Headline input={input} result={result} />
       <IncomeSummary input={input} result={result} />
       <ProjectionChart input={input} result={result} />

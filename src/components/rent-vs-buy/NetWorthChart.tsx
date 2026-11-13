@@ -15,8 +15,9 @@ import {
 } from "recharts";
 import { SIMULATION_HORIZON_YEARS } from "@/utils/monteCarlo";
 import { formatCAD, formatCADCompact } from "@/utils/format";
-import { CHART_AXIS } from "@/utils/charts";
+import { CHART_AXIS, generateTicks, niceTicks } from "@/utils/charts";
 import { Eyebrow, Figure, FigureStrip } from "@/components/shared/Figures";
+import JumpToResult from "@/components/shared/JumpToResult";
 import type {
   BreakEven,
   MonteCarloResponse,
@@ -208,7 +209,12 @@ export function Summary({
 
   return (
     <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
-      <Eyebrow>Result · sale at year {decision.year}</Eyebrow>
+      <JumpToResult targetId="result">
+        {winnerPct >= 60
+          ? `${title} · ${winnerPct}%`
+          : `${title} · ${winner.toLowerCase()} ${winnerPct}%`}
+      </JumpToResult>
+      <Eyebrow>If you sell at year {decision.year}</Eyebrow>
       <Group gap="sm" wrap="nowrap" align="center">
         {winnerPct >= 60 && (
           <span data-testid="verdict-icon" style={{ display: "inline-flex", color: verdictColor }}>
@@ -323,13 +329,11 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
     .flatMap((d) => [d.renterP25, d.renterP75, d.ownerP25, d.ownerP75])
     .filter((v): v is number => v != null && isFinite(v));
 
-  const yMin = Math.min(...allValues);
-  const yMax = Math.max(...allValues);
-  const yPad = (yMax - yMin) * 0.1;
-  const yDomain = [
-    Math.floor((yMin - yPad) / 50000) * 50000,
-    Math.ceil((yMax + yPad) / 50000) * 50000,
-  ];
+  // Round, evenly spaced money ticks; the domain runs from the first tick to the last.
+  const yTicks = niceTicks(Math.min(...allValues), Math.max(...allValues));
+  const yDomain = [yTicks[0], yTicks[yTicks.length - 1]];
+  // Every 5 years (plus year 1); the sale year has its own labelled line.
+  const yearTicks = [1, ...generateTicks(5, lastPoint.year, 5)];
 
   function downloadCSV() {
     const esc = (v: unknown) => {
@@ -400,9 +404,17 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                 fontSize: 12,
                 fill: "var(--pf-muted)",
               }}
+              ticks={yearTicks}
+              interval={0}
               {...CHART_AXIS}
             />
-            <YAxis domain={yDomain} tickFormatter={formatCADCompact} {...CHART_AXIS} width={70} />
+            <YAxis
+              domain={yDomain}
+              ticks={yTicks}
+              tickFormatter={formatCADCompact}
+              {...CHART_AXIS}
+              width={70}
+            />
             <Tooltip content={<ChartTooltip />} />
 
             <Area
@@ -586,6 +598,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
 
       <Group justify="flex-end" align="center" mt="xs">
         <Button
+          variant="default"
           size="sm"
           leftSection={<IconDownload size={14} aria-hidden="true" />}
           onClick={downloadCSV}

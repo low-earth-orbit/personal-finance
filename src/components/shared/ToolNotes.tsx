@@ -5,9 +5,10 @@ import classes from "./Ledger.module.css";
 /**
  * Ruled "notes" section under a tool: methodology, assumptions, acknowledgements.
  *
- * `columns` flows plain prose into two columns on wide screens. Leave it off when the children
- * already lay themselves out (a grid); flowing a grid into CSS columns splits it at an arbitrary
- * point and strands content in the second column.
+ * `columns` flows plain prose into two columns on wide screens. Paragraphs never split across the
+ * columns (reading on from the bottom of one column to the top of the next mid-sentence is hard),
+ * so give it two or more paragraphs of similar length. Leave it off when the children already lay
+ * themselves out (a grid); flowing a grid into CSS columns strands content in the second column.
  */
 export default function ToolNotes({
   title,
@@ -23,7 +24,7 @@ export default function ToolNotes({
       <Title order={2} className={classes.notesHeading}>
         {title}
       </Title>
-      {columns ? <div style={{ columns: "2 22rem", columnGap: "3rem" }}>{children}</div> : children}
+      {columns ? <div className={classes.notesColumns}>{children}</div> : children}
     </Container>
   );
 }

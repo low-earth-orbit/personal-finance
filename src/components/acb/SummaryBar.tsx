@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { SimpleGrid, Text } from "@mantine/core";
 import { formatCAD } from "@/utils/format";
 
@@ -13,7 +14,7 @@ type SummaryBarProps = {
 
 type StatProps = {
   label: string;
-  value: string;
+  value: ReactNode;
 };
 
 const Stat = ({ label, value }: StatProps) => (
@@ -50,7 +51,20 @@ const SummaryBar = ({
       <Stat label="Total cost basis" value={formatCAD(totalCostBasis)} />
       <Stat label="Holdings" value={String(holdingsCount)} />
       <Stat label="Transactions" value={String(transactionCount)} />
-      <Stat label="Coverage" value={dateRange ? `${dateRange.min} – ${dateRange.max}` : "—"} />
+      <Stat
+        label="Coverage"
+        value={
+          dateRange ? (
+            // Each date stays whole; a narrow cell wraps at the dash, not inside "2025-03-03".
+            <>
+              <span style={{ whiteSpace: "nowrap" }}>{dateRange.min}</span> –{" "}
+              <span style={{ whiteSpace: "nowrap" }}>{dateRange.max}</span>
+            </>
+          ) : (
+            "—"
+          )
+        }
+      />
     </SimpleGrid>
   </div>
 );

@@ -281,7 +281,7 @@ const Main = () => {
             }
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result} id="result">
           <ColumnHeader title="Result" note="Updates as you change inputs" />
           <Result userInput={userInput} errors={errors} />
         </Grid.Col>

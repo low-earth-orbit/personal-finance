@@ -31,11 +31,19 @@
   margin-top: -1px;
 }
 
+/* Block, not flex: an info icon in a label that wraps stays beside the words, not at the far edge. */
 .figureLabel {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: block;
   min-height: 1.25rem;
+}
+
+/* No-break space + icon, kept on the same line as the last word of the label. */
+.figureInfo {
+  white-space: nowrap;
+}
+
+.figureInfo > * {
+  vertical-align: middle;
 }
 
 .figureValue {
@@ -119,6 +127,16 @@
   border-bottom: 1px solid var(--pf-ink);
   font-size: 1.5rem;
   letter-spacing: -0.01em;
+}
+
+.notesColumns {
+  columns: 2 22rem;
+  column-gap: 3rem;
+}
+
+/* Whole paragraphs per column: never continue a sentence at the top of the next column. */
+.notesColumns > * {
+  break-inside: avoid;
 }
 
 /*

@@ -26,8 +26,13 @@ export function Figure({ label, value, note, info, tone, size = "md" }: FigurePr
   return (
     <div className={classes.figure}>
       <span className={`${classes.eyebrow} ${classes.figureLabel}`}>
-        <span>{label}</span>
-        {info}
+        {label}
+        {info && (
+          <span className={classes.figureInfo}>
+            {" "}
+            {info}
+          </span>
+        )}
       </span>
       <span
         className={classes.figureValue}
