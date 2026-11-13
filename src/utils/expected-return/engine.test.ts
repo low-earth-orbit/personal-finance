@@ -138,7 +138,7 @@ describe("regionViews", () => {
   it("takes the earnings yield from the region's CAPE and the bond view from global inputs", () => {
     const views = regionViews(DEFAULTS.regions.canada, DEFAULTS);
     expect(views.earningsYield).toBeCloseTo(1.075 / 25, 12);
-    expect(views.riskPremium).toBeCloseTo(0.072, 12);
+    expect(views.riskPremium).toBeCloseTo(0.06, 12);
   });
 });
 

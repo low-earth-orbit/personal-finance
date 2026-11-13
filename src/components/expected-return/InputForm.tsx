@@ -1,11 +1,21 @@
 "use client";
 
 import { useState } from "react";
-import { Accordion, Stack, Text } from "@mantine/core";
+import { Accordion, Button, Group, Stack, Text } from "@mantine/core";
+import FieldHeader from "@/components/shared/FieldHeader";
 import FormResetButton from "@/components/shared/FormResetButton";
 import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
-import { REGION_IDS, REGION_LABELS } from "@/utils/expected-return/presets";
+import { fieldRowClasses } from "@/components/shared/fieldRow";
+import type { ViewWeights } from "@/utils/expected-return/engine";
+import { formatRate } from "@/utils/expected-return/format";
+import {
+  REGION_IDS,
+  REGION_LABELS,
+  WEIGHT_PRESETS,
+  matchWeightPreset,
+  type WeightPresetId,
+} from "@/utils/expected-return/presets";
 import { GLOBAL_CONSTRAINTS, REGION_CONSTRAINTS } from "@/utils/expected-return/validation";
 import type {
   ExpectedReturnErrors,
@@ -23,6 +33,9 @@ interface Props {
   errors: ExpectedReturnErrors;
   onRegionChange: OnRegionChange;
   onChange: OnGlobalChange;
+  onWeightsChange: (weights: ViewWeights) => void;
+  /** Real return after costs each weight preset gives with the other inputs; null while invalid. */
+  presetReturns: Record<WeightPresetId, number> | null;
   onReset: () => void;
 }
 
@@ -61,11 +74,11 @@ function errorSections(errors: ExpectedReturnErrors): Section[] {
 const REGION_HELP: Partial<Record<RegionKey, { description?: string; helper?: string }>> = {
   weight: {
     helper:
-      "This region's share of your stock portfolio. VEQT holds about 30% Canada, 45% US, 18% other developed markets and 7% emerging markets; its fact sheet on Vanguard Canada's site has the current split.",
+      "This region's share of your stock portfolio. VEQT holds about 30% Canada, 45% US, 18% international developed markets and 7% emerging markets; its fact sheet on Vanguard Canada's site has the current split.",
   },
   dividendYield: {
     helper:
-      "Trailing 12-month dividend yield of the region's index. Index ETF pages list it: iShares XIC (Canada), IVV (US), EFA (developed ex-North America), EEM (emerging). Those yields are after the fund's fee, so add the fee back.",
+      "Trailing 12-month dividend yield of the region's index. Index ETF pages list it: iShares XIC (Canada), XTOT (US), XEF (international developed), XEC (emerging). Those yields are after the fund's fee and, for XTOT, XEF and XEC, after foreign withholding tax paid inside the fund, so add both back: divide by about 0.85 for withholding (15% on US dividends; rates vary by country), then add the fee. The withholding drag is counted separately under costs.",
   },
   buybackYield: {
     helper:
@@ -83,11 +96,21 @@ const REGION_HELP: Partial<Record<RegionKey, { description?: string; helper?: st
   targetCape: {
     description: "Set equal to current CAPE to switch off reversion for this region.",
     helper:
-      "The level CAPE drifts back toward. US medians: 16 since 1881, about 20 since 1950 and 26 since 1990 (Shiller data). Picking a recent-era median assumes part of the rise in valuations is permanent. The valuation half-life sets how fast it gets there.",
+      "The level CAPE drifts back toward. US medians: about 16.5 since 1881, 20 since 1950 and 26.5 since 1990 (Shiller data). Picking a recent-era median assumes part of the rise in valuations is permanent. The CAPE half-life sets how fast it gets there.",
   },
 };
 
-export default function InputForm({ input, errors, onRegionChange, onChange, onReset }: Props) {
+export default function InputForm({
+  input,
+  errors,
+  onRegionChange,
+  onChange,
+  onWeightsChange,
+  presetReturns,
+  onReset,
+}: Props) {
+  const preset = matchWeightPreset(input);
+
   const [opened, setOpened] = useState<string[]>(() => [
     ...new Set<string>([REGION_IDS[0], "views", ...errorSections(errors)]),
   ]);
@@ -172,19 +195,19 @@ export default function InputForm({ input, errors, onRegionChange, onChange, onR
                 {...field("horizon")}
                 suffix=" yrs"
                 description="Years the expected return is averaged over."
-                labelHelperText="Use your planning horizon, such as the years until the money is spent. A valuation change is spread over the horizon, so it matters less a year over long horizons."
+                labelHelperText="Use your planning horizon, such as the years until the money is spent. The CAPE change is spread over the horizon, so it matters less a year over long horizons."
               />
               <UserInputFormItem
                 {...field("halfLife")}
                 suffix=" yrs"
                 description="Years for half the gap between current and target CAPE to close."
-                labelHelperText="In US data since 1881, the gap between CAPE and its average has halved every 7–13 years, depending on how it's estimated (Shiller data). Longer means slower reversion and less drag."
+                labelHelperText="In US data since 1881, the gap between CAPE and its average has halved every 7–13 years, depending on how it's estimated (Shiller data). Longer means slower CAPE reversion and less drag."
               />
               <UserInputFormItem
                 {...field("realYield")}
                 suffix="%"
-                description="10-year TIPS yield. Not a nominal yield: inflation is added separately."
-                labelHelperText="The 10-year TIPS yield is the real counterpart of the 10-year Treasury that Damodaran's premium is measured against. FRED publishes it daily as series DFII10 (fred.stlouisfed.org/series/DFII10). Canada stopped issuing Real Return Bonds in 2022, so their yields are thinly traded."
+                description="US 10-year TIPS yield. Not a nominal yield: inflation is added separately."
+                labelHelperText="The US 10-year TIPS yield is the real counterpart of the 10-year US Treasury that Damodaran's premium is measured against. FRED publishes it daily as series DFII10 (fred.stlouisfed.org/series/DFII10). Canada stopped issuing Real Return Bonds in 2022, and they trade thinly."
               />
               <UserInputFormItem
                 {...field("equityPremium")}
@@ -206,28 +229,53 @@ export default function InputForm({ input, errors, onRegionChange, onChange, onR
           <Accordion.Control>
             View weights
             <SectionSummary>
-              {WEIGHT_KEYS.map((key) => summaryValue(input[key])).join("/")}
+              {`${preset ? `${preset.label} · ` : ""}${WEIGHT_KEYS.map((key) => summaryValue(input[key])).join("/")}`}
             </SectionSummary>
           </Accordion.Control>
           <Accordion.Panel>
             <Stack gap={0}>
               <Text size="sm" c="dimmed" mb="xs">
-                How much each view counts; they must add to 100%. No single return model is reliably
-                best, and a simple equal-weight average of forecasts has beaten the individual
-                forecasts out of sample (Rapach, Strauss and Zhou, 2010), so the defaults are equal.
-                The views overlap: market and valuation share the yield + growth inputs, and
-                valuation and earnings yield both come from CAPE. Weight bond + premium or history
-                more if you want independent sources to count more.
+                How much each view counts; they must add to 100%. The views overlap: CAPE reversion
+                builds on yield + growth, and CAPE reversion and earnings yield both come from CAPE.
+                Bond + premium and history are independent sources.
               </Text>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
+                <FieldHeader
+                  label="Preset"
+                  labelHelperText="Each preset fills in the five weights below. The figure on each button is the real return after costs it gives with your other inputs, so the spread shows how much the answer rests on beliefs about CAPE reversion and bond yields. Editing a weight makes the weights custom."
+                  description={preset?.description ?? "Custom weights."}
+                />
+                <Group gap={6} mt={6} role="group" aria-label="View weight preset">
+                  {WEIGHT_PRESETS.map((option) => {
+                    const selected = preset?.id === option.id;
+                    return (
+                      <Button
+                        key={option.id}
+                        variant={selected ? "filled" : "default"}
+                        size="sm"
+                        aria-pressed={selected}
+                        onClick={() => onWeightsChange(option.weights)}
+                      >
+                        {option.label}
+                        {presetReturns && (
+                          <Text span size="xs" ff="var(--pf-font-figures)" ml={6} opacity={0.75}>
+                            {formatRate(presetReturns[option.id])}
+                          </Text>
+                        )}
+                      </Button>
+                    );
+                  })}
+                </Group>
+              </Stack>
               <UserInputFormItem
                 {...field("weightMarket")}
                 suffix="%"
-                labelHelperText="Dividend yield + net buyback yield + real earnings growth, with valuations unchanged."
+                labelHelperText="Dividend yield + net buyback yield + real earnings growth, with valuations unchanged (the building-block model)."
               />
               <UserInputFormItem
                 {...field("weightValuation")}
                 suffix="%"
-                labelHelperText="The market-consistent view plus the yearly drag from CAPE moving toward its target."
+                labelHelperText="Yield + growth plus the yearly drag (or boost) from CAPE moving toward its target."
               />
               <UserInputFormItem
                 {...field("weightEarningsYield")}

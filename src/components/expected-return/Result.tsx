@@ -83,8 +83,8 @@ export default function Result({ result, input, paused }: Props) {
               <Table.Tr>
                 <Table.Th>Region</Table.Th>
                 <Table.Th ta="right">Weight</Table.Th>
-                <Table.Th ta="right">Market</Table.Th>
-                <Table.Th ta="right">Valuation</Table.Th>
+                <Table.Th ta="right">Yield + growth</Table.Th>
+                <Table.Th ta="right">CAPE reversion</Table.Th>
                 <Table.Th ta="right">Earnings yield</Table.Th>
                 <Table.Th ta="right">Bond + premium</Table.Th>
                 <Table.Th ta="right">History</Table.Th>
@@ -129,10 +129,11 @@ export default function Result({ result, input, paused }: Props) {
           </Table>
         </Table.ScrollContainer>
         <Text size="xs" c="dimmed" maw="46rem">
-          Market = cash yield + real earnings growth, multiples unchanged. Valuation = market + CAPE
-          drag: CAPE closes half its gap to target every {input.halfLife} years, and the change is
-          averaged over the {input.horizon}-year horizon. Earnings yield = 1/CAPE × 1.075. Bond +
-          premium = {input.realYield}% real yield + {input.equityPremium}% premium. Blend ={" "}
+          Yield + growth = dividend + net buyback yield + real earnings growth, multiples unchanged.
+          CAPE reversion = yield + growth + CAPE drag: CAPE closes half its gap to target every{" "}
+          {input.halfLife} years, and the change is averaged over the {input.horizon}-year horizon.
+          Earnings yield = 1/CAPE × 1.075. Bond + premium = {input.realYield}% real yield +{" "}
+          {input.equityPremium}% premium. Blend ={" "}
           {[
             input.weightMarket,
             input.weightValuation,

@@ -20,12 +20,12 @@ export const REGION_CONSTRAINTS: Record<RegionKey, Constraint> = {
 
 export const GLOBAL_CONSTRAINTS: Record<GlobalKey, Constraint> = {
   horizon: { min: 5, max: 60, step: 1, label: "Horizon" },
-  halfLife: { min: 1, max: 100, step: 1, label: "Valuation half-life" },
+  halfLife: { min: 1, max: 100, step: 1, label: "CAPE half-life" },
   historyReturn: { min: 0, max: 10, step: 0.1, label: "Long-run real return" },
   realYield: { min: -2, max: 6, step: 0.1, label: "Real bond yield" },
   equityPremium: { min: 0, max: 10, step: 0.1, label: "Equity risk premium" },
-  weightMarket: { min: 0, max: 100, step: 5, label: "Market-consistent weight" },
-  weightValuation: { min: 0, max: 100, step: 5, label: "Valuation weight" },
+  weightMarket: { min: 0, max: 100, step: 5, label: "Yield + growth weight" },
+  weightValuation: { min: 0, max: 100, step: 5, label: "CAPE reversion weight" },
   weightEarningsYield: { min: 0, max: 100, step: 5, label: "Earnings-yield weight" },
   weightRiskPremium: { min: 0, max: 100, step: 5, label: "Bond + premium weight" },
   weightHistory: { min: 0, max: 100, step: 5, label: "History weight" },

@@ -7,9 +7,13 @@ import JumpToResult from "@/components/shared/JumpToResult";
 import layout from "@/components/shared/TwoColumn.module.css";
 import InputForm from "./InputForm";
 import Result from "./Result";
-import { computeExpectedReturn } from "@/utils/expected-return/engine";
+import { computeExpectedReturn, type ViewWeights } from "@/utils/expected-return/engine";
 import { formatRate } from "@/utils/expected-return/format";
-import { DEFAULTS_AS_OF } from "@/utils/expected-return/presets";
+import {
+  DEFAULTS_AS_OF,
+  WEIGHT_PRESETS,
+  type WeightPresetId,
+} from "@/utils/expected-return/presets";
 import { clearInput, cloneDefaults, loadInput, saveInput } from "@/utils/expected-return/storage";
 import { isValid, validateExpectedReturnInput } from "@/utils/expected-return/validation";
 import type {
@@ -38,6 +42,15 @@ export default function Main() {
 
   // The engine is plain arithmetic, so it runs on every render without a worker or debounce.
   const result = lastValid ? computeExpectedReturn(lastValid) : null;
+  // What each weight preset would give with the same inputs, shown on its button.
+  const presetReturns = lastValid
+    ? (Object.fromEntries(
+        WEIGHT_PRESETS.map((preset) => [
+          preset.id,
+          computeExpectedReturn({ ...lastValid, ...preset.weights }).realGeometric,
+        ]),
+      ) as Record<WeightPresetId, number>)
+    : null;
 
   function update(next: ExpectedReturnInput) {
     setInput(next);
@@ -55,6 +68,10 @@ export default function Main() {
     update({ ...input, [key]: coerce(value) });
   }
 
+  function handleWeightsChange(weights: ViewWeights) {
+    update({ ...input, ...weights });
+  }
+
   function handleReset() {
     clearInput();
     setInput(cloneDefaults());
@@ -70,6 +87,8 @@ export default function Main() {
             errors={errors}
             onRegionChange={handleRegionChange}
             onChange={handleChange}
+            onWeightsChange={handleWeightsChange}
+            presetReturns={presetReturns}
             onReset={handleReset}
           />
         </Grid.Col>
