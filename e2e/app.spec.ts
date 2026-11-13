@@ -101,3 +101,14 @@ test("lifetime allocation generates a recommendation under both return models", 
   });
   await expect(page.getByText(/Inputs changed/)).toHaveCount(0);
 });
+
+test("expected return tool recomputes from user inputs", async ({ page }) => {
+  await page.goto("/expected-return");
+
+  await expect(page.getByRole("heading", { name: "Expected stock returns" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "4.4% a year" })).toBeVisible();
+  await expect(page.getByRole("table", { name: /By region and view/ })).toBeVisible();
+
+  await page.getByRole("textbox", { name: "Valuation half-life" }).fill("100");
+  await expect(page.getByRole("heading", { name: "4.5% a year" })).toBeVisible();
+});

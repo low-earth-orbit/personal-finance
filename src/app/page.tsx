@@ -54,6 +54,13 @@ const TOOLS: Tool[] = [
     href: "/swr",
     status: "new",
   },
+  {
+    title: "Expected stock returns",
+    description:
+      "Estimate a long-run return for a global stock portfolio from yields, growth, valuations and history.",
+    href: "/expected-return",
+    status: "preview",
+  },
 ];
 
 function ToolRow({ tool, index }: { tool: Tool; index: number }) {

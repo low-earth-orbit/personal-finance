@@ -61,6 +61,7 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 | `/acb` | ACB Calculator | Computes adjusted cost basis from Wealthsimple activity CSV export |
 | `/allocator` | Where to invest: TFSA, RRSP or Non-Reg? | Invests one lump sum now across TFSA, RRSP, and non-registered accounts |
 | `/swr` | Safe withdrawal rates | SWR table by stock/bond mix × horizon from user CMAs; optional VR(10) dynamics |
+| `/expected-return` | Expected stock returns | Real compound equity return per region from user inputs: yield + growth, CAPE reversion, earnings yield, real bond yield + ERP, history; blended, after costs |
 
 **New tool pattern:** `src/app/<tool>/` + `src/components/<tool>/`. Reuse `src/components/shared/` and `src/utils/`. Import alias: `@/` → `./src/`.
 
@@ -96,3 +97,4 @@ See `docs/` for per-tool deep dives:
 - [docs/retirement/swr-methodology.md](docs/retirement/swr-methodology.md) — SWR engine, safe withdrawal assumptions
 - [docs/swr/methodology.md](docs/swr/methodology.md) — SWR table engine, VR→AR(1), exact quantile shortcut
 - [docs/glide-path/methodology.md](docs/glide-path/methodology.md) — CRRA utility, coordinate ascent, forward-block bootstrap
+- [docs/expected-return/methodology.md](docs/expected-return/methodology.md) — five-view expected equity return, CAPE half-life, view weights, defaults and sources

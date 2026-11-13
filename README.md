@@ -14,6 +14,7 @@ A small collection of free, sensible personal finance calculators for Canadians.
 | **ACB Calculator** — adjusted cost base from a Wealthsimple activity export | `/acb` | Preview |
 | **Where to invest: TFSA, RRSP or Non-Reg?** — split a lump sum across account types | `/allocator` | Preview |
 | **Safe withdrawal rates** — first-year withdrawal rate (then indexed to inflation) by stock/bond mix and retirement length | `/swr` | New |
+| **Expected stock returns** — long-run return for a global stock mix from yields, growth, CAPE, bond yields and history | `/expected-return` | Preview |
 
 The site is a single statically-exported Next.js app: a hub landing page at `/` links to each tool, which lives at its own route.
 
@@ -50,12 +51,14 @@ src/
     glide-path/page.tsx   # Lifetime Allocation route
     allocator/page.tsx    # Where to invest: TFSA, RRSP or Non-Reg? route
     swr/page.tsx          # Safe withdrawal rates route
+    expected-return/page.tsx # Expected stock returns route
   components/
     shared/               # reusable chrome + form primitives (Header, Footer, inputs)
     rent-vs-buy/          # rent-vs-buy-specific components
     glide-path/           # Lifetime Allocation components
     allocator/            # Where to invest: TFSA, RRSP or Non-Reg? components
     swr/                  # Safe withdrawal rates components
+    expected-return/      # Expected stock returns components
   utils/                  # math, formatting, Monte Carlo (shared) + tool-specific logic
   types.ts                # shared domain types
 analysis/                 # Python research, validation, and recommender tools
