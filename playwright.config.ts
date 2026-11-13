@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const BASE_URL = "http://localhost:3000";
+const PORT = process.env.E2E_PORT ?? "3000";
+const BASE_URL = `http://localhost:${PORT}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,9 +15,13 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "npm run dev",
+    // CI tests the production static export (what ships). `next dev` + Turbopack intermittently
+    // fails to resolve next/font/google on a cold start ("queries have exactly one entry").
+    command: process.env.CI
+      ? `npm run build && node scripts/serve-out.mjs out ${PORT}`
+      : "npm run dev",
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    timeout: 240_000,
   },
 });
