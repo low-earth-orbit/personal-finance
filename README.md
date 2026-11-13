@@ -2,7 +2,7 @@
 
 A small collection of free, sensible personal finance calculators for Canadians.
 
-Latest deployed version: [Click Me](https://low-earth-orbit.github.io/personal-finance/)
+[Latest deployed version](https://low-earth-orbit.github.io/personal-finance-tools/)
 
 ## Tools
 
