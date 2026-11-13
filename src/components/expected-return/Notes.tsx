@@ -41,19 +41,19 @@ export default function Notes() {
           currency and compound (geometric). Currencies are assumed to add nothing over the long
           run, so regions are blended directly by weight.
         </Point>
-        <Point heading="Market-consistent.">
+        <Point heading="Yield + growth.">
           The building-block model (Grinold and Kroner) with valuation multiples held where they
           are: dividend yield + net buyback yield + real growth of total earnings. Damodaran’s
-          implied equity risk premium rests on the same yield-plus-growth logic. Treating yield +
-          growth as a compound return follows common practice; some argue it is closer to an
-          arithmetic one, which would lower it by about half the variance.
+          implied equity risk premium rests on the same logic. Treating yield + growth as a compound
+          return follows common practice; some argue it is closer to an arithmetic one, which would
+          lower it by about half the variance.
         </Point>
-        <Point heading="Valuation.">
-          Adds a CAPE drag. Log CAPE decays toward your target like an AR(1): half the gap closes
-          every half-life, so most of the move comes early. The total change is averaged over your
-          horizon. In US data since 1881 the half-life is about 7–13 years, depending on the
-          estimator; the default is 10. Setting the target equal to today switches it off for that
-          region.
+        <Point heading="CAPE reversion.">
+          Yield + growth plus a CAPE drag. Log CAPE decays toward your target like an AR(1): half
+          the gap closes every half-life, so most of the move comes early. The total change is
+          averaged over your horizon. In US data since 1881 the half-life is about 7–13 years,
+          depending on the estimator; the default is 10. Setting the target equal to today switches
+          it off for that region.
         </Point>
         <Point heading="Earnings yield.">
           1/CAPE, scaled up by 1.075: CAPE’s 10-year earnings average sits about 5 years behind
@@ -63,11 +63,11 @@ export default function Notes() {
           overstates returns where companies issue many new shares, as in emerging markets.
         </Point>
         <Point heading="Bond + premium.">
-          The 10-year TIPS yield plus an equity risk premium, the same for every region. It ties the
-          estimate to today’s bond market, so a rise in real yields lifts the expected return on
-          stocks too. The default premium is Damodaran’s implied premium for the S&P 500, which
-          leans on analyst earnings forecasts; stocks have beaten bonds by about 3% a year across
-          countries since 1900.
+          The US 10-year TIPS yield plus an equity risk premium, the same for every region. It ties
+          the estimate to today’s bond market, so a rise in real yields lifts the expected return on
+          stocks too. The default premium is based on Damodaran’s implied premium for the S&P 500,
+          which leans on analyst earnings forecasts; stocks have beaten bonds by about 3% a year
+          across countries since 1900.
         </Point>
         <Point heading="History.">
           One long-run real return for every region, about 5% for global stocks since 1900 (Dimson,
@@ -88,13 +88,15 @@ export default function Notes() {
 
       <ToolNotes title="Where to find the inputs" columns>
         <Point>
-          The defaults were set from market data on November 12, 2026. Yields, CAPE, the real bond
+          The defaults are based on market data from November 12, 2026. Yields, CAPE, the real bond
           yield and the equity premium move with markets, so update them before relying on the
           result. Each field’s info button repeats its source.
         </Point>
         <Point heading="Dividend yield and P/E.">
-          Index ETF pages list both: iShares XIC (Canada), IVV (US), EFA (developed ex-North
-          America) and EEM (emerging). Add the fund’s fee back to its distribution yield.
+          Index ETF pages list both: iShares XIC (Canada), XTOT (US), XEF (international developed)
+          and XEC (emerging). Their distribution yields are after the fund’s fee and, for XTOT, XEF
+          and XEC, after foreign withholding tax paid inside the fund. Add both back: divide by
+          about 0.85 for withholding (15% on US dividends; rates vary by country), then add the fee.
         </Point>
         <Point heading="CAPE.">
           <Source href="https://www.multpl.com/shiller-pe">multpl.com</Source> shows it daily, and{" "}
@@ -106,7 +108,7 @@ export default function Notes() {
           shows CAPE by market (free sign-up).
         </Point>
         <Point heading="Real bond yield.">
-          The 10-year TIPS yield,{" "}
+          The US 10-year TIPS yield,{" "}
           <Source href="https://fred.stlouisfed.org/series/DFII10">FRED series DFII10</Source>.
         </Point>
         <Point heading="Equity risk premium.">

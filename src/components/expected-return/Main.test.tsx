@@ -18,13 +18,13 @@ describe("Expected return Main", () => {
 
   it("recomputes as inputs change and saves them", () => {
     renderWithMantine(<Main />);
-    expect(screen.getByRole("heading", { name: "4.4% a year" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "4.2% a year" })).toBeInTheDocument();
 
     // A much slower reversion shrinks the CAPE drag, which raises the blend.
-    fireEvent.change(screen.getByRole("textbox", { name: "Valuation half-life" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "CAPE half-life" }), {
       target: { value: "100" },
     });
-    expect(screen.getByRole("heading", { name: "4.5% a year" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "4.4% a year" })).toBeInTheDocument();
     expect(JSON.parse(window.localStorage.getItem(KEY)!).halfLife).toBe(100);
   });
 
@@ -36,9 +36,32 @@ describe("Expected return Main", () => {
     expect(
       screen.getByText("Region weights add to 95%; they must add to 100%."),
     ).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "4.4% a year" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "4.2% a year" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("US: Portfolio weight"), { target: { value: "45" } });
     expect(screen.queryByText(/Update paused/)).not.toBeInTheDocument();
+  });
+
+  // The weights panel starts collapsed, so its buttons are queried with `hidden: true`.
+  it("applies a weight preset and drops to custom when a weight is edited", () => {
+    renderWithMantine(<Main />);
+    const equal = screen.getByRole("button", { name: /^Equal/, hidden: true });
+    expect(equal).toHaveAttribute("aria-pressed", "true");
+
+    const planner = screen.getByRole("button", { name: "Planner-style 4.8%", hidden: true });
+    fireEvent.click(planner);
+    expect(planner).toHaveAttribute("aria-pressed", "true");
+    expect(equal).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("heading", { name: "4.8% a year" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Bond + premium weight", hidden: true }),
+    ).toHaveValue("40%");
+    expect(JSON.parse(window.localStorage.getItem(KEY)!).weightRiskPremium).toBe(40);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Bond + premium weight", hidden: true }), {
+      target: { value: "30" },
+    });
+    expect(screen.getByText("Custom weights.")).toBeInTheDocument();
+    expect(screen.queryAllByRole("button", { pressed: true, hidden: true })).toHaveLength(0);
   });
 });

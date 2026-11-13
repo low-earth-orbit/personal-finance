@@ -39,7 +39,7 @@ export type ViewWeights = Pick<
 export const EARNINGS_LAG_UPLIFT = 1.075;
 
 /**
- * Market-consistent view: building blocks with the valuation multiple held constant.
+ * Yield + growth view (`market`): building blocks with the valuation multiple held constant.
  * Cash yield (dividends + net buybacks) plus real growth of total earnings.
  */
 export function marketConsistent(
@@ -104,7 +104,7 @@ export function blendViews(views: Omit<ViewReturns, "blended">, weights: ViewWei
   return weightedMean(VIEWS.map(({ key, weight }) => [views[key], weights[weight]]));
 }
 
-/** All five views for one region. The valuation view adds the drag to the market view. */
+/** All five views for one region. CAPE reversion (`valuation`) adds the drag to yield + growth (`market`). */
 export function regionViews(
   region: RegionInput,
   input: Pick<

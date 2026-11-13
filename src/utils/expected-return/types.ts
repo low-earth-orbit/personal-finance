@@ -26,7 +26,7 @@ export interface GlobalInput {
   halfLife: number;
   /** Long-run real geometric equity return used by the history view, %. */
   historyReturn: number;
-  /** Real yield on inflation-linked government bonds (RRBs / TIPS), %. */
+  /** Real yield on US 10-year TIPS, %. */
   realYield: number;
   /** Expected equity premium over that real yield, %. */
   equityPremium: number;
