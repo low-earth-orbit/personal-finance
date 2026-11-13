@@ -10,11 +10,14 @@ A small collection of free, sensible personal finance calculators for Canadians.
 | --- | --- | --- |
 | **Rent vs Buy** — compare renting vs owning a home | `/rent-vs-buy` | Live |
 | **When can I retire?** — quick retirement reality check | `/retirement` | Live |
-| **Lifetime Allocation** — find your optimal lifetime stock allocation | `/glide-path` | Live |
-| **ACB Calculator** — adjusted cost base from a Wealthsimple activity export | `/acb` | Live |
-| **Where to invest: TFSA, RRSP or Non-Reg?** — split a lump sum across account types | `/allocator` | Coming soon |
+| **Lifetime Allocation** — find your optimal lifetime stock allocation | `/glide-path` | New |
+| **ACB Calculator** — adjusted cost base from a Wealthsimple activity export | `/acb` | Preview |
+| **Where to invest: TFSA, RRSP or Non-Reg?** — split a lump sum across account types | `/allocator` | Preview |
+| **Safe withdrawal rates** — first-year withdrawal rate (then indexed to inflation) by stock/bond mix and retirement length | `/swr` | New |
 
 The site is a single statically-exported Next.js app: a hub landing page at `/` links to each tool, which lives at its own route.
+
+The Safe withdrawal rates tool follows the 4% rule logic from the Trinity study: each cell is the first-year withdrawal as a % of the starting portfolio, raised with inflation every year after, at your chosen success rate (80–99%). You set stock and bond returns, volatilities, their correlation and inflation, and can optionally model mean reversion or persistence through each asset's 10-year variance ratio, VR(10).
 
 The Lifetime Allocation tool finds the optimal stock allocation across your lifetime. It also compares that path with the best constant allocation and reports drawdown-only depletion separately from full-path shortfall so the trade-offs between both choices remain visible.
 
@@ -46,11 +49,13 @@ src/
     rent-vs-buy/page.tsx  # rent-vs-buy tool route
     glide-path/page.tsx   # Lifetime Allocation route
     allocator/page.tsx    # Where to invest: TFSA, RRSP or Non-Reg? route
+    swr/page.tsx          # Safe withdrawal rates route
   components/
     shared/               # reusable chrome + form primitives (Header, Footer, inputs)
     rent-vs-buy/          # rent-vs-buy-specific components
     glide-path/           # Lifetime Allocation components
     allocator/            # Where to invest: TFSA, RRSP or Non-Reg? components
+    swr/                  # Safe withdrawal rates components
   utils/                  # math, formatting, Monte Carlo (shared) + tool-specific logic
   types.ts                # shared domain types
 analysis/                 # Python research, validation, and recommender tools

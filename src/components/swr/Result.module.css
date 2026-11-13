@@ -1,0 +1,36 @@
+.table {
+  width: 100%;
+}
+
+/* The row label stays in view while the horizon columns scroll on a phone. */
+.rowLabel {
+  position: sticky;
+  inset-inline-start: 0;
+  z-index: 1;
+  background: var(--mantine-color-body);
+  white-space: nowrap;
+  font-family: var(--pf-font-figures);
+  font-weight: 600;
+}
+
+/* The header cell keeps the theme's eyebrow styling. */
+.headLabel {
+  font-weight: 500;
+}
+
+.cell {
+  text-align: right;
+  font-family: var(--pf-font-figures);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The highest rate in a horizon column. */
+.best {
+  color: var(--pf-accent);
+  font-weight: 700;
+}
+
+.legend {
+  color: var(--pf-accent);
+  font-weight: 700;
+}

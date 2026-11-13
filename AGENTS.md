@@ -60,6 +60,7 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 | `/glide-path` | Lifetime Allocation | MC coordinate ascent, CRRA utility, optimized vs constant allocation |
 | `/acb` | ACB Calculator | Computes adjusted cost basis from Wealthsimple activity CSV export |
 | `/allocator` | Where to invest: TFSA, RRSP or Non-Reg? | Invests one lump sum now across TFSA, RRSP, and non-registered accounts |
+| `/swr` | Safe withdrawal rates | SWR table by stock/bond mix × horizon from user CMAs; optional VR(10) dynamics |
 
 **New tool pattern:** `src/app/<tool>/` + `src/components/<tool>/`. Reuse `src/components/shared/` and `src/utils/`. Import alias: `@/` → `./src/`.
 
@@ -93,4 +94,5 @@ See `docs/` for per-tool deep dives:
 
 - [docs/rent-vs-buy/methodology.md](docs/rent-vs-buy/methodology.md) — MC architecture, modeling assumptions, summary tier logic
 - [docs/retirement/swr-methodology.md](docs/retirement/swr-methodology.md) — SWR engine, safe withdrawal assumptions
+- [docs/swr/methodology.md](docs/swr/methodology.md) — SWR table engine, VR→AR(1), exact quantile shortcut
 - [docs/glide-path/methodology.md](docs/glide-path/methodology.md) — CRRA utility, coordinate ascent, forward-block bootstrap

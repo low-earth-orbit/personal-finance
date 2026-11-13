@@ -66,6 +66,15 @@ test("retirement planner shows an earliest retirement age and chart", async ({ p
   ).toBeVisible();
 });
 
+test("swr shows the safe withdrawal rate table", async ({ page }) => {
+  await page.goto("/swr");
+
+  await expect(page.getByRole("heading", { name: "Safe withdrawal rates" })).toBeVisible();
+  const table = page.getByRole("table");
+  await expect(table).toBeVisible();
+  await expect(table.getByRole("row").filter({ hasText: "60/40" })).toBeVisible();
+});
+
 test("lifetime allocation generates a recommendation under both return models", async ({
   page,
 }) => {
