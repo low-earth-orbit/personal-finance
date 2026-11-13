@@ -203,17 +203,22 @@ ul.list > .listItem::before {
 }
 
 /*
- * An outlined pill: the active segment is a chip inset inside the outline, so the control reads as
- * one piece rather than two halves.
+ * An outlined control whose active segment fills it edge to edge. There is no border: the outline is
+ * an inset outline painted over the segments, so the active chip runs underneath it. With a real
+ * border and a chip clipped inside it, the two curves meet at the rounded corners and leave a faint
+ * light anti-aliasing seam.
  */
 .segmented {
   background: transparent;
-  border: 1px solid var(--pf-ink);
-  padding: 2px;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  outline: 1px solid var(--pf-ink);
+  outline-offset: -1px;
 }
 
 .segmentedIndicator {
-  border-radius: 2px;
+  border-radius: 0;
   box-shadow: none;
 }
 

@@ -5,6 +5,8 @@ import { Container, Grid } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
 import InputForm from "./InputForm";
 import Result from "./Result";
+import ColumnHeader from "@/components/shared/ColumnHeader";
+import layout from "@/components/shared/TwoColumn.module.css";
 import { DEFAULTS } from "@/utils/retirement/presets";
 import { computePlan } from "@/utils/retirement/monteCarlo";
 import { loadInput, saveInput } from "@/utils/retirement/storage";
@@ -93,10 +95,12 @@ export default function Main() {
   return (
     <Container size="xl" pb="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 5 }} order={{ base: 2, md: 1 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }}>
+          <ColumnHeader title="Inputs" />
           <InputForm input={input} errors={errors} onChange={handleChange} onReset={handleReset} />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 7 }} order={{ base: 1, md: 2 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
+          <ColumnHeader title="Result" note="Updates as you change inputs" />
           <Result
             input={input}
             result={plan?.result ?? null}

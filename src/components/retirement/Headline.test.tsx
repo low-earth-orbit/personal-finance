@@ -20,14 +20,6 @@ describe("retirement Headline", () => {
       screen.getByText(/confidence covers market swings after you retire/),
     ).toBeInTheDocument();
     expect(screen.getByText(`Left at age ${i.planningAge}`)).toBeInTheDocument();
-    expect(screen.queryByText(/Chance of trimming spending/)).toBeNull();
-  });
-
-  it("shows the chance of trimming spending when spending is flexible", () => {
-    const i = input({ spendingFlexibilityPct: 20 });
-    const { result, planSWR } = computePlan(i);
-    renderWithMantine(<Headline input={i} result={result} planSWR={planSWR} />);
-    expect(screen.getByText(/Chance of trimming spending/)).toBeInTheDocument();
   });
 });
 

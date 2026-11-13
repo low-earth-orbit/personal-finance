@@ -36,7 +36,6 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
   const retireNow = yearsUntilRetirement === 0;
   const bands = result.retirementBands;
   const medianLeft = bands && bands.length > 0 ? bands[bands.length - 1].p50 : null;
-  const showCutRate = input.spendingFlexibilityPct > 0 && result.cutRate != null;
 
   return (
     <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
@@ -47,9 +46,9 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
           <Title
             order={2}
             ff="monospace"
-            fw={500}
-            fz={{ base: 52, sm: 84 }}
-            lh={1}
+            fw={600}
+            fz={36}
+            lh={1.1}
             c="ledger"
             style={{ letterSpacing: "-0.04em" }}
           >
@@ -81,6 +80,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         {result.portfolioAtRetirement != null && (
           <Figure
             label="Savings at retirement"
+            size="sm"
             value={formatCADCompact(result.portfolioAtRetirement)}
             note="today's dollars"
           />
@@ -88,6 +88,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         {result.guaranteedIncome > 0 && (
           <Figure
             label="Guaranteed income"
+            size="sm"
             value={`${formatCADCompact(result.guaranteedIncome)} /yr`}
             note={`all started by age ${lastGuaranteedStartAge(input)}`}
           />
@@ -95,6 +96,7 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         {planSWR != null && (
           <Figure
             label="Year-1 withdrawal"
+            size="sm"
             value={`${(planSWR * 100).toFixed(1)}%`}
             note="of savings"
             info={<SwrTechnicalNote input={input} />}
@@ -103,15 +105,9 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
         {medianLeft != null && (
           <Figure
             label={`Left at age ${input.planningAge}`}
+            size="sm"
             value={formatCADCompact(medianLeft)}
             note="median, today's dollars"
-          />
-        )}
-        {showCutRate && (
-          <Figure
-            label="Chance of trimming spending"
-            value={`${Math.round((result.cutRate ?? 0) * 100)}%`}
-            note="at least one year of reduced spending"
           />
         )}
       </FigureStrip>

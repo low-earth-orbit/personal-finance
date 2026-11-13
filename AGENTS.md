@@ -67,7 +67,7 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 
 ## Architecture
 
-**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, IBM Plex Sans/Mono) → `providers.tsx` (MantineProvider, Ledger theme from `theme.ts`, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
+**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, Source Sans 3) → `providers.tsx` (MantineProvider, Ledger theme from `theme.ts`, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
 
 **CSS:** Tailwind v4 + Mantine via `@layer(tailwind-base, mantine, tailwind-utilities)` — Tailwind preflight never overrides Mantine.
 

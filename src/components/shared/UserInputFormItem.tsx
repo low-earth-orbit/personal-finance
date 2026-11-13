@@ -69,11 +69,21 @@ export default function UserInputFormItem({
   // With a trailing control the row frame becomes [field | trailing]; the field keeps its own
   // label/input grid inside the first cell.
   const withTrailing = row && trailing != null;
+  // With a trailing control the note sits below the whole row, not inside the amount's cell: an
+  // extra line there would make the cell taller and push the trailing input out of alignment.
+  const noteEl = additionalText ? (
+    <Text size="xs" c="dimmed" aria-live="polite" mt={withTrailing ? 0 : 4}>
+      {additionalText}
+    </Text>
+  ) : null;
   const frame = (content: ReactNode) =>
     withTrailing ? (
-      <div className={`${fieldRowClasses.frame} ${fieldRowClasses.withTrailing}`}>
-        <div className={fieldRowClasses.trailingMain}>{content}</div>
-        <div>{trailing}</div>
+      <div>
+        <div className={`${fieldRowClasses.frame} ${fieldRowClasses.withTrailing}`}>
+          <div className={fieldRowClasses.trailingMain}>{content}</div>
+          <div>{trailing}</div>
+        </div>
+        {noteEl}
       </div>
     ) : (
       content
@@ -117,7 +127,15 @@ export default function UserInputFormItem({
             ff="monospace"
             styles={{
               root: { flexShrink: 0 },
-              label: { padding: "0 7px", lineHeight: "20px", fontSize: 12 },
+              // Fixed whole-pixel segment widths keep the chip edges off sub-pixel positions.
+              label: {
+                width: 25,
+                padding: 0,
+                lineHeight: "22px",
+                fontSize: 12,
+                display: "flex",
+                justifyContent: "center",
+              },
             }}
             data={[
               { label: "$", value: "$" },
@@ -169,11 +187,7 @@ export default function UserInputFormItem({
         styles={{ label: { display: "block" } }}
         {...rest}
       />
-      {additionalText && (
-        <Text size="xs" c="dimmed" aria-live="polite" mt={4}>
-          {additionalText}
-        </Text>
-      )}
+      {!withTrailing && noteEl}
     </Stack>,
   );
 }

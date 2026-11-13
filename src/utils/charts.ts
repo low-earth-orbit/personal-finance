@@ -16,7 +16,7 @@ export const CHART_AXIS = {
   stroke: "var(--pf-border)",
   tick: {
     fontSize: 12,
-    fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
+    fontFamily: "var(--font-sans), system-ui, sans-serif",
     fill: "var(--pf-muted)",
   },
 };

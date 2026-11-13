@@ -12,7 +12,7 @@ import {
 } from "@mantine/core";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
-import { formatCADCompact } from "@/utils/format";
+import { formatCAD, formatCADCompact } from "@/utils/format";
 import FieldHeader from "@/components/shared/FieldHeader";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import { Eyebrow } from "@/components/shared/Figures";
@@ -22,6 +22,7 @@ import {
   SUCCESS_RATE_PRESETS,
   type ReturnPreset,
 } from "@/utils/retirement/presets";
+import { cppAdjustment, oasAdjustment } from "@/utils/retirement/projection";
 import { FIELD_CONSTRAINTS } from "@/utils/retirement/validation";
 import type {
   RetirementErrors,
@@ -38,6 +39,27 @@ interface InputFormProps {
   onReset: () => void;
 }
 
+/**
+ * Note under CPP/OAS when the start age moves the amount off the age-65 figure the user entered, so
+ * the automatic adjustment is visible. Nothing while the start age is 65 or a field is out of range.
+ */
+function startAgeNote(
+  amountAt65: unknown,
+  startAge: unknown,
+  startAgeKey: "cppStartAge" | "oasStartAge",
+  adjustment: (startAge: number) => number,
+): string | undefined {
+  const amount = Number(amountAt65);
+  const age = Number(startAge);
+  const { min, max } = FIELD_CONSTRAINTS[startAgeKey];
+  if (!(amount > 0) || !Number.isInteger(age)) return undefined;
+  if (age < (min ?? 0) || age > (max ?? Infinity)) return undefined;
+  const factor = adjustment(age);
+  if (factor === 1) return undefined;
+  const change = Math.round(Math.abs(factor - 1) * 100);
+  return `Adjusted for starting at ${age} (${factor > 1 ? "+" : "−"}${change}%): ${formatCAD(amount * factor)} /yr`;
+}
+
 export default function InputForm({ input, errors, onChange, onReset }: InputFormProps) {
   const bind = (key: RetirementInputKey) => (value: FieldValue) => onChange(key, value);
 
@@ -48,9 +70,6 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
     (preset) =>
       isSameRate(input.accumReturn, preset.accumReturn) &&
       isSameRate(input.retireReturn, preset.retireReturn),
-  );
-  const isCustomConfidence = !SUCCESS_RATE_PRESETS.some((rate) =>
-    isSameRate(input.targetSuccessRate, rate),
   );
 
   const applyReturnPreset = (preset: ReturnPreset) => {
@@ -169,18 +188,30 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                   {...num("cppAt65")}
                   error={errors.cppAt65 ?? errors.cppStartAge}
                   label="CPP at 65"
-                  labelHelperText="The CPP pension you'd get if it started at 65, in today's dollars per year. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together. Start age: 60 to 70. Each year before 65 cuts CPP by 7.2% (−36% at 60); each year after adds 8.4% (+42% at 70), for life. If you retire before your first guaranteed income starts, your portfolio funds the full target until then (a 'bridge')."
+                  labelHelperText="Your CPP pension in today's dollars per year, as it would be if you started at 65. Your My Service Canada Account statement shows it (the 2026 maximum is about $18,000; most people get less). Enter a couple's combined amount if you're planning together. Start age: 60 to 70. Each year before 65 cuts CPP by 7.2% (−36% at 60); each year after adds 8.4% (+42% at 70), for life. If you retire before your first guaranteed income starts, your portfolio funds the full target until then (a 'bridge')."
                   prefix="$"
                   thousandSeparator
+                  additionalText={startAgeNote(
+                    input.cppAt65,
+                    input.cppStartAge,
+                    "cppStartAge",
+                    cppAdjustment,
+                  )}
                   trailing={startAge("cppStartAge", "CPP start age")}
                 />
                 <UserInputFormItem
                   {...num("oasAt65")}
                   error={errors.oasAt65 ?? errors.oasStartAge}
                   label="OAS at 65"
-                  labelHelperText="Old Age Security starting at 65, in today's dollars per year — about $8,900 with 40 years in Canada after age 18, less with fewer years. It rises 10% at 75. The model ignores the OAS clawback on high incomes. Start age: 65 to 70. Each year of deferral adds 7.2% (+36% at 70), for life."
+                  labelHelperText="Your Old Age Security in today's dollars per year, as it would be if you started at 65 — about $8,900 with 40 years in Canada after age 18, less with fewer years. It rises 10% at 75. The model ignores the OAS clawback on high incomes. Start age: 65 to 70. Each year of deferral adds 7.2% (+36% at 70), for life."
                   prefix="$"
                   thousandSeparator
+                  additionalText={startAgeNote(
+                    input.oasAt65,
+                    input.oasStartAge,
+                    "oasStartAge",
+                    oasAdjustment,
+                  )}
                   trailing={startAge("oasStartAge", "OAS start age")}
                 />
                 <UserInputFormItem
@@ -220,25 +251,6 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
                       {rate}%
                     </Button>
                   ))}
-                  <Popover width={220} position="bottom-start" withArrow shadow="md">
-                    <Popover.Target>
-                      <Button
-                        variant={isCustomConfidence ? "filled" : "default"}
-                        size="sm"
-                        aria-pressed={isCustomConfidence}
-                      >
-                        Custom
-                      </Button>
-                    </Popover.Target>
-                    <Popover.Dropdown>
-                      <UserInputFormItem
-                        {...num("targetSuccessRate")}
-                        label="Confidence target"
-                        layout="stacked"
-                        suffix="%"
-                      />
-                    </Popover.Dropdown>
-                  </Popover>
                 </Button.Group>
                 {input.targetSuccessRate < 90 && (
                   <Group gap={6} wrap="nowrap" align="flex-start">

@@ -37,6 +37,15 @@ describe("allocator validation", () => {
     expect(errors.capitalGainsTaxRatePct).toBe("Must be between 0 and 60");
   });
 
+  it("caps the nominal return at 10%", () => {
+    expect(validateAllocatorInput({ ...DEFAULTS, portfolioReturn: 10 }).portfolioReturn).toBe(
+      undefined,
+    );
+    expect(validateAllocatorInput({ ...DEFAULTS, portfolioReturn: 10.1 }).portfolioReturn).toBe(
+      "Must be between 0 and 10",
+    );
+  });
+
   it("requires an explicit retirement withdrawal tax rate", () => {
     expect(
       validateAllocatorInput({

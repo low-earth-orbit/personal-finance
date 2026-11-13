@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Container, Grid } from "@mantine/core";
+import ColumnHeader from "@/components/shared/ColumnHeader";
+import layout from "@/components/shared/TwoColumn.module.css";
 import Result from "./Result";
 import UserInputForm from "./UserInputForm";
 import PresetBar from "./PresetBar";
@@ -249,7 +251,8 @@ const Main = () => {
   return (
     <Container size="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 5 }} order={{ base: 2, md: 1 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }}>
+          <ColumnHeader title="Inputs" />
           <UserInputForm
             userInput={userInput}
             handleChange={handleChange}
@@ -276,7 +279,8 @@ const Main = () => {
             }
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 7 }} order={{ base: 1, md: 2 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
+          <ColumnHeader title="Result" note="Updates as you change inputs" />
           <Result userInput={userInput} errors={errors} />
         </Grid.Col>
       </Grid>

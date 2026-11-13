@@ -12,7 +12,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CellStrip } from "@/components/shared/Figures";
 import type { GlidePathInput, GlidePathResult } from "@/utils/glide-path/types";
 import { CHART_AXIS, generateTicks } from "@/utils/charts";
 
@@ -222,17 +221,6 @@ export default function GlidePathChart({
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-      <Box mt="sm">
-        <CellStrip
-          label="Equity allocation at each step"
-          cells={result.schedule.map((block) => ({
-            key: block.step,
-            label: `Age ${block.ageStart}`,
-            value: `${block.equityPct.toFixed(0)}%`,
-            shaded: block.phase === "retire",
-          }))}
-        />
-      </Box>
       <Group gap="lg" mt="sm" wrap="wrap">
         <Group gap={6} wrap="nowrap">
           <Box w={18} h={2} style={{ backgroundColor: ACCENT }} aria-hidden />

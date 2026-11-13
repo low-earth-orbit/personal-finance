@@ -1,0 +1,12 @@
+/* Hairline between an input column and a result column once they sit side by side (Mantine lg). */
+@media (min-width: 75em) {
+  .result {
+    border-inline-start: 1px solid var(--pf-hairline);
+    padding-inline-start: 1.5rem;
+  }
+}
+
+/* Caption above a column; the column's first ink rule sits beneath it. */
+.columnHeader {
+  margin-block-end: 0.75rem;
+}

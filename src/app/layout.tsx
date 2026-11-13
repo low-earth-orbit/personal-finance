@@ -1,15 +1,15 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
-import { IBM_Plex_Sans } from "next/font/google";
+import { Source_Sans_3 } from "next/font/google";
 import { ColorSchemeScript, mantineHtmlProps } from "@mantine/core";
 import Providers from "./providers";
 
-const plexSans = IBM_Plex_Sans({
+const sourceSans = Source_Sans_3({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-plex-sans",
+  variable: "--font-sans",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +31,7 @@ const FAVICON =
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" {...mantineHtmlProps} className={plexSans.variable}>
+    <html lang="en" {...mantineHtmlProps} className={sourceSans.variable}>
       <head>
         <ColorSchemeScript
           defaultColorScheme="auto"

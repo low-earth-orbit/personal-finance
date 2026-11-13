@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Container, Grid } from "@mantine/core";
+import ColumnHeader from "@/components/shared/ColumnHeader";
+import layout from "@/components/shared/TwoColumn.module.css";
 import { useDebouncedValue } from "@mantine/hooks";
 import InputForm from "./InputForm";
 import Result from "./Result";
@@ -110,7 +112,8 @@ export default function Main() {
   return (
     <Container size="xl" pb="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 5 }} order={{ base: allocation ? 2 : 1, lg: 1 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }}>
+          <ColumnHeader title="Inputs" />
           <InputForm
             input={input}
             errors={errors}
@@ -121,7 +124,8 @@ export default function Main() {
             onShowRecommendation={handleShowRecommendation}
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 7 }} order={{ base: allocation ? 1 : 2, lg: 2 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
+          <ColumnHeader title="Result" />
           <Result allocation={allocation} input={resultInput} status={status} />
         </Grid.Col>
       </Grid>

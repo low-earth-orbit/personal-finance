@@ -130,12 +130,12 @@ export const theme = createTheme({
     ink: virtualColor({ name: "ink", light: "inkLight", dark: "inkDark" }),
     dark,
   },
-  fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
+  fontFamily: "var(--font-sans), system-ui, sans-serif",
   // Figures use the text face with tabular numerals; a monospace face made numbers and % look
   // like code. The token name is kept so existing `ff="monospace"` call sites stay valid.
-  fontFamilyMonospace: "var(--font-plex-sans), system-ui, sans-serif",
+  fontFamilyMonospace: "var(--font-sans), system-ui, sans-serif",
   headings: {
-    fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
+    fontFamily: "var(--font-sans), system-ui, sans-serif",
     fontWeight: "600",
   },
   defaultRadius: "sm",

@@ -159,8 +159,8 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
   const floorIncome = targetGrossIncome * (1 - flexPct / 100);
 
   return (
-    <Card withBorder radius="md" padding="md">
-      <Group justify="space-between" align="baseline" mb="sm">
+    <Stack gap="sm" pt="md" style={{ borderTop: "1px solid var(--pf-hairline)" }}>
+      <Group justify="space-between" align="baseline">
         <Text fw={600} fz="lg">
           Retirement income
         </Text>
@@ -219,7 +219,7 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
           measured against the lower floor.
         </Text>
       )}
-    </Card>
+    </Stack>
   );
 }
 
