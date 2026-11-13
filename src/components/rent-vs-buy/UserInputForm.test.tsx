@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { renderWithMantine } from "@/test-utils";
+import { renderWithMantine, screen } from "@/test-utils";
 import UserInputForm from "./UserInputForm";
 import { DEFAULTS } from "@/utils/presets";
 import type { UserInput } from "@/types";
@@ -17,6 +17,20 @@ function renderForm(overrides: Partial<UserInput> = {}) {
     />,
   );
 }
+
+describe("UserInputForm owner costs", () => {
+  it("lists insurance on its own and one growth rate for every owner cost", () => {
+    renderForm();
+    expect(screen.getByText("Maintenance")).toBeInTheDocument();
+    expect(screen.getByText("Home insurance")).toBeInTheDocument();
+    expect(screen.getByText("Owner cost growth")).toBeInTheDocument();
+    expect(
+      screen.getByText("Applies to property tax, condo fees, maintenance and insurance."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Building aging")).toBeNull();
+    expect(screen.queryByText("Cost inflation")).toBeNull();
+  });
+});
 
 describe("UserInputForm mortgage readout", () => {
   it("renders with valid defaults", () => {

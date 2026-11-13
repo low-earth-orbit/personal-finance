@@ -4,14 +4,13 @@ Projects portfolio in real $ → finds earliest feasible retirement age. Grows s
 
 ## Files
 
-- `Main.tsx` — state container, persists via `src/utils/retirement/storage.ts`; runs `computePlan` in `src/workers/retirementWorker.ts` (main-thread fallback when `Worker` is missing, e.g. jsdom)
+- `Main.tsx` — state container, persists via `src/utils/retirement/storage.ts`; runs `computeRetirement` in `src/workers/retirementWorker.ts` (main-thread fallback when `Worker` is missing, e.g. jsdom)
 - `RetirementApp.tsx` — `"use client"` wrapper, lazy-loads Main (`ssr:false`)
 - `InputForm.tsx` — user inputs (age, income, savings, target %, CPP/OAS at 65 + start ages, workplace pension)
 - `Result.tsx` — renders feasibility result
 - `Headline.tsx` — earliest retirement age summary
 - `ProjectionChart.tsx` — portfolio projection chart (Recharts)
 - `Assumptions.tsx` — key assumption display
-- `SwrTechnicalNote.tsx` — static SWR methodology note
 
 ## Engine (`src/utils/retirement/`)
 

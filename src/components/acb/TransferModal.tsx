@@ -45,7 +45,7 @@ const TransferModal = ({ symbol, lots, acbs, onChange, onClose }: TransferModalP
           transferred lot — the share count and date are shown to help you match each lot to your
           records.
         </Text>
-        <Alert color="yellow" title="Only outside transfers need an ACB">
+        <Alert color="rust" title="Only outside transfers need an ACB">
           <Text size="sm">
             Enter a cost only for shares transferred in from outside these uploads. For moves
             between your own uploaded accounts, leave $0 — their cost is already in the pool, and

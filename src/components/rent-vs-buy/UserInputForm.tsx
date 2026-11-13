@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
-import { Accordion, Alert, Button, Group, Modal, SimpleGrid, Stack, Text } from "@mantine/core";
+import { Accordion, Alert, Button, Group, Modal, Stack, Text } from "@mantine/core";
 import { IconRotate } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import UserInputRangeItem from "@/components/shared/UserInputRangeItem";
 import { FIELD_CONSTRAINTS } from "@/utils/validation";
@@ -28,6 +29,7 @@ interface UserInputFormProps {
 interface PerturbedOptions {
   label: string;
   helperText?: string;
+  additionalText?: string;
   disabled?: boolean;
 }
 
@@ -55,13 +57,14 @@ export default function UserInputForm({
   const perturbed = (
     baseField: UserInputKey,
     sigmaField: SigmaKey,
-    { label, helperText, disabled }: PerturbedOptions,
+    { label, helperText, additionalText, disabled }: PerturbedOptions,
   ) => (
     <UserInputRangeItem
       baseField={baseField}
       sigmaField={sigmaField}
       label={label}
       helperText={helperText}
+      additionalText={additionalText}
       baseValue={userInput[baseField]}
       sigma={userInput[sigmaField]}
       baseConstraint={c(baseField)}
@@ -76,15 +79,6 @@ export default function UserInputForm({
   );
 
   const rentalYield = formatPercentage((userInput.monthlyRent * 12) / userInput.initialHomePrice);
-
-  // Combined nominal growth of maintenance + condo fees (stacks
-  // multiplicatively: inflation × aging). Shown in the aging helper so the
-  // two knobs read as one effective number.
-  const maintTotalGrowth =
-    (1 + userInput.ownerCostGrowthRate / 100) * (1 + userInput.maintAgingPct / 100) - 1;
-  const maintTotalText = Number.isFinite(maintTotalGrowth)
-    ? `Maintenance + fees grow ≈${formatPercentage(maintTotalGrowth)}/yr in total (stacks with cost inflation).`
-    : null;
 
   // While a field is mid-edit it can transiently be "" or 0. Show a placeholder
   // rather than a misleading "$0/mo" (empty amortization) or "NaN" (empty price).
@@ -132,7 +126,7 @@ export default function UserInputForm({
             <Button variant="subtle" color="gray" onClick={closeReset}>
               Cancel
             </Button>
-            <Button color="red" onClick={confirmReset}>
+            <Button color="rust" onClick={confirmReset}>
               Reset all
             </Button>
           </Group>
@@ -141,9 +135,12 @@ export default function UserInputForm({
 
       <Accordion multiple defaultValue={["rent", "property"]} variant="contained">
         <Accordion.Item value="rent">
-          <Accordion.Control>Rent</Accordion.Control>
+          <Accordion.Control>
+            Rent
+            <SectionSummary>{`${summaryValue(userInput.monthlyRent, formatCAD)}/mo · +${summaryValue(userInput.rentIncreaseRate)}%/yr`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="monthlyRent"
                 label="Monthly rent"
@@ -160,14 +157,17 @@ export default function UserInputForm({
                 helperText:
                   "Expected annual growth in rent payments. Typically at or slightly above inflation (2–2.5%).",
               })}
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="property">
-          <Accordion.Control>Property</Accordion.Control>
+          <Accordion.Control>
+            Property
+            <SectionSummary>{`${summaryValue(userInput.initialHomePrice, formatCAD)} · ${summaryValue(userInput.holdingPeriod)} yr hold`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="initialHomePrice"
                 label="Purchase price"
@@ -188,7 +188,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="propertyTaxRate"
                 label="Property tax"
-                labelHelperText="Current annual property tax. Switch between dollar amount and rate (% of today's home value). Typical range: 0.5–1.5% depending on municipality."
+                labelHelperText={`Your annual property tax, in dollars or as a % of today's home value: typically 0.5–1.5%, lower in the big metros.`}
                 value={userInput.propertyTaxRate}
                 onChange={bind("propertyTaxRate")}
                 error={errors.propertyTaxRate}
@@ -203,7 +203,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="condoFeesPerMonth"
                 label="Condo fees"
-                labelHelperText="Monthly condo or strata fees in today's dollars. Set to $0 for detached homes."
+                labelHelperText={`Monthly condo or strata fees in today's dollars; $0 for a house.`}
                 value={userInput.condoFeesPerMonth}
                 onChange={bind("condoFeesPerMonth")}
                 error={errors.condoFeesPerMonth}
@@ -215,8 +215,8 @@ export default function UserInputForm({
 
               <UserInputFormItem
                 id="maintPct"
-                label="Maintenance & insurance"
-                labelHelperText="Annual repairs and insurance. Toggle % of today's home price or $/yr. Excludes condo fees. Typically 0.5–1% for condos and 1–2% for detached homes."
+                label="Maintenance"
+                labelHelperText={`Yearly repairs and replacements (roof, furnace, appliances), in dollars or as a % of today's home value: about 1% for a house and 0.5% for a condo unit, less where land is expensive. Excludes condo fees and insurance.`}
                 value={userInput.maintPct}
                 onChange={bind("maintPct")}
                 error={errors.maintPct}
@@ -224,25 +224,30 @@ export default function UserInputForm({
                 percentToggle={{
                   base: userInput.initialHomePrice,
                   defaultUnit: "%",
-                  unitAriaLabel: "Maintenance and Insurance input unit",
+                  unitAriaLabel: "Maintenance input unit",
                 }}
               />
 
               <UserInputFormItem
-                id="maintAgingPct"
-                label="Building aging"
-                labelHelperText={`Extra yearly rise from building deterioration, on top of cost inflation.${maintTotalText ? ` ${maintTotalText}` : ""} Default 1%/yr matches the AHS maintenance-only age gradient (see methodology note). 0% for new builds. Does not apply to property tax.`}
-                value={userInput.maintAgingPct}
-                onChange={bind("maintAgingPct")}
-                error={errors.maintAgingPct}
-                suffix="%"
-                {...c("maintAgingPct")}
+                id="insurancePct"
+                label="Home insurance"
+                labelHelperText={`Your yearly home insurance premium minus the tenant insurance you'd pay as a renter, in dollars or as a % of today's home value.`}
+                value={userInput.insurancePct}
+                onChange={bind("insurancePct")}
+                error={errors.insurancePct}
+                {...c("insurancePct")}
+                percentToggle={{
+                  base: userInput.initialHomePrice,
+                  defaultUnit: "$",
+                  unitAriaLabel: "Home insurance input unit",
+                }}
               />
 
               {perturbed("ownerCostGrowthRate", "ownerCostGrowthSigma", {
-                label: "Cost inflation",
+                label: "Owner cost growth",
                 helperText:
-                  "General price inflation for property tax, insurance, condo fees, and baseline maintenance. Maintenance and condo fees grow an extra building-aging uplift on top (see Building aging).",
+                  "How fast property tax, condo fees, maintenance and insurance rise each year. A little above inflation: repairs are mostly skilled labour, buildings age, and municipal budgets have grown faster than prices.",
+                additionalText: "Applies to property tax, condo fees, maintenance and insurance.",
               })}
 
               <UserInputFormItem
@@ -255,18 +260,21 @@ export default function UserInputForm({
                 suffix=" Years"
                 {...c("holdingPeriod")}
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="mortgage">
-          <Accordion.Control>Mortgage</Accordion.Control>
+          <Accordion.Control>
+            Mortgage
+            <SectionSummary>{`${summaryValue(userInput.downPaymentPercentage)}% down · ${summaryValue(userInput.amortization)} yr · ${summaryValue(userInput.annualMortgageInterestRate)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Text size="xs" c="dimmed">
                 {`Down payment amount ${formatCAD((userInput.downPaymentPercentage / 100) * userInput.initialHomePrice)}. Est. mortgage payment: ${monthlyMortgage} /mo.${premiumText}`}
               </Text>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   id="downPaymentPercentage"
                   label="Down payment"
@@ -294,13 +302,16 @@ export default function UserInputForm({
                     "Your rate for the first 5-year term. Renewals vary around it. The default reflects the Bank of Canada's neutral policy rate (2.75%) plus a typical lender spread (1.75%).",
                   disabled: userInput.downPaymentPercentage === 100,
                 })}
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="investment">
-          <Accordion.Control>Investment</Accordion.Control>
+          <Accordion.Control>
+            Investment
+            <SectionSummary>{`${summaryValue(userInput.investmentReturnRate)}% return · ${summaryValue(userInput.taxShelteredPct)}% sheltered`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
             <Stack gap="md">
               <Alert variant="default" color="gray">
@@ -308,11 +319,11 @@ export default function UserInputForm({
                 capital gains (taxed at sale). Use Annual Yield Tax to set a blended rate that
                 reflects your mix of interest, dividends and realized capital gains.
               </Alert>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {
                   label: "Compound return",
                   helperText:
-                    "Expected pre-tax compound annual return after fund fees, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
+                    "Expected pre-tax compound annual return after fund fees, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio.",
                 })}
                 {perturbed("dividendYield", "dividendYieldSigma", {
                   label: "Annual yield",
@@ -349,15 +360,18 @@ export default function UserInputForm({
                   suffix="%"
                   {...c("taxShelteredPct")}
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="costs">
-          <Accordion.Control>Transaction costs</Accordion.Control>
+          <Accordion.Control>
+            Transaction costs
+            <SectionSummary>{`buy ${summaryValue(userInput.buyerClosingCostsPct)}% · sell ${summaryValue(userInput.sellerClosingCostsPct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 id="buyerClosingCostsPct"
                 label="Buyer closing costs"
@@ -378,17 +392,16 @@ export default function UserInputForm({
                 suffix="%"
                 {...c("sellerClosingCostsPct")}
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
       <Button
-        variant="transparent"
-        size="xs"
-        color="red"
+        variant="default"
+        size="sm"
         onClick={openReset}
         leftSection={<IconRotate size={14} />}
-        style={{ alignSelf: "flex-start" }}
+        style={{ alignSelf: "flex-end" }}
       >
         Reset all
       </Button>

@@ -13,10 +13,10 @@ import {
   YAxis,
 } from "recharts";
 import type { GlidePathInput, GlidePathResult } from "@/utils/glide-path/types";
-import { generateTicks } from "@/utils/charts";
+import { CHART_AXIS, generateTicks } from "@/utils/charts";
 
-const TEAL = "var(--mantine-color-teal-6)";
-const INDIGO = "var(--mantine-color-indigo-5)";
+const ACCENT = "var(--pf-accent)";
+const INK = "var(--pf-ink)";
 
 type ChartView = "stepped" | "smoothed";
 
@@ -96,11 +96,11 @@ function ChartTooltip({
   const p = payload[0].payload;
   const value = view === "smoothed" ? p.equitySmooth : p.equity;
   return (
-    <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+    <Paper px="md" py="sm" shadow="md" style={{ border: "1px solid var(--pf-border)" }}>
       <Text fw={600} mb={2}>
         Age {p.age}
       </Text>
-      <Text size="sm" c="teal">
+      <Text size="sm" c="ledger">
         Equity {value.toFixed(0)}%{view === "smoothed" ? " (trend)" : ""}
       </Text>
       <Text size="xs" c="dimmed">
@@ -164,7 +164,11 @@ export default function GlidePathChart({
         style={{ width: "100%", minWidth: 0 }}
       >
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart data={data} margin={{ top: 16, right: 12, bottom: 28, left: 0 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 16, right: 12, bottom: 28, left: 0 }}
+            accessibilityLayer={false}
+          >
             <ReferenceArea
               x1={retireAge}
               x2={lastAge}
@@ -174,7 +178,7 @@ export default function GlidePathChart({
               label={{
                 value: "Retirement",
                 position: "insideTopRight",
-                fill: "var(--mantine-color-gray-6)",
+                fill: "var(--pf-muted)",
                 fontSize: 12,
               }}
             />
@@ -184,28 +188,28 @@ export default function GlidePathChart({
               domain={["dataMin", "dataMax"]}
               ticks={ageTicks}
               tickMargin={8}
-              label={{ value: "Age", position: "bottom", fontSize: 12 }}
-              tick={{ fontSize: 12 }}
+              label={{ value: "Age", position: "bottom", fontSize: 12, fill: "var(--pf-muted)" }}
+              {...CHART_AXIS}
             />
             <YAxis
               width={44}
               domain={[0, yMax]}
               ticks={equityTicks}
               tickFormatter={(v) => `${v}%`}
-              tick={{ fontSize: 12 }}
+              {...CHART_AXIS}
             />
             <Tooltip content={<ChartTooltip view={view} />} />
-            <ReferenceLine x={retireAge} stroke={TEAL} strokeDasharray="4 4" />
+            <ReferenceLine x={retireAge} stroke={ACCENT} strokeDasharray="4 4" />
             {showConstant && (
               <ReferenceLine
                 y={result.flatEquityPct}
-                stroke={INDIGO}
+                stroke={INK}
                 strokeWidth={2}
                 strokeDasharray="5 4"
                 label={{
                   value: `Constant ${result.flatEquityPct.toFixed(0)}%`,
                   position: "insideTopLeft",
-                  fill: "var(--mantine-color-indigo-6)",
+                  fill: "var(--pf-ink)",
                   fontSize: 11,
                 }}
               />
@@ -213,7 +217,7 @@ export default function GlidePathChart({
             <Line
               type={view === "smoothed" ? "monotone" : "stepAfter"}
               dataKey={view === "smoothed" ? "equitySmooth" : "equity"}
-              stroke={TEAL}
+              stroke={ACCENT}
               strokeWidth={2.5}
               dot={false}
               isAnimationActive={false}
@@ -223,14 +227,14 @@ export default function GlidePathChart({
       </div>
       <Group gap="lg" mt="sm" wrap="wrap">
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: TEAL }} aria-hidden />
+          <Box w={18} h={2} style={{ backgroundColor: ACCENT }} aria-hidden />
           <Text size="xs" c="dimmed">
             Optimized glide path
           </Text>
         </Group>
         {showConstant && (
           <Group gap={6} wrap="nowrap">
-            <Box w={18} h={0} style={{ borderTop: `2px dashed ${INDIGO}` }} aria-hidden />
+            <Box w={18} h={0} style={{ borderTop: `2px dashed ${INK}` }} aria-hidden />
             <Text size="xs" c="dimmed">
               Best constant {result.flatEquityPct.toFixed(0)}% equity
             </Text>

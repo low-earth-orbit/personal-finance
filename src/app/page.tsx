@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { Card, Container, Group, SimpleGrid, Stack, Text, Title } from "@mantine/core";
+import { Container, Group, Text } from "@mantine/core";
+import { IconArrowRight } from "@tabler/icons-react";
 import Header from "@/components/shared/Header";
 import Footer from "@/components/shared/Footer";
 import StatusBadge, { type AppStatus } from "@/components/shared/StatusBadge";
+import classes from "./page.module.css";
 
 type Tool = {
-  emoji: string;
   title: string;
   description: string;
   href?: string;
@@ -16,29 +17,24 @@ type Tool = {
 
 const TOOLS: Tool[] = [
   {
-    emoji: "🏠",
     title: "Rent vs Buy",
     description: "Compare the long-run net worth of renting versus owning a home.",
     href: "/rent-vs-buy",
   },
   {
-    emoji: "🏖",
     title: "When can I retire?",
     description:
       "A quick reality check on the earliest age you could retire, based on your savings and target income.",
     href: "/retirement",
-    status: "new",
   },
   {
-    emoji: "🛤️",
     title: "Lifetime Allocation",
     description:
-      "A research model of how stock allocation could change over a lifetime. FOR NERDS.",
+      "A research model of how stock allocation could change over a lifetime. For nerds.",
     href: "/glide-path",
     status: "new",
   },
   {
-    emoji: "🧾",
     title: "ACB Calculator",
     description:
       "Compute the adjusted cost basis of your non-registered holdings from a Wealthsimple activity export.",
@@ -46,7 +42,6 @@ const TOOLS: Tool[] = [
     status: "preview",
   },
   {
-    emoji: "🧮",
     title: "Where to invest: TFSA, RRSP or Non-Reg?",
     description: "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
     href: "/allocator",
@@ -54,61 +49,65 @@ const TOOLS: Tool[] = [
   },
 ];
 
-function ToolCardBody({ tool }: { tool: Tool }) {
-  const available = Boolean(tool.href);
-  return (
-    <Stack gap="xs">
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Text fz={32}>{tool.emoji}</Text>
-        <Group gap="xs" wrap="nowrap">
-          {!available && <StatusBadge status="coming-soon" />}
-          {tool.status && <StatusBadge status={tool.status} />}
-        </Group>
+function ToolRow({ tool, index }: { tool: Tool; index: number }) {
+  const body = (
+    <>
+      <span className={classes.number}>{String(index + 1).padStart(2, "0")}</span>
+      <span className={classes.text}>
+        <span className={classes.title}>{tool.title}</span>
+        <span className={classes.description}>{tool.description}</span>
+      </span>
+      <Group gap="sm" wrap="nowrap" className={classes.meta}>
+        {!tool.href && <StatusBadge status="coming-soon" />}
+        {tool.status && <StatusBadge status={tool.status} />}
+        {tool.href && <IconArrowRight size={20} aria-hidden="true" className={classes.arrow} />}
       </Group>
-      <Title order={2} fz="xl">
-        {tool.title}
-      </Title>
-      <Text c="dimmed" size="sm">
-        {tool.description}
-      </Text>
-    </Stack>
+    </>
   );
-}
-
-function ToolCard({ tool }: { tool: Tool }) {
-  if (tool.href) {
-    return (
-      <Card
-        component={Link}
-        href={tool.href}
-        withBorder
-        padding="lg"
-        radius="md"
-        style={{ height: "100%", cursor: "pointer" }}
-      >
-        <ToolCardBody tool={tool} />
-      </Card>
-    );
-  }
 
   return (
-    <Card withBorder padding="lg" radius="md" style={{ height: "100%", opacity: 0.65 }}>
-      <ToolCardBody tool={tool} />
-    </Card>
+    <li>
+      {tool.href ? (
+        <Link href={tool.href} className={classes.row}>
+          {body}
+        </Link>
+      ) : (
+        <div className={classes.row} data-disabled>
+          {body}
+        </div>
+      )}
+    </li>
   );
 }
 
 export default function HomePage() {
   return (
     <>
-      <Header title="Personal Finance" />
+      <Header
+        hero
+        title="The numbers behind the big decisions."
+        subtitle="Free, simple personal finance calculators for Canadians — compare renting vs buying, plan for retirement, and more."
+      />
       <main>
-        <Container size="xl" py="xl">
-          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
-            {TOOLS.map((tool) => (
-              <ToolCard key={tool.title} tool={tool} />
-            ))}
-          </SimpleGrid>
+        <Container size="xl">
+          <section aria-labelledby="tools-heading">
+            <div className={classes.listHeader}>
+              <Text span className={classes.listHeaderCell}>
+                No.
+              </Text>
+              <Text span id="tools-heading" className={classes.listHeaderCell}>
+                Tools
+              </Text>
+              <Text span className={classes.listHeaderCell}>
+                Status
+              </Text>
+            </div>
+            <ol className={classes.list}>
+              {TOOLS.map((tool, index) => (
+                <ToolRow key={tool.title} tool={tool} index={index} />
+              ))}
+            </ol>
+          </section>
         </Container>
       </main>
       <Footer />

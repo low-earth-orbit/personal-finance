@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULTS } from "./presets";
-import { accumulationBalances } from "./projection";
+import { accumulationBalances, withdrawalAtAge } from "./projection";
 import {
   NUM_SIMULATIONS,
-  computePlan,
-  computePlanSWR,
   computeRetirement,
   safeWithdrawalRate,
   simulateRetirementPhase,
@@ -202,29 +200,6 @@ describe("computeRetirement", () => {
   });
 });
 
-describe("computePlanSWR", () => {
-  const input = base({
-    currentIncome: 100_000,
-    targetIncomePct: 60, // $60k target
-    guaranteedIncomePct: 25, // $25k pension → $35k gap
-    pensionStartAge: 65,
-  });
-
-  it("uses the full target income in year 1 when retiring before the pension (bridge)", () => {
-    // Retire at 60 (< pensionStartAge): year-1 draw is the whole $60k target.
-    expect(computePlanSWR(input, 60, 1_000_000)).toBeCloseTo(0.06, 6);
-  });
-
-  it("uses the post-pension gap when retiring at/after the pension starts", () => {
-    // Retire at 65: pension is already flowing, so year-1 draw is the $35k gap.
-    expect(computePlanSWR(input, 65, 1_000_000)).toBeCloseTo(0.035, 6);
-  });
-
-  it("returns 0 for non-positive savings", () => {
-    expect(computePlanSWR(input, 65, 0)).toBe(0);
-  });
-});
-
 describe("safeWithdrawalRate", () => {
   it("returns a plausible 60/40 rate that falls as the horizon lengthens", () => {
     const swr30 = safeWithdrawalRate(5.67, 8.79, 2.1, 30, 0.9);
@@ -266,7 +241,7 @@ describe("safeWithdrawalRate", () => {
   });
 });
 
-describe("cut rate and computePlan", () => {
+describe("cut rate", () => {
   it("never cuts spending at 0% flexibility", () => {
     expect(computeRetirement(base({ spendingFlexibilityPct: 0 })).cutRate).toBe(0);
   });
@@ -275,15 +250,6 @@ describe("cut rate and computePlan", () => {
     const r = computeRetirement(base({ spendingFlexibilityPct: 20 }));
     expect(r.cutRate).toBeGreaterThan(0);
     expect(r.cutRate).toBeLessThanOrEqual(1);
-  });
-
-  it("bundles the result with its year-1 withdrawal rate", () => {
-    const { result, planSWR } = computePlan(base());
-    expect(result.earliestRetirementAge).not.toBeNull();
-    expect(planSWR).toBeCloseTo(
-      computePlanSWR(base(), result.earliestRetirementAge!, result.portfolioAtRetirement!),
-      12,
-    );
   });
 });
 
@@ -300,12 +266,9 @@ describe("CPP and OAS in the simulation", () => {
 
   it("funds the bridge before CPP starts: year-1 draw is the whole target", () => {
     const input = streams({ cppStartAge: 70, oasStartAge: 67 });
-    expect(computePlanSWR(input, 62, 1_000_000)).toBeCloseTo(0.06, 6);
+    expect(withdrawalAtAge(input, 62)).toBeCloseTo(60_000, 6);
     // At 70 both have started: 60k − 9k×1.144 − 12k×1.42.
-    expect(computePlanSWR(input, 70, 1_000_000)).toBeCloseTo(
-      (60_000 - 9_000 * 1.144 - 12_000 * 1.42) / 1_000_000,
-      6,
-    );
+    expect(withdrawalAtAge(input, 70)).toBeCloseTo(60_000 - 9_000 * 1.144 - 12_000 * 1.42, 6);
   });
 
   it("counts OAS from its start age in the drawdown", () => {

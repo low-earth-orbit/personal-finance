@@ -265,30 +265,12 @@ function retirementAgeRange(
 }
 
 /**
- * Headline safe withdrawal rate: the first retirement year's portfolio draw as a
- * fraction of savings at retirement — the true initial withdrawal rate. The year-1
- * draw is the FULL target income when retiring before the pension starts (the
- * bridge — so this runs high), otherwise the post-pension gap (comparable to the
- * "4% rule").
- */
-export function computePlanSWR(
-  input: RetirementInput,
-  retireAge: number,
-  savingsAtRetirement: number,
-): number {
-  if (savingsAtRetirement <= 0) return 0;
-  const yearOneWithdrawal = withdrawalAtAge(input, retireAge);
-  return yearOneWithdrawal / savingsAtRetirement;
-}
-
-/**
  * Pure-drawdown safe withdrawal rate (real, as a fraction of the starting balance):
  * the largest constant real withdrawal sustainable for `years` with at least
  * `successRate` survival, for a portfolio with the given nominal mean return and
- * volatility. Independent of the user's savings/pension — this generalizes the
- * headline figure across allocations and horizons for the technical-note reference
- * table. Uses the same normal-return + AR(1) + mid-year-withdrawal dynamics as
- * `simulate` (φ is currently 0, i.e. iid). Lighter `numSims` since it's a table cell.
+ * volatility. Independent of the user's savings/pension. Uses the same normal-return +
+ * AR(1) + mid-year-withdrawal dynamics as `simulate` (φ is currently 0, i.e. iid).
+ * The app no longer displays it; kept as a reference for the methodology tables.
  */
 export function safeWithdrawalRate(
   retireReturnPct: number,
@@ -384,17 +366,4 @@ export function computeRetirement(input: RetirementInput): RetirementResult {
     retirementBands: null,
     retirementAgeRange: null,
   };
-}
-
-/** The retirement result plus its headline year-1 withdrawal rate (what the UI renders). */
-export function computePlan(input: RetirementInput): {
-  result: RetirementResult;
-  planSWR: number | null;
-} {
-  const result = computeRetirement(input);
-  const planSWR =
-    result.earliestRetirementAge != null && result.portfolioAtRetirement != null
-      ? computePlanSWR(input, result.earliestRetirementAge, result.portfolioAtRetirement)
-      : null;
-  return { result, planSWR };
 }

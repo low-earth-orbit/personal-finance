@@ -14,6 +14,13 @@ describe("retirement validation", () => {
     expect(validateRetirementInput({ ...DEFAULTS, oasStartAge: 71 }).oasStartAge).toBeTruthy();
   });
 
+  it("caps expected returns at 10%", () => {
+    expect(validateRetirementInput({ ...DEFAULTS, accumReturn: 10 })).toEqual({});
+    expect(validateRetirementInput({ ...DEFAULTS, accumReturn: 10.1 }).accumReturn).toBeTruthy();
+    expect(validateRetirementInput({ ...DEFAULTS, retireReturn: 10 })).toEqual({});
+    expect(validateRetirementInput({ ...DEFAULTS, retireReturn: 10.1 }).retireReturn).toBeTruthy();
+  });
+
   it("requires whole-year start ages", () => {
     expect(validateRetirementInput({ ...DEFAULTS, cppStartAge: 62.5 }).cppStartAge).toBe(
       "Must be a whole number of years.",

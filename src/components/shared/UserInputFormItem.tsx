@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Group, Input, NumberInput, SegmentedControl, Stack, Text } from "@mantine/core";
 import type { ReactNode } from "react";
 import FieldLabel from "./FieldLabel";
+import { fieldRowClassNames, fieldRowClasses } from "./fieldRow";
 import type { FieldValue } from "@/types";
 
 interface PercentToggleOptions {
@@ -32,6 +33,16 @@ interface UserInputFormItemProps {
   /** Accessible name, for fields whose visible heading sits outside the input. */
   "aria-label"?: string;
   percentToggle?: PercentToggleOptions;
+  /**
+   * "row" (default): ledger row with the label left and the input right.
+   * "stacked": label above the input, for narrow containers such as popovers.
+   */
+  layout?: "row" | "stacked";
+  /**
+   * A second, narrow control at the end of the row (e.g. a start age beside an amount). Row layout
+   * only; give it its own `aria-label`.
+   */
+  trailing?: ReactNode;
 }
 
 export default function UserInputFormItem({
@@ -50,8 +61,34 @@ export default function UserInputFormItem({
   allowNegative,
   error,
   percentToggle,
+  layout = "row",
+  trailing,
   ...rest
 }: UserInputFormItemProps) {
+  const row = layout === "row";
+  // With a trailing control the row frame becomes [field | trailing]; the field keeps its own
+  // label/input grid inside the first cell.
+  const withTrailing = row && trailing != null;
+  // With a trailing control the note sits below the whole row, not inside the amount's cell: an
+  // extra line there would make the cell taller and push the trailing input out of alignment.
+  const noteEl = additionalText ? (
+    <Text size="xs" c="dimmed" aria-live="polite" mt={withTrailing ? 0 : 4}>
+      {additionalText}
+    </Text>
+  ) : null;
+  const frame = (content: ReactNode) =>
+    withTrailing ? (
+      <div>
+        <div className={`${fieldRowClasses.frame} ${fieldRowClasses.withTrailing}`}>
+          <div className={fieldRowClasses.trailingMain}>{content}</div>
+          <div>{trailing}</div>
+        </div>
+        {noteEl}
+      </div>
+    ) : (
+      content
+    );
+  const frameClass = row && !withTrailing ? fieldRowClasses.frame : "";
   const [unit, setUnit] = useState<string>(percentToggle?.defaultUnit ?? "$");
 
   if (percentToggle) {
@@ -76,10 +113,10 @@ export default function UserInputFormItem({
       onChange(Math.round(pct * 10000) / 10000);
     };
 
-    return (
-      <Stack gap={0}>
-        <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-          <Input.Label htmlFor={id}>
+    return frame(
+      <div className={row ? `${frameClass} ${fieldRowClasses.custom}` : undefined}>
+        <Group justify={row ? "flex-start" : "space-between"} align="center" wrap="wrap" gap="xs">
+          <Input.Label htmlFor={id} className={row ? fieldRowClasses.customLabel : undefined}>
             <FieldLabel label={label} helperText={labelHelperText} />
           </Input.Label>
           <SegmentedControl
@@ -87,9 +124,18 @@ export default function UserInputFormItem({
             value={unit}
             onChange={setUnit}
             aria-label={unitAriaLabel}
+            ff="var(--pf-font-figures)"
             styles={{
-              root: { height: 22, padding: 2, flexShrink: 0 },
-              label: { padding: "0 6px", lineHeight: "18px" },
+              root: { flexShrink: 0 },
+              // Fixed whole-pixel segment widths keep the chip edges off sub-pixel positions.
+              label: {
+                width: 25,
+                padding: 0,
+                lineHeight: "22px",
+                fontSize: 12,
+                display: "flex",
+                justifyContent: "center",
+              },
             }}
             data={[
               { label: "$", value: "$" },
@@ -117,14 +163,15 @@ export default function UserInputFormItem({
           allowNegative={false}
           clampBehavior="none"
         />
-      </Stack>
+      </div>,
     );
   }
 
-  return (
-    <Stack gap={4}>
+  return frame(
+    <Stack gap={0} className={frameClass || undefined}>
       <NumberInput
         id={id}
+        classNames={row ? fieldRowClassNames : undefined}
         label={<FieldLabel label={label} helperText={labelHelperText} />}
         description={description}
         value={value}
@@ -140,11 +187,7 @@ export default function UserInputFormItem({
         styles={{ label: { display: "block" } }}
         {...rest}
       />
-      {additionalText && (
-        <Text size="xs" c="dimmed" aria-live="polite">
-          {additionalText}
-        </Text>
-      )}
-    </Stack>
+      {!withTrailing && noteEl}
+    </Stack>,
   );
 }

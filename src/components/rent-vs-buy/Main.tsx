@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Container, Grid } from "@mantine/core";
+import ColumnHeader from "@/components/shared/ColumnHeader";
+import layout from "@/components/shared/TwoColumn.module.css";
 import Result from "./Result";
 import UserInputForm from "./UserInputForm";
 import PresetBar from "./PresetBar";
@@ -7,6 +9,7 @@ import type { ImportSummary } from "./ManagePresetsModal";
 import type { PresetFileEntry } from "@/utils/presetFile";
 import { DEFAULTS, PRESETS, INPUT_UNCERTAINTIES, getActivePreset } from "@/utils/presets";
 import { validateUserInput } from "@/utils/validation";
+import { migrateInput } from "@/utils/inputMigration";
 import {
   loadInput,
   saveInput,
@@ -33,9 +36,10 @@ const PERTURBED_FIELDS: UserInputKey[] = [
   "dividendYield",
 ];
 
+// Saved inputs and presets may come from an older version; migrate them before filling defaults.
 const normalizeInput = (values?: Partial<UserInput> | null): UserInput => ({
   ...DEFAULTS,
-  ...(values ?? {}),
+  ...migrateInput(values ?? {}),
 });
 
 const newPresetId = () =>
@@ -249,7 +253,8 @@ const Main = () => {
   return (
     <Container size="xl">
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 2, md: 1 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }}>
+          <ColumnHeader title="Inputs" />
           <UserInputForm
             userInput={userInput}
             handleChange={handleChange}
@@ -276,7 +281,8 @@ const Main = () => {
             }
           />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 6 }} order={{ base: 1, md: 2 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result} id="result">
+          <ColumnHeader title="Result" note="Updates as you change inputs" />
           <Result userInput={userInput} errors={errors} />
         </Grid.Col>
       </Grid>

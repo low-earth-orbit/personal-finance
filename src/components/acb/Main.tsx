@@ -276,9 +276,9 @@ const Main = () => {
   // Shared between the gated Tabs layout and the no-tabs layout below.
   const holdingsPanel = (
     <Stack gap="lg">
-      <Paper withBorder p="md" radius="md">
+      <Paper withBorder pt="md">
         <Stack gap="sm">
-          <Title order={2} fz="lg">
+          <Title order={2} fz="xl">
             Holdings
           </Title>
           <Text c="dimmed" size="sm">
@@ -309,15 +309,15 @@ const Main = () => {
         </Stack>
       </Paper>
       {marginYears.length > 0 && (
-        <Paper withBorder p="md" radius="md">
+        <Paper withBorder pt="md">
           <Stack gap="sm">
-            <Title order={2} fz="lg">
-              Margin Interest Paid
+            <Title order={2} fz="xl">
+              Margin interest paid
             </Title>
             <Text c="dimmed" size="sm">
               Potentially deductible against taxable income (line 22100)
             </Text>
-            <Table striped withTableBorder>
+            <Table verticalSpacing="sm" horizontalSpacing={0}>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Tax Year</Table.Th>
@@ -342,30 +342,17 @@ const Main = () => {
   return (
     <Container size="xl" py="md">
       <Stack gap="lg">
-        <Paper withBorder p="md" radius="md">
-          <FileUpload
-            files={fileSummaries}
-            onFilesAdded={handleFilesAdded}
-            onRemoveFile={handleRemoveFile}
-            onPreview={setPreviewFileIndex}
-          />
-        </Paper>
-        {parseErrors.length > 0 && (
-          <Alert color="red" title="Could not read file(s)">
-            <List size="sm">
-              {parseErrors.map((error) => (
-                <List.Item key={error}>{error}</List.Item>
-              ))}
-            </List>
-          </Alert>
-        )}
-        {!hasFiles && (
-          <Paper withBorder p="md" radius="md">
+        <FileUpload
+          files={fileSummaries}
+          onFilesAdded={handleFilesAdded}
+          onRemoveFile={handleRemoveFile}
+          onPreview={setPreviewFileIndex}
+          empty={
             <Stack gap="sm">
-              <Title order={2} fz="lg">
+              <Title order={2} fz="1.0625rem">
                 How it works
               </Title>
-              <List type="ordered" size="sm" spacing="xs">
+              <List type="ordered" spacing="sm">
                 <List.Item>
                   Export your account activity (Wealthsimple CSV, Questrade spreadsheet, or IBKR
                   activity statement). You can combine brokerages — holdings pool across all of
@@ -381,10 +368,19 @@ const Main = () => {
                 </List.Item>
               </List>
             </Stack>
-          </Paper>
+          }
+        />
+        {parseErrors.length > 0 && (
+          <Alert color="red" title="Could not read file(s)">
+            <List size="sm">
+              {parseErrors.map((error) => (
+                <List.Item key={error}>{error}</List.Item>
+              ))}
+            </List>
+          </Alert>
         )}
         {overlappingFiles && (
-          <Alert color="yellow" title="Overlapping date ranges detected">
+          <Alert color="rust" title="Overlapping date ranges detected">
             <Text size="sm">
               Overlapping date ranges detected across files — transactions may be duplicated. Check
               that each file covers a distinct date range.
@@ -392,7 +388,7 @@ const Main = () => {
           </Alert>
         )}
         {mixedCurrencySymbols.length > 0 && (
-          <Alert color="yellow" title="Mixed currencies detected">
+          <Alert color="rust" title="Mixed currencies detected">
             <Text size="sm">
               {mixedCurrencySymbols.join(", ")}: transactions span more than one currency. ACB
               assumes a single currency per holding — convert each transaction to CAD using the
@@ -402,7 +398,7 @@ const Main = () => {
           </Alert>
         )}
         {oversoldSymbols.length > 0 && (
-          <Alert color="yellow" title="Sales exceed recorded purchases">
+          <Alert color="rust" title="Sales exceed recorded purchases">
             <Text size="sm">
               {oversoldSymbols.join(", ")}: more shares were sold than the uploads account for —
               purchase history is missing (an older file, or a transfer whose opening ACB was never
@@ -431,10 +427,10 @@ const Main = () => {
           />
         )}
         {hasFiles && showAccountTypeMarker && (
-          <Paper withBorder p="md" radius="md">
+          <Paper withBorder pt="md">
             <Stack gap="md">
               {hasDefaultedUnknownAccountTypes && (
-                <Alert color="yellow" title="Mark account types">
+                <Alert color="rust" title="Mark account types">
                   <Text size="sm">
                     Some uploaded accounts do not say whether they are registered. Mark each unknown
                     account so registered accounts are excluded from ACB.
@@ -464,7 +460,7 @@ const Main = () => {
             </Tabs.Panel>
             <Tabs.Panel value="byAccount" pt="lg">
               <Stack gap="lg">
-                <Alert color="yellow" title="For reconciliation only">
+                <Alert color="rust" title="For reconciliation only">
                   <Text size="sm">
                     Book costs below are per account and unadjusted — no T3 or opening-lot
                     adjustments — matching what your account statements show. The CRA requires ACB

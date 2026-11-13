@@ -1,25 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Alert,
-  Box,
-  Button,
-  Collapse,
-  Group,
-  Paper,
-  ScrollArea,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  VisuallyHidden,
-} from "@mantine/core";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconDownload,
-  IconHeart,
-  IconScale,
-} from "@tabler/icons-react";
+import { Box, Button, Group, Paper, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { IconDownload, IconHeart } from "@tabler/icons-react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ComposedChart,
@@ -34,6 +15,9 @@ import {
 } from "recharts";
 import { SIMULATION_HORIZON_YEARS } from "@/utils/monteCarlo";
 import { formatCAD, formatCADCompact } from "@/utils/format";
+import { CHART_AXIS, generateTicks, niceTicks } from "@/utils/charts";
+import { Eyebrow, Figure, FigureStrip } from "@/components/shared/Figures";
+import JumpToResult from "@/components/shared/JumpToResult";
 import type {
   BreakEven,
   MonteCarloResponse,
@@ -69,15 +53,15 @@ const INPUT_LABELS = {
   holdingPeriod: "Holding period (years)",
   rentIncreaseRate: "Rent increase rate (%/yr)",
   homePriceGrowthRate: "Home price growth (%/yr)",
-  ownerCostGrowthRate: "Cost inflation (%/yr)",
+  ownerCostGrowthRate: "Owner cost growth (%/yr)",
   investmentReturnRate: "Compound investment return (%/yr)",
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",
   taxShelteredPct: "Tax-sheltered (%)",
   propertyTaxRate: "Property tax rate (%)",
-  maintPct: "Maintenance (%/yr)",
-  maintAgingPct: "Building aging (%/yr)",
+  maintPct: "Maintenance (% of price/yr)",
+  insurancePct: "Home insurance (% of price/yr)",
   condoFeesPerMonth: "Condo fees ($/month)",
   buyerClosingCostsPct: "Buyer closing costs (%)",
   sellerClosingCostsPct: "Seller closing costs (%)",
@@ -98,11 +82,11 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
   const leader = renter >= owner ? "Renting leads" : "Buying leads";
 
   return (
-    <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+    <Paper px="md" py="sm" shadow="md" style={{ border: "1px solid var(--pf-border)" }}>
       <Text fw={600} mb={4}>
         Year {point.year}
       </Text>
-      <Text size="sm" c="teal">
+      <Text size="sm" c="ledger">
         Rent: {formatCAD(renter)}
         {point.renterP25 != null && (
           <Text size="xs" c="dimmed" span>
@@ -111,7 +95,7 @@ function ChartTooltip({ payload }: { payload?: { payload: ChartPoint }[] }) {
           </Text>
         )}
       </Text>
-      <Text size="sm" c="indigo">
+      <Text size="sm" c="ink">
         Buy: {formatCAD(owner)}
         {point.ownerP25 != null && (
           <Text size="xs" c="dimmed" span>
@@ -154,6 +138,19 @@ function breakEvenText(data: ChartPoint[], saleYear: number): string {
     : `${earlier}Buying doesn't pull ahead in most simulations by year ${data[data.length - 1].year}.`;
 }
 
+/** First year of buying's majority lead, read relative to the sale year (see `breakEvenText`). */
+function buyingLeadYear(data: ChartPoint[], saleYear: number): number | null {
+  const buyLeads = (d: ChartPoint) => d.renterWinPct < 0.5;
+  const saleIdx = data.findIndex((d) => d.year === saleYear);
+  const atSale = data[saleIdx];
+  if (atSale && buyLeads(atSale)) {
+    let i = saleIdx;
+    while (i > 0 && buyLeads(data[i - 1])) i--;
+    return data[i].year;
+  }
+  return data.slice(saleIdx + 1).find(buyLeads)?.year ?? null;
+}
+
 /** "Tie at a rent of $X/mo or a price of $Y" — the inputs that make it a 50/50 call. */
 function breakEvenInputsText(be: BreakEven): string | null {
   const parts: string[] = [];
@@ -192,18 +189,12 @@ export function Summary({
   const winnerPct = renterFavored ? winPct : 100 - winPct;
   const winner = renterFavored ? "Renting" : "Buying";
 
-  let title: string;
-  let color: string;
-  if (winnerPct >= 70) {
-    title = `${winner} clearly leads`;
-    color = renterFavored ? "teal" : "indigo";
-  } else if (winnerPct >= 60) {
-    title = `${winner} likely leads`;
-    color = renterFavored ? "teal" : "indigo";
-  } else {
-    title = "Too close to call";
-    color = "gray";
-  }
+  const title =
+    winnerPct >= 70
+      ? `${winner} clearly leads`
+      : winnerPct >= 60
+        ? `${winner} likely leads`
+        : "Too close to call";
 
   const sims = `${winner} comes out ahead in ${winnerPct}% of simulations at sale (year ${holdingPeriod}).`;
   // The median of the per-simulation gap has the same sign as the majority winner.
@@ -213,29 +204,65 @@ export function Summary({
   const close = winnerPct < 60 ? " Small changes in your assumptions could flip the outcome." : "";
   const body = `${sims} ${gap} ${breakEvenLine}${close}`;
 
+  const leadYear = buyingLeadYear(data, decision.year);
+  const verdictColor = renterFavored ? "var(--pf-accent)" : "var(--pf-ink)";
+
   return (
-    <Alert
-      icon={winnerPct >= 60 ? <IconHeart size={16} /> : <IconScale size={16} />}
-      color={color}
-      title={title}
-      radius="md"
-    >
-      <Text size="sm">{body}</Text>
+    <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
+      <JumpToResult targetId="result">
+        {winnerPct >= 60
+          ? `${title} · ${winnerPct}%`
+          : `${title} · ${winner.toLowerCase()} ${winnerPct}%`}
+      </JumpToResult>
+      <Eyebrow>If you sell at year {decision.year}</Eyebrow>
+      <Group gap="sm" wrap="nowrap" align="center">
+        {winnerPct >= 60 && (
+          <span data-testid="verdict-icon" style={{ display: "inline-flex", color: verdictColor }}>
+            <IconHeart size={26} />
+          </span>
+        )}
+        <Title order={2} fz={{ base: 26, sm: 34 }} lh={1.1} style={{ letterSpacing: "-0.02em" }}>
+          {title}
+        </Title>
+      </Group>
+      <Text lh={1.6} maw="46rem">
+        {body}
+      </Text>
       {breakEven === null ? (
         // The tie line arrives ~1 s after the chart. Wrap a typical-length sentence in a skeleton
         // (its text is hidden) so it wraps at this container's width and reserves the height the
-        // real line will take, instead of the alert and everything below it jumping.
-        <Skeleton mt={4} aria-hidden data-testid="break-even-pending">
+        // real line will take, instead of the figures and everything below them jumping.
+        <Skeleton aria-hidden data-testid="break-even-pending">
           <Text size="sm">{TIE_PLACEHOLDER}</Text>
         </Skeleton>
       ) : (
         breakEvenInput && (
-          <Text size="sm" mt={4}>
+          <Text size="sm" c="dimmed" maw="46rem">
             {breakEvenInput}
           </Text>
         )
       )}
-    </Alert>
+      <FigureStrip>
+        <Figure
+          label={`${winner} wins`}
+          value={`${winnerPct}%`}
+          note="of simulations at sale"
+          tone={winnerPct >= 60 && renterFavored ? "accent" : undefined}
+        />
+        <Figure
+          label="Median gap"
+          value={formatCAD(Math.abs(decision.medianGap))}
+          note={`${winner.toLowerCase()} ahead at year ${decision.year}`}
+        />
+        <Figure
+          label="Buying leads from"
+          value={leadYear == null ? "—" : `Yr ${leadYear}`}
+          note={
+            leadYear == null ? `not by year ${data[data.length - 1].year}` : "in most simulations"
+          }
+        />
+      </FigureStrip>
+    </Stack>
   );
 }
 
@@ -245,7 +272,6 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   const [mcData, setMcData] = useState<MonteCarloYear[] | null>(null);
   const [breakEven, setBreakEven] = useState<BreakEven | null>(null);
   const [debouncedInput] = useDebouncedValue(userInput, 300);
-  const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL("../../workers/monteCarloWorker.ts", import.meta.url));
@@ -303,13 +329,11 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
     .flatMap((d) => [d.renterP25, d.renterP75, d.ownerP25, d.ownerP75])
     .filter((v): v is number => v != null && isFinite(v));
 
-  const yMin = Math.min(...allValues);
-  const yMax = Math.max(...allValues);
-  const yPad = (yMax - yMin) * 0.1;
-  const yDomain = [
-    Math.floor((yMin - yPad) / 50000) * 50000,
-    Math.ceil((yMax + yPad) / 50000) * 50000,
-  ];
+  // Round, evenly spaced money ticks; the domain runs from the first tick to the last.
+  const yTicks = niceTicks(Math.min(...allValues), Math.max(...allValues));
+  const yDomain = [yTicks[0], yTicks[yTicks.length - 1]];
+  // Every 5 years (plus year 1); the sale year has its own labelled line.
+  const yearTicks = [1, ...generateTicks(5, lastPoint.year, 5)];
 
   function downloadCSV() {
     const esc = (v: unknown) => {
@@ -359,25 +383,36 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   return (
     <Stack gap="xs">
       <Summary data={chartData} holdingPeriod={userInput.holdingPeriod} breakEven={breakEven} />
+      <Text fw={600} fz="lg" mt="lg">
+        Net worth — median and 25–75% range
+      </Text>
       <div
         role="img"
-        aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}
+        aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The summary above gives the headline result, and the full year-by-year data can be downloaded as a CSV.`}
       >
         <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart data={chartData} margin={{ top: 25, right: 50, left: 0, bottom: 20 }}>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 25, right: 50, left: 0, bottom: 20 }}
+            accessibilityLayer={false}
+          >
             <XAxis
               dataKey="year"
               label={{
                 value: "Year",
                 position: "bottom",
                 fontSize: 12,
+                fill: "var(--pf-muted)",
               }}
-              tick={{ fontSize: 12 }}
+              ticks={yearTicks}
+              interval={0}
+              {...CHART_AXIS}
             />
             <YAxis
               domain={yDomain}
+              ticks={yTicks}
               tickFormatter={formatCADCompact}
-              tick={{ fontSize: 12 }}
+              {...CHART_AXIS}
               width={70}
             />
             <Tooltip content={<ChartTooltip />} />
@@ -398,7 +433,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="renterBandWidth"
               stackId="renter"
-              fill="#12b886"
+              fill="var(--pf-accent)"
               fillOpacity={0.18}
               stroke="none"
               legendType="none"
@@ -423,7 +458,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="ownerBandWidth"
               stackId="owner"
-              fill="#4c6ef5"
+              fill="var(--pf-ink)"
               fillOpacity={0.18}
               stroke="none"
               legendType="none"
@@ -437,7 +472,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="renterMedian"
               name="Rent"
-              stroke="#12b886"
+              stroke="var(--pf-accent)"
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
@@ -449,8 +484,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               type="linear"
               dataKey="ownerMedian"
               name="Buy"
-              stroke="#4c6ef5"
+              stroke="var(--pf-ink)"
               strokeWidth={2}
+              strokeDasharray="6 4"
               dot={false}
               activeDot={{ r: 4 }}
               isAnimationActive
@@ -465,7 +501,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               label={{
                 value: "Rent",
                 position: "right",
-                fill: "#12b886",
+                fill: "var(--pf-accent)",
                 fontSize: 11,
                 fontWeight: 600,
               }}
@@ -478,20 +514,20 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
               label={{
                 value: "Buy",
                 position: "right",
-                fill: "#4c6ef5",
+                fill: "var(--pf-ink)",
                 fontSize: 11,
                 fontWeight: 600,
               }}
             />
             <ReferenceLine
               x={saleYear}
-              stroke="#fd7e14"
+              stroke="var(--pf-warn)"
               strokeWidth={1.5}
               label={{
                 value: `Sale (Yr ${saleYear})`,
                 position: "top",
                 fontSize: 11,
-                fill: "#fd7e14",
+                fill: "var(--pf-warn)",
                 fontWeight: 600,
               }}
             />
@@ -500,18 +536,18 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       </div>
       <Group gap="lg" wrap="wrap">
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#12b886" }} aria-hidden="true" />
+          <Box w={18} h={2} style={{ backgroundColor: "var(--pf-accent)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="teal">
+            <Text span fw={600} c="ledger">
               Rent
             </Text>{" "}
             — median
           </Text>
         </Group>
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#4c6ef5" }} aria-hidden="true" />
+          <Box w={18} h={0} style={{ borderTop: "2px dashed var(--pf-ink)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="indigo">
+            <Text span fw={600} c="ink">
               Buy
             </Text>{" "}
             — median
@@ -522,7 +558,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           <Box
             w={18}
             h={10}
-            style={{ backgroundColor: "#12b886", opacity: 0.18 }}
+            style={{ backgroundColor: "var(--pf-accent)", opacity: 0.18 }}
             aria-hidden="true"
           />
           <Text size="xs" c="dimmed">
@@ -533,7 +569,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           <Box
             w={18}
             h={10}
-            style={{ backgroundColor: "#4c6ef5", opacity: 0.18 }}
+            style={{ backgroundColor: "var(--pf-ink)", opacity: 0.18 }}
             aria-hidden="true"
           />
           <Text size="xs" c="dimmed">
@@ -542,9 +578,9 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         </Group>
 
         <Group gap={6} wrap="nowrap">
-          <Box w={18} h={2} style={{ backgroundColor: "#fd7e14" }} aria-hidden="true" />
+          <Box w={18} h={2} style={{ backgroundColor: "var(--pf-warn)" }} aria-hidden="true" />
           <Text size="xs" c="dimmed">
-            <Text span fw={600} c="orange.7">
+            <Text span fw={600} c="rust">
               Sale
             </Text>{" "}
             — year you sell
@@ -560,112 +596,16 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         modelling error, uncertain inputs, and real-world complexity.
       </Text>
 
-      <Group justify="space-between" align="center" mt="xs">
+      <Group justify="flex-end" align="center" mt="xs">
         <Button
-          variant="subtle"
-          size="xs"
-          color="gray"
-          aria-expanded={tableOpen}
-          aria-controls="net-worth-data-table"
-          leftSection={
-            tableOpen ? (
-              <IconChevronUp size={14} aria-hidden="true" />
-            ) : (
-              <IconChevronDown size={14} aria-hidden="true" />
-            )
-          }
-          onClick={() => setTableOpen((o) => !o)}
-        >
-          {tableOpen ? "Hide" : "Show"} data table
-        </Button>
-        <Button
-          variant="subtle"
-          size="xs"
-          color="gray"
+          variant="default"
+          size="sm"
           leftSection={<IconDownload size={14} aria-hidden="true" />}
           onClick={downloadCSV}
         >
           Download CSV
         </Button>
       </Group>
-
-      <Collapse expanded={tableOpen}>
-        <div id="net-worth-data-table">
-          <ScrollArea>
-            <Table striped withTableBorder withColumnBorders fz="xs" style={{ minWidth: 620 }}>
-              <caption
-                style={{
-                  captionSide: "top",
-                  textAlign: "left",
-                  fontSize: "0.75rem",
-                  color: "var(--mantine-color-dimmed)",
-                  paddingBottom: 4,
-                }}
-              >
-                Year-by-year net worth comparison: Renting vs buying (
-                {NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations)
-              </caption>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Year</Table.Th>
-                  <Table.Th scope="col" c="teal">
-                    Rent median
-                  </Table.Th>
-                  <Table.Th scope="col" c="teal">
-                    <abbr title="25th percentile">Rent P25</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" c="teal">
-                    <abbr title="75th percentile">Rent P75</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" c="indigo">
-                    Buy median
-                  </Table.Th>
-                  <Table.Th scope="col" c="indigo">
-                    <abbr title="25th percentile">Buy P25</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" c="indigo">
-                    <abbr title="75th percentile">Buy P75</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col">
-                    Renter win %<VisuallyHidden> (% of simulations)</VisuallyHidden>
-                  </Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {chartData.map((d) => (
-                  <Table.Tr
-                    key={d.year}
-                    style={d.year === userInput.holdingPeriod ? { fontWeight: 700 } : undefined}
-                  >
-                    <Table.Td>
-                      {d.year}
-                      {d.year === userInput.holdingPeriod && (
-                        <>
-                          {" "}
-                          <span aria-hidden="true">★</span>
-                          <VisuallyHidden> (sale year)</VisuallyHidden>
-                        </>
-                      )}
-                    </Table.Td>
-                    <Table.Td>{formatCADCompact(d.renterMedian)}</Table.Td>
-                    <Table.Td c="dimmed">{formatCADCompact(d.renterP25)}</Table.Td>
-                    <Table.Td c="dimmed">{formatCADCompact(d.renterP75)}</Table.Td>
-                    <Table.Td>{formatCADCompact(d.ownerMedian)}</Table.Td>
-                    <Table.Td c="dimmed">{formatCADCompact(d.ownerP25)}</Table.Td>
-                    <Table.Td c="dimmed">{formatCADCompact(d.ownerP75)}</Table.Td>
-                    <Table.Td>
-                      {d.renterWinPct != null ? `${Math.round(d.renterWinPct * 100)}%` : "—"}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
-          <Text size="xs" c="dimmed" mt={4}>
-            <span aria-hidden="true">★</span> Sale year (holding period)
-          </Text>
-        </div>
-      </Collapse>
     </Stack>
   );
 }

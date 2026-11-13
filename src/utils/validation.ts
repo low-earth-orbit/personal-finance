@@ -26,7 +26,7 @@ export const FIELD_CONSTRAINTS: Record<UserInputKey, FieldConstraint> = {
   sellerClosingCostsPct: { min: 0, max: 10, step: 0.25 },
   propertyTaxRate: { min: 0, max: 10, step: 0.1 },
   maintPct: { min: 0, max: 10, step: 0.1 },
-  maintAgingPct: { min: 0, max: 5, step: 0.25 },
+  insurancePct: { min: 0, max: 5, step: 0.05 },
   condoFeesPerMonth: { min: 0, max: undefined, step: 50 },
   downPaymentPercentage: { min: 5, max: 100, step: 5 },
   annualMortgageInterestRate: { min: -10, max: 20, step: 0.25 },

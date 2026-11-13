@@ -17,6 +17,8 @@ export default function RetirementPage() {
         title="When can I retire?"
         subtitle="Estimate the earliest age your savings can support the retirement you want."
         showHomeLink
+        eyebrow="02 / Retirement"
+        tags={["Monte Carlo", "Today's dollars", "CPP + OAS"]}
       />
       <main>
         <RetirementApp />

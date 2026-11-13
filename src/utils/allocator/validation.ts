@@ -48,7 +48,7 @@ export const FIELD_CONSTRAINTS: Partial<Record<AllocatorInputKey, Constraint>> =
   },
   portfolioReturn: {
     min: 0,
-    max: 12,
+    max: 10,
     step: 0.1,
     label: "Nominal return",
   },

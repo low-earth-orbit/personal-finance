@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Accordion, Button, Select, SimpleGrid, Stack, Text } from "@mantine/core";
+import { Accordion, Button, Select, Stack, Text } from "@mantine/core";
 import FormResetButton from "@/components/shared/FormResetButton";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
+import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
+import { fieldRowClassNames, fieldRowClasses } from "@/components/shared/fieldRow";
 import { PORTFOLIO_PRESETS, PROVINCES, SALARY_CURVE_PRESETS } from "@/utils/allocator/presets";
 import { TAX_YEAR } from "@/utils/allocator/taxConstants";
 import type {
@@ -109,10 +112,13 @@ export default function InputForm({
     <>
       <Accordion multiple value={openedSections} onChange={setOpenedSections} variant="contained">
         <Accordion.Item value="money">
-          <Accordion.Control>Money to invest</Accordion.Control>
+          <Accordion.Control>
+            Money to invest
+            <SectionSummary>{`${summaryValue(input.lumpSum, formatCADCompact)} lump sum`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Text size="sm" c="dimmed">
+            <Stack gap={0}>
+              <Text size="sm" c="dimmed" mb="xs">
                 The full lump sum is invested now. Amounts above registered account room go to
                 non-registered.
               </Text>
@@ -122,7 +128,7 @@ export default function InputForm({
                 prefix="$"
                 thousandSeparator
               />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   {...num("availableRrspRoom")}
                   label="Available RRSP room"
@@ -135,16 +141,19 @@ export default function InputForm({
                   prefix="$"
                   thousandSeparator
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="profile">
-          <Accordion.Control>Tax profile &amp; timeline</Accordion.Control>
+          <Accordion.Control>
+            Tax profile &amp; timeline
+            <SectionSummary>{`${input.province} · age ${summaryValue(input.currentAge)} → ${summaryValue(input.retirementAge)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
+              <Stack gap={0}>
                 <UserInputFormItem {...num("currentAge")} label="Current age" suffix=" yrs" />
                 <UserInputFormItem
                   {...num("retirementAge")}
@@ -157,6 +166,8 @@ export default function InputForm({
                   suffix=" yrs"
                 />
                 <Select
+                  className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
+                  classNames={fieldRowClassNames}
                   label="Province"
                   description="Only BC, ON, and NB tax rules are modeled"
                   data={PROVINCES}
@@ -172,8 +183,10 @@ export default function InputForm({
                   prefix="$"
                   thousandSeparator
                 />
-              </SimpleGrid>
+              </Stack>
               <Select
+                className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
+                classNames={fieldRowClassNames}
                 label="Real income curve"
                 data={SALARY_CURVE_PRESETS.map(({ value, label }) => ({
                   value,
@@ -182,11 +195,11 @@ export default function InputForm({
                 value={input.salaryCurve}
                 onChange={(value) => value && onChange("salaryCurve", value)}
               />
-              <Text size="xs" c="dimmed">
+              <Text size="xs" c="dimmed" py="xs">
                 {selectedCurve?.description}
               </Text>
               {input.salaryCurve === "custom" && (
-                <SimpleGrid cols={{ base: 1, sm: 2 }}>
+                <Stack gap={0}>
                   <UserInputFormItem
                     {...num("salaryGrowthPct")}
                     label="Real income growth"
@@ -199,20 +212,25 @@ export default function InputForm({
                     description="Years income grows before leveling off."
                     suffix=" yrs"
                   />
-                </SimpleGrid>
+                </Stack>
               )}
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="investment">
-          <Accordion.Control>Investment assumptions</Accordion.Control>
+          <Accordion.Control>
+            Investment assumptions
+            <SectionSummary>{`${PORTFOLIO_PRESETS.find((preset) => preset.id === input.portfolioPresetId)?.label ?? "custom return"} · ${summaryValue(input.inflationPct)}% inflation`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Text size="xs" c="dimmed">
+            <Stack gap={0}>
+              <Text size="sm" c="dimmed" mb="xs">
                 Defaults are illustrations. Small changes can alter the suggested split.
               </Text>
               <Select
+                className={`${fieldRowClasses.frame} ${fieldRowClasses.wide}`}
+                classNames={fieldRowClassNames}
                 label="Portfolio"
                 data={PORTFOLIO_PRESETS.map((preset) => ({
                   value: preset.id,
@@ -221,7 +239,7 @@ export default function InputForm({
                 value={input.portfolioPresetId}
                 onChange={setPortfolio}
               />
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 {input.portfolioPresetId === "custom" && (
                   <UserInputFormItem
                     {...num("portfolioReturn")}
@@ -236,28 +254,31 @@ export default function InputForm({
                   label="Non-reg distribution yield"
                   suffix="%"
                 />
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="retirement-tax">
-          <Accordion.Control>Retirement tax assumptions</Accordion.Control>
+          <Accordion.Control>
+            Retirement tax assumptions
+            <SectionSummary>{`RRSP ${summaryValue(input.retirementWithdrawalRatePct)}% · gains ${summaryValue(input.capitalGainsTaxRatePct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 {...num("retirementWithdrawalRatePct")}
                 label="Effective RRSP withdrawal tax rate"
-                description="Estimated average tax applied to RRSP withdrawals at retirement. Consider pensions, CPP/OAS, other taxable income, and possible OAS clawback."
+                labelHelperText="Your average tax on RRSP withdrawals in retirement. Consider pensions, CPP/OAS, other taxable income, and possible OAS clawback."
                 suffix="%"
               />
               <UserInputFormItem
                 {...num("capitalGainsTaxRatePct")}
                 label="Capital gains tax rate at retirement"
-                description="Effective tax on the full capital gain after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
+                labelHelperText="Effective tax on the whole gain, after the inclusion rate. For example, enter 15% when a 30% marginal rate applies to half the gain."
                 suffix="%"
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
@@ -266,11 +287,18 @@ export default function InputForm({
           The split updates automatically when inputs change.
         </Text>
       ) : (
-        <Button fullWidth mt="lg" onClick={showRecommendation} loading={loading} disabled={loading}>
+        <Button
+          fullWidth
+          size="md"
+          mt="lg"
+          onClick={showRecommendation}
+          loading={loading}
+          disabled={loading}
+        >
           Show split
         </Button>
       )}
-      <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />
+      <FormResetButton onReset={onReset} mt="lg" mb={0} />
     </>
   );
 }

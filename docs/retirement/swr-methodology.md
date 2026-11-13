@@ -94,10 +94,9 @@ Custom returns are treated the same way (as nominal compound rates), with volati
 ### 1.3 Outputs
 
 - **Feasibility** (`computeRetirement`): the earliest age whose drawdown simulation meets the user's target success rate (e.g. 90%). The confidence covers drawdown market risk only; the headline savings come from the deterministic accumulation path, and saving-years luck shows up in the age range. The app says so under the headline.
-- **Money left** (median of the drawdown bands at the planning age, today's dollars) and, when spending flexibility is above 0, the **chance of trimming spending** (`cutRate`: share of simulations with at least one guardrail cut).
+- **Money left** (median of the drawdown bands at the planning age, today's dollars). The engine also reports `cutRate` (share of simulations with at least one guardrail cut); the app doesn't display it.
 - The search runs in a Web Worker (`src/workers/retirementWorker.ts`, ~200 ms per input change on a desktop).
-- **Headline SWR** (`computePlanSWR`): the first retirement year's portfolio draw ÷ the deterministic savings at that age, i.e. the plan's actual initial withdrawal rate. The age search steps a year at a time, so savings usually overshoot the minimum slightly and this figure sits at or below the marginal SWR.
-- **Reference SWR** (`safeWithdrawalRate`): the pure-portfolio SWR for a given return, volatility and horizon, independent of the user's savings and pension. It powers the **technical note** ([`SwrTechnicalNote.tsx`](../../src/components/retirement/SwrTechnicalNote.tsx), the "Why this figure?" link beside the headline): a live table by allocation × horizon at the user's chosen confidence. It excludes CPP/OAS/pensions, so it intentionally differs from the blended headline figure.
+- **Reference SWR** (`safeWithdrawalRate`): the pure-portfolio SWR for a given return, volatility and horizon, independent of the user's savings and pension. The app doesn't display it (or any year-1 withdrawal rate); it stays in the engine for the reference tables below. It excludes CPP/OAS/pensions.
 
 ---
 

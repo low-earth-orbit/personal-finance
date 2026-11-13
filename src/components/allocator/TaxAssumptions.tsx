@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Container, Paper, Stack, Text } from "@mantine/core";
+import { Container, Stack, Text } from "@mantine/core";
+import ledger from "@/components/shared/Ledger.module.css";
 
 export default function TaxAssumptions() {
   const [opened, setOpened] = useState(false);
@@ -18,13 +19,18 @@ export default function TaxAssumptions() {
   }, []);
 
   return (
-    <Container size="xl" pt="xl" pb="xs" id="model-assumptions">
-      <Paper withBorder p="md" radius="md">
-        <details open={opened} onToggle={(event) => setOpened(event.currentTarget.open)}>
-          <summary style={{ cursor: "pointer", fontWeight: 600 }}>
+    <Container size="xl" pt="xl" pb="xs" mt={48} id="model-assumptions">
+      <div style={{ borderTop: "1px solid var(--pf-hairline)", paddingTop: "1rem" }}>
+        <details
+          className={ledger.disclosure}
+          data-wide
+          open={opened}
+          onToggle={(event) => setOpened(event.currentTarget.open)}
+        >
+          <summary style={{ fontWeight: 600, fontSize: "1.25rem" }}>
             Detailed model assumptions
           </summary>
-          <Stack gap="xs" mt="sm">
+          <Stack gap="sm" mt="md" style={{ columns: "2 22rem", columnGap: "3rem" }}>
             <Text size="sm" c="dimmed">
               Uses 2026 federal, New Brunswick, Ontario, and British Columbia personal tax rules.
               All brackets, rates, credits, surtax thresholds, premium thresholds, and reduction
@@ -78,7 +84,7 @@ export default function TaxAssumptions() {
             </Text>
           </Stack>
         </details>
-      </Paper>
+      </div>
     </Container>
   );
 }

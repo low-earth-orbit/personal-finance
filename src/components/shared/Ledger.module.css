@@ -1,0 +1,181 @@
+/* Shared Ledger building blocks: eyebrow labels, the key-figure strip, ruled notes, disclosures. */
+
+.eyebrow {
+  font-family: var(--pf-font-figures);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--pf-muted);
+}
+
+/* Key figures in a hairline-ruled row; cells wrap on narrow screens and keep their separators. */
+.figures {
+  border-block: 1px solid var(--pf-hairline);
+  overflow: hidden;
+}
+
+.figuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  margin-inline: -1.25rem -1px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 1rem 1.25rem;
+  border-inline-end: 1px solid var(--pf-hairline);
+  border-top: 1px solid var(--pf-hairline);
+  margin-top: -1px;
+}
+
+/* Block, not flex: an info icon in a label that wraps stays beside the words, not at the far edge. */
+.figureLabel {
+  display: block;
+  min-height: 1.25rem;
+}
+
+/* No-break space + icon, kept on the same line as the last word of the label. */
+.figureInfo {
+  white-space: nowrap;
+}
+
+.figureInfo > * {
+  vertical-align: middle;
+}
+
+.figureValue {
+  font-family: var(--pf-font-figures);
+  font-size: 1.625rem;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.figureValue[data-size="sm"] {
+  font-size: 1.25rem;
+}
+
+.figureValue[data-accent] {
+  color: var(--pf-accent);
+}
+
+.figureValue[data-warn] {
+  color: var(--pf-warn);
+}
+
+.figureNote {
+  font-size: 0.8125rem;
+  color: var(--pf-muted);
+}
+
+/* In-flow notice: a short toned bar at the side and a titled line of text, not a tinted box. */
+.notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 0.5rem;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid var(--pf-ink);
+}
+
+.notice[data-tone="warn"] {
+  border-inline-start-color: var(--pf-warn);
+}
+
+.notice[data-tone="accent"] {
+  border-inline-start-color: var(--pf-accent);
+}
+
+.noticeIcon {
+  display: flex;
+  align-items: center;
+  height: 1.5rem;
+  color: var(--pf-ink);
+}
+
+.notice[data-tone="warn"] .noticeIcon {
+  color: var(--pf-warn);
+}
+
+.notice[data-tone="accent"] .noticeIcon {
+  color: var(--pf-accent);
+}
+
+.noticeTitle {
+  font-weight: 600;
+  line-height: 1.5rem;
+}
+
+.noticeBody {
+  grid-column: 2;
+  margin-top: 2px;
+  font-size: 0.875rem;
+  color: var(--mantine-color-dimmed);
+}
+
+/* Explanatory text under a tool: a ruled heading, then prose. */
+.notes {
+  margin-top: 4.5rem;
+}
+
+.notesHeading {
+  padding-bottom: 0.625rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--pf-ink);
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+.notesColumns {
+  columns: 2 22rem;
+  column-gap: 3rem;
+}
+
+/* Whole paragraphs per column: never continue a sentence at the top of the next column. */
+.notesColumns > * {
+  break-inside: avoid;
+}
+
+/*
+ * A native <details> that reads like the accordion rows: no browser triangle, a chevron after the
+ * label (pointing down when closed, up when open). data-wide pushes the chevron to the far edge.
+ */
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.5rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure[data-wide] > summary {
+  width: auto;
+  justify-content: space-between;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::after {
+  content: "";
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: translateY(-25%) rotate(45deg);
+}
+
+.disclosure[open] > summary::after {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+.disclosure > summary:focus-visible {
+  outline: 2px solid var(--pf-ink);
+  outline-offset: 2px;
+}

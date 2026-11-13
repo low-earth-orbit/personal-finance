@@ -13,35 +13,51 @@ import {
 } from "@mantine/core";
 import { IconSun, IconMoon, IconArrowLeft } from "@tabler/icons-react";
 import Link from "next/link";
+import StatusBadge, { type AppStatus } from "./StatusBadge";
+import classes from "./Header.module.css";
 
 type HeaderProps = {
   title: string;
   subtitle?: string;
-  /** Show a "← All tools" link back to the hub landing page. */
+  /** Show an "All tools" link back to the hub landing page. */
   showHomeLink?: boolean;
+  /** Small mono line above the title, e.g. "01 / Rent vs Buy". */
+  eyebrow?: string;
+  /** Short facts about the model, shown at the right of the title block. */
+  tags?: string[];
+  status?: AppStatus;
+  /** Landing-page layout: a large headline beside the subtitle. */
+  hero?: boolean;
 };
 
-const Header = ({ title, subtitle, showHomeLink = false }: HeaderProps) => {
+const Header = ({
+  title,
+  subtitle,
+  showHomeLink = false,
+  eyebrow,
+  tags,
+  status,
+  hero = false,
+}: HeaderProps) => {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
 
   const toggle = () => setColorScheme(colorScheme === "dark" ? "light" : "dark");
 
   return (
-    <Container component="header" size="xl" pt="xl" pb="xs">
-      <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Stack gap={4}>
+    <Container component="header" size="xl">
+      <Group justify="space-between" wrap="nowrap" gap="md" className={classes.topBar}>
+        <Group gap="lg" wrap="wrap">
           {showHomeLink && (
-            <Anchor component={Link} href="/" size="sm" c="dimmed">
-              <Group gap={4} wrap="nowrap" component="span">
-                <IconArrowLeft size={14} />
-                All tools
-              </Group>
+            <Anchor component={Link} href="/" className={classes.homeLink}>
+              <IconArrowLeft size={14} aria-hidden="true" />
+              All tools
             </Anchor>
           )}
-          <Title order={1}>{title}</Title>
-          {subtitle && <Text c="dimmed">{subtitle}</Text>}
-        </Stack>
-        <ActionIcon variant="default" size="lg" onClick={toggle} aria-label="Toggle color scheme">
+          <Text fw={700} fz="lg">
+            Personal Finance
+          </Text>
+        </Group>
+        <ActionIcon variant="default" size={44} onClick={toggle} aria-label="Toggle color scheme">
           <Box component="span" darkHidden>
             <IconMoon size={18} />
           </Box>
@@ -50,6 +66,37 @@ const Header = ({ title, subtitle, showHomeLink = false }: HeaderProps) => {
           </Box>
         </ActionIcon>
       </Group>
+
+      {hero ? (
+        <div className={classes.hero}>
+          <Title order={1} className={classes.heroTitle}>
+            {title}
+          </Title>
+          {subtitle && <Text className={classes.heroSubtitle}>{subtitle}</Text>}
+        </div>
+      ) : (
+        <Group justify="space-between" align="flex-end" gap="lg" className={classes.titleBlock}>
+          <Stack gap="xs">
+            {(eyebrow || status) && (
+              <Group gap="sm">
+                {eyebrow && <Text className={classes.eyebrow}>{eyebrow}</Text>}
+                {status && <StatusBadge status={status} />}
+              </Group>
+            )}
+            <Title order={1} className={classes.title}>
+              {title}
+            </Title>
+            {subtitle && <Text className={classes.subtitle}>{subtitle}</Text>}
+          </Stack>
+          {tags && tags.length > 0 && (
+            <Group gap="lg" className={classes.tags}>
+              {tags.map((tag) => (
+                <span key={tag}>{tag}</span>
+              ))}
+            </Group>
+          )}
+        </Group>
+      )}
     </Container>
   );
 };

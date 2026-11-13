@@ -1,19 +1,12 @@
 "use client";
 
-import {
-  Accordion,
-  Box,
-  Button,
-  Group,
-  Popover,
-  SegmentedControl,
-  SimpleGrid,
-  Slider,
-  Stack,
-} from "@mantine/core";
+import { Accordion, Box, Button, Popover, SegmentedControl, Slider, Stack } from "@mantine/core";
 import { IconChartLine } from "@tabler/icons-react";
+import SectionSummary, { summaryValue } from "@/components/shared/SectionSummary";
+import { formatCADCompact } from "@/utils/format";
 import UserInputFormItem from "@/components/shared/UserInputFormItem";
 import FieldHeader from "@/components/shared/FieldHeader";
+import { fieldRowClasses } from "@/components/shared/fieldRow";
 import { GAMMA_PRESETS } from "@/utils/glide-path/presets";
 import { FIELD_CONSTRAINTS } from "@/utils/glide-path/validation";
 import type {
@@ -75,11 +68,14 @@ export default function InputForm({
 
   return (
     <>
-      <Accordion multiple defaultValue={["you", "retirement", "prefs"]} variant="contained">
+      <Accordion multiple defaultValue={["you", "retirement"]} variant="contained">
         <Accordion.Item value="you">
-          <Accordion.Control>About you</Accordion.Control>
+          <Accordion.Control>
+            About you
+            <SectionSummary>{`age ${summaryValue(input.startAge)} → ${summaryValue(input.retirementAge)} · ${summaryValue(input.startSavings, formatCADCompact)} saved`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem {...num("startAge")} label="Current age" suffix=" yrs" />
               <UserInputFormItem {...num("retirementAge")} label="Retirement age" suffix=" yrs" />
               <UserInputFormItem
@@ -95,14 +91,17 @@ export default function InputForm({
                 prefix="$"
                 thousandSeparator
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="retirement">
-          <Accordion.Control>Retirement targets</Accordion.Control>
+          <Accordion.Control>
+            Retirement targets
+            <SectionSummary>{`${summaryValue(input.targetIncome, formatCADCompact)}/yr · to age ${summaryValue(input.planningAge)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <SimpleGrid cols={{ base: 1, sm: 2 }}>
+            <Stack gap={0}>
               <UserInputFormItem
                 {...num("targetIncome")}
                 label="Target retirement income"
@@ -129,15 +128,18 @@ export default function InputForm({
                 labelHelperText="If this is after your retirement age, the portfolio funds your whole target until then (a bridge). At or before retirement means it is paid from retirement."
                 suffix=" yrs"
               />
-            </SimpleGrid>
+            </Stack>
           </Accordion.Panel>
         </Accordion.Item>
 
         <Accordion.Item value="prefs">
-          <Accordion.Control>Spending &amp; risk</Accordion.Control>
+          <Accordion.Control>
+            Spending &amp; risk
+            <SectionSummary>{`flexibility ${flex.toFixed(2)} · γ ${summaryValue(input.gamma)} · β ${summaryValue(input.beta)}`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Stack gap={4}>
+            <Stack gap={0}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader
                   label="Spending flexibility"
                   description="How much retirement spending responds to markets. 0 = fixed real dollars (spend the same after a crash); 1 = fully follows the portfolio (a 20% drop cuts that year's withdrawal ~20%). 0.5 sits halfway."
@@ -155,7 +157,7 @@ export default function InputForm({
                       { value: 0.5, label: "Half" },
                       { value: 1, label: "Flexible" },
                     ]}
-                    styles={{ markLabel: { fontSize: 11 } }}
+                    styles={{ markLabel: { fontSize: 12, color: "var(--pf-muted)" } }}
                     label={(v) => v.toFixed(2)}
                   />
                 </Box>
@@ -170,15 +172,14 @@ export default function InputForm({
                 />
               )}
 
-              <Stack gap={4}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader label="Risk aversion (γ)" description={gammaDescription} />
-                <Group gap="xs" mt="xs" role="group" aria-label="Risk aversion">
+                <Button.Group mt={6} aria-label="Risk aversion" style={{ flexWrap: "wrap" }}>
                   {GAMMA_PRESETS.map((g) => (
                     <Button
                       key={g}
-                      variant={isSame(input.gamma, g) ? "filled" : "light"}
-                      size="xs"
-                      radius="lg"
+                      variant={isSame(input.gamma, g) ? "filled" : "default"}
+                      size="sm"
                       aria-pressed={isSame(input.gamma, g)}
                       onClick={() => onChange("gamma", g)}
                     >
@@ -188,19 +189,22 @@ export default function InputForm({
                   <Popover width={220} position="bottom-start" withArrow shadow="md">
                     <Popover.Target>
                       <Button
-                        variant={isCustomGamma ? "filled" : "light"}
-                        size="xs"
-                        radius="lg"
+                        variant={isCustomGamma ? "filled" : "default"}
+                        size="sm"
                         aria-pressed={isCustomGamma}
                       >
                         Custom
                       </Button>
                     </Popover.Target>
                     <Popover.Dropdown>
-                      <UserInputFormItem {...num("gamma")} label="Custom risk aversion" />
+                      <UserInputFormItem
+                        {...num("gamma")}
+                        label="Custom risk aversion"
+                        layout="stacked"
+                      />
                     </Popover.Dropdown>
                   </Popover>
-                </Group>
+                </Button.Group>
               </Stack>
               <UserInputFormItem
                 {...num("beta")}
@@ -213,10 +217,13 @@ export default function InputForm({
         </Accordion.Item>
 
         <Accordion.Item value="engine">
-          <Accordion.Control>Simulation</Accordion.Control>
+          <Accordion.Control>
+            Simulation
+            <SectionSummary>{`${returnMode === "iid-mc" ? "independent" : "historical"} · ${summaryValue(input.numPaths, (n) => n.toLocaleString())} paths · max ${summaryValue(input.maxEquityPct)}%`}</SectionSummary>
+          </Accordion.Control>
           <Accordion.Panel>
-            <Stack gap="md">
-              <Stack gap={4}>
+            <Stack gap={0}>
+              <Stack gap={4} className={`${fieldRowClasses.frame} ${fieldRowClasses.block}`}>
                 <FieldHeader
                   label="Return model"
                   description="Independent (the default) draws each year's return separately from our forward capital-market assumptions. Historical sequences replays real multi-year return sequences rescaled to the same assumptions, which keeps patterns such as recoveries after crashes and inflation decades. The two can disagree on the equity level, so compare both."
@@ -229,9 +236,10 @@ export default function InputForm({
                     { value: "forward-block", label: "Historical sequences" },
                   ]}
                   size="sm"
+                  mt={6}
                 />
               </Stack>
-              <SimpleGrid cols={{ base: 1, sm: 2 }}>
+              <Stack gap={0}>
                 <UserInputFormItem
                   {...num("maxEquityPct")}
                   label="Max equity"
@@ -252,7 +260,7 @@ export default function InputForm({
                     suffix="%"
                   />
                 )}
-              </SimpleGrid>
+              </Stack>
             </Stack>
           </Accordion.Panel>
         </Accordion.Item>
@@ -269,7 +277,7 @@ export default function InputForm({
       >
         Generate allocation paths
       </Button>
-      <FormResetButton onReset={onReset} confirm mb={0} />
+      <FormResetButton onReset={onReset} mb={0} />
     </>
   );
 }

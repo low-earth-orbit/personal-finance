@@ -1,9 +1,14 @@
 import { render, type RenderOptions } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import type { ReactElement, ReactNode } from "react";
+import { cssVariablesResolver, theme } from "@/app/theme";
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MantineProvider>{children}</MantineProvider>;
+  return (
+    <MantineProvider theme={theme} cssVariablesResolver={cssVariablesResolver}>
+      {children}
+    </MantineProvider>
+  );
 }
 
 // RTL render wrapped in MantineProvider so component tests have Mantine context.

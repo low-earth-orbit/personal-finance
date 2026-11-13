@@ -1,6 +1,7 @@
 import { Box, Input } from "@mantine/core";
 import type { ReactNode } from "react";
 import FieldLabel from "./FieldLabel";
+import classes from "./FieldRow.module.css";
 
 interface FieldHeaderProps {
   label: ReactNode;
@@ -11,8 +12,8 @@ interface FieldHeaderProps {
 /**
  * Standalone label + description for controls that aren't a plain
  * `UserInputFormItem` (sliders, button groups, etc.). Renders Mantine's own
- * `Input.Label`/`Input.Description` primitives so the typography matches
- * `UserInputFormItem` exactly, and supports the same optional helper popover.
+ * `Input.Label`/`Input.Description` primitives at the field-row size so the
+ * typography matches `UserInputFormItem`, and supports the same helper popover.
  *
  * The two are wrapped in a single block (not a fragment) so the label and
  * description sit flush — matching `NumberInput`, where the wrapper puts no
@@ -21,10 +22,14 @@ interface FieldHeaderProps {
 export default function FieldHeader({ label, labelHelperText, description }: FieldHeaderProps) {
   return (
     <Box>
-      <Input.Label>
+      <Input.Label size="md" className={classes.label}>
         <FieldLabel label={label} helperText={labelHelperText} />
       </Input.Label>
-      {description && <Input.Description>{description}</Input.Description>}
+      {description && (
+        <Input.Description size="md" mt={2}>
+          {description}
+        </Input.Description>
+      )}
     </Box>
   );
 }

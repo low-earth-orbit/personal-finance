@@ -1,0 +1,56 @@
+/* Upload panel: a dashed drop target beside the list of loaded files (or the how-to). */
+
+.layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
+  gap: 2rem;
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.875rem;
+  padding: 1.75rem;
+  border: 1.5px dashed var(--pf-border);
+  border-radius: 6px;
+}
+
+.dropzone[data-dragging] {
+  border-color: var(--pf-accent);
+  background: var(--pf-accent-soft);
+}
+
+.filesHeader {
+  display: block;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--pf-ink);
+}
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding-block: 0.625rem;
+}
+
+.file + .file {
+  border-top: 1px solid var(--pf-hairline);
+}
+
+.fileName {
+  display: flex;
+  flex: 1 1 12rem;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fileName > :first-child {
+  overflow: hidden;
+  font-family: var(--pf-font-figures);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

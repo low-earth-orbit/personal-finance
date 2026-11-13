@@ -6,28 +6,37 @@ import { findBreakEven, maxPriceForDownPayment, runMonteCarlo } from "./monteCar
 const SIMS = 300;
 const year = DEFAULTS.holdingPeriod;
 
-describe("maintenance aging", () => {
-  test("defaults stay valid with maintAgingPct", () => {
+describe("owner costs", () => {
+  test("defaults are valid", () => {
     expect(validateUserInput(DEFAULTS)).toEqual({});
   });
 
-  test("higher aging raises renter net worth, leaves owner equity unchanged", () => {
-    const base = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 0 }, SIMS);
-    const aged = runMonteCarlo({ ...DEFAULTS, maintAgingPct: 5 }, SIMS);
-
-    // Owning costs more than renting through the holding period, so the owner invests
-    // nothing and owner net worth is home equity only — unaffected by maintenance.
-    expect(aged[year - 1].ownerMedian).toBe(base[year - 1].ownerMedian);
-    // Higher maintenance raises owner cash outflow, so the renter invests a larger surplus.
-    expect(aged[year - 1].renterMedian).toBeGreaterThan(base[year - 1].renterMedian);
+  // Owning costs more than renting through the holding period, so the owner invests nothing and
+  // owner net worth is home equity only; a higher owner cost lets the renter invest more.
+  test("insurance is an owner cost: it raises renter net worth, leaves owner equity unchanged", () => {
+    const none = runMonteCarlo({ ...DEFAULTS, insurancePct: 0 }, SIMS);
+    const insured = runMonteCarlo({ ...DEFAULTS, insurancePct: 1 }, SIMS);
+    expect(insured[year - 1].ownerMedian).toBe(none[year - 1].ownerMedian);
+    expect(insured[year - 1].renterMedian).toBeGreaterThan(none[year - 1].renterMedian);
   });
 
-  test("aging uplift also applies to condo fees", () => {
-    const base = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 0 }, SIMS);
-    const aged = runMonteCarlo({ ...DEFAULTS, condoFeesPerMonth: 600, maintAgingPct: 5 }, SIMS);
+  test("insurance and maintenance of the same size have the same effect", () => {
+    const asInsurance = runMonteCarlo({ ...DEFAULTS, maintPct: 0, insurancePct: 1.2 }, SIMS);
+    const asMaintenance = runMonteCarlo({ ...DEFAULTS, maintPct: 1.2, insurancePct: 0 }, SIMS);
+    expect(asInsurance).toEqual(asMaintenance);
+  });
 
-    expect(aged[year - 1].ownerMedian).toBe(base[year - 1].ownerMedian);
-    expect(aged[year - 1].renterMedian).toBeGreaterThan(base[year - 1].renterMedian);
+  test("owner cost growth applies to every owner cost, condo fees included", () => {
+    for (const cost of [
+      { propertyTaxRate: 1, maintPct: 0, insurancePct: 0, condoFeesPerMonth: 0 },
+      { propertyTaxRate: 0, maintPct: 1, insurancePct: 0, condoFeesPerMonth: 0 },
+      { propertyTaxRate: 0, maintPct: 0, insurancePct: 1, condoFeesPerMonth: 0 },
+      { propertyTaxRate: 0, maintPct: 0, insurancePct: 0, condoFeesPerMonth: 800 },
+    ]) {
+      const slow = runMonteCarlo({ ...DEFAULTS, ...cost, ownerCostGrowthRate: 1 }, SIMS);
+      const fast = runMonteCarlo({ ...DEFAULTS, ...cost, ownerCostGrowthRate: 6 }, SIMS);
+      expect(fast[year - 1].renterMedian).toBeGreaterThan(slow[year - 1].renterMedian);
+    }
   });
 });
 
@@ -83,6 +92,7 @@ describe("market draws", () => {
       monthlyRent: 0,
       propertyTaxRate: 0,
       maintPct: 0,
+      insurancePct: 0,
       sellerClosingCostsPct: 0,
       homePriceGrowthRate: 3,
       homePriceGrowthSigma: 0,

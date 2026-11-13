@@ -40,4 +40,18 @@ describe("preset file", () => {
       /any presets/,
     );
   });
+
+  it("migrates files exported before insurance was split from maintenance", () => {
+    const [entry] = parsePresetFile(
+      JSON.stringify([
+        { label: "Old", values: { maintPct: 1.5, maintAgingPct: 1, ownerCostGrowthRate: 2.5 } },
+      ]),
+    );
+    expect(entry.values).toEqual({
+      ...DEFAULTS,
+      maintPct: 1.3,
+      insurancePct: 0.2,
+      ownerCostGrowthRate: 3,
+    });
+  });
 });

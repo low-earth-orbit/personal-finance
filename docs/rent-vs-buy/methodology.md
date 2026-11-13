@@ -8,7 +8,7 @@
 4. **Tax**: each portfolio splits into a sheltered sleeve (`taxShelteredPct`, default 50 (some but not all TFSA/RRSP room still free), UI label "Tax-sheltered": treated as TFSA-like — no tax on yield or gains) and a taxable sleeve (yield taxed annually, cost basis adjusted; capital gains at sale on `value − book`). Owner net worth = home equity after selling costs + owner portfolio after tax. Principal residence exempt.
 5. **Selling costs**: `homePrice × (1 − sellerClosingCostsPct) − mortgageBalance`
 6. **Holding period**: `holdingPeriod` (default 12yr) is comparison year. Horizon hardcoded 30yr (`SIMULATION_HORIZON_YEARS`), so `holdingPeriod` ≤ 30.
-7. **Growth rates**: `rentIncreaseRate` → rent only; `ownerCostGrowthRate` → maintenance/tax/condo baseline; `homePriceGrowthRate` → home value only. Maintenance and condo fees grow an extra deterministic `maintAgingPct` per year on top of `ownerCostGrowthRate` as the building ages. Realized growth has no floors — deflation passes through symmetrically to rent and owner costs.
+7. **Growth rates**: `rentIncreaseRate` → rent only; `ownerCostGrowthRate` (UI "Owner cost growth") → all four owner costs alike: property tax, condo fees, maintenance (`maintPct`) and home insurance (`insurancePct`); `homePriceGrowthRate` → home value only. Realized growth has no floors — deflation passes through symmetrically to rent and owner costs.
 
 ## Monte Carlo Architecture
 
@@ -25,7 +25,7 @@ Two-layer uncertainty model:
 | `mortgageRateSigma`     | Long-run mortgage rate mean (renewals)    |
 | `dividendYieldSigma`    | Long-run dividend yield mean              |
 
-`maintPct`/`propertyTaxRate` have no sigma — path driven by `ownerCostGrowthRate`. `maintAgingPct` is a deterministic uplift on maintenance and condo fees (no sigma, no inflation beta).
+`maintPct`/`insurancePct`/`propertyTaxRate`/`condoFeesPerMonth` have no sigma — their paths are driven by `ownerCostGrowthRate`.
 
 **Layer 2 — annual realized vol (drawn per year in `drawPath()`):**
 
@@ -45,23 +45,26 @@ Two-layer uncertainty model:
 
 **Renter/owner share same scenario path** — enables fair pairwise comparison. Draws come from a fixed seed (`src/utils/rng.ts`), so identical inputs give identical results and the 60/70% tier boundaries don't flicker between renders.
 
-**Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and when buying leads in most simulations, read relative to the sale year: since which year (if it leads at sale), otherwise the first later year it would, flagging an earlier lead that was lost. The lead can change hands more than once (e.g. buying pulls ahead, then building aging lets renting back in front).
+**Summary outputs:** win % at the sale year, the median of the per-simulation gap (renter − owner; same sign as the majority winner) and when buying leads in most simulations, read relative to the sale year: since which year (if it leads at sale), otherwise the first later year it would, flagging an earlier lead that was lost. The lead can change hands more than once (e.g. buying pulls ahead, then rising owner costs let renting back in front).
 
 **Break-even inputs** (`findBreakEven`): the monthly rent and the purchase price at which the median renter − owner gap at the sale year is zero (a 50/50 call), each solved by bisection with every other input fixed. Market draws don't depend on rent or price, so one set of paths is reused for every step — the same 10,000 seeded paths as the headline run (full-horizon draws truncated to the sale year), so the solver's gap at the current inputs equals the headline's median gap and the tie never points the wrong way. The worker posts the chart first and the tie (~0.7 s at year 12, ~1.2 s at year 30) as a second message for the same request; the Summary shows the "now" rent/price of that request. The rent search spans $1 to max(10× rent, $10k)/mo; the price search spans $10k to 10× price, capped at the highest price the down-payment % can buy (`maxPriceForDownPayment`, never above $1,499,999 when insured). Either value is omitted when no tie falls in range.
 
 **Tax-sheltered share limits:** `taxShelteredPct` also shelters the starting savings (down payment + closing costs), and the model doesn't enforce TFSA/RRSP room or the FHSA's $40k lifetime cap and closure on purchase — keep the share within the user's real room. An RRSP is approximated as TFSA-like: exact only if the refund is reinvested and the withdrawal tax rate equals the contribution rate. The model doesn't track the gross RRSP balance or withdrawal tax; this slight inaccuracy is accepted to avoid two extra rate inputs.
 
-## Maintenance Aging Calibration
+## Owner Costs
 
-Default `maintAgingPct = 1%/yr` is fit to the cross-sectional age gradient in US housing surveys (best available proxy; no Canadian equivalent found):
+Four recurring costs, each anchored in today's dollars: property tax (`propertyTaxRate`, % of price), condo fees (`condoFeesPerMonth`), maintenance (`maintPct`, % of price: repairs and replacements) and home insurance (`insurancePct`, % of price: the premium less the tenant insurance a renter would pay; ~0.2% for a house, ~0.1% for a condo unit whose building is insured through the fees).
 
-- **Maintenance-only ≈ 1.0%/yr**: 2023 AHS via JCHS — pre-1960 homes averaged $6,000 total improvement+repair with a 22% maintenance share ($1,320) vs $4,500 at 16% ($720) for 2010+ homes. $720 → $1,320 over ~63y of age gap ≈ 1.0%/yr.
-- **Total improvement+repair ≈ 0.5%/yr** ($4,500 → $6,000): lower bound — includes discretionary remodels that don't age the same way.
-- **Repair need ≈ 0.5%/yr**: Philly Fed 2025 — $3,600 avg repair cost (post-2000) vs $5,200 (pre-1940).
+All four grow at one rate, `ownerCostGrowthRate`, default **3%/yr**: a little above ~2.1% inflation. It's a judgment, not a fit. The reasons it sits above inflation apply to every line:
 
-The maintenance-only gradient is the direct analog of the modeled bundle, so 1% is the mean estimate, not a buffer. The same uplift applies to condo fees: for apartments, envelope aging (roof, systems, reserve shortfalls) lands in fees and assessments rather than unit maintenance. Known biases: income sorting (poorer owners occupy older homes and spend less) and deferred maintenance push the observed gradient _down_, so true need is likely ≥1%. Excluded on purpose: the new-owner move-in spike (median 1.5% vs 0.6% of value for longtime owners — a tenure effect, not aging) and lumpiness (roof/HVAC years); the model smooths aging, so bands understate capex timing risk.
+- **Labour.** Repairs, rebuilding (what insurance prices) and condo operations are mostly skilled labour, whose price follows wages, which outpace prices; CPI is pulled down by goods that keep getting cheaper.
+- **Aging.** Over the hold more components wear out; in a condo this lands in fees and special assessments. US surveys put the maintenance age gradient at ~0.5–1%/yr (2023 AHS via JCHS; Philly Fed 2025).
+- **Municipal levies.** A property tax bill follows the municipality's total levy, not the home's value (reassessment mostly reshuffles who pays), and levies have recently grown faster than prices.
+- **Insurance** premiums rose about twice as fast as CPI from 2019 to 2025 (StatCan), partly a regional catastrophe repricing that isn't assumed to continue at that pace.
 
-Sources: JCHS "Many Owners Cannot Afford to Maintain Aging Homes" (Jul 2026, 2023 AHS tabulations); Census "Buying an Older Home? Consider Upkeep Costs" (Oct 2023, 2021 AHS).
+Why one rate rather than separate ones (before Nov 2026: cost inflation 2.5% for all, plus a 1% "building aging" uplift on maintenance and condo fees): the drivers are shared, the differences between lines are smaller than the uncertainty in any of them, and half-point differences in owner-cost growth barely move the result next to the rent-to-price ratio, home price growth vs investment return, the mortgage rate and transaction costs. The model smooths costs, so the bands understate the timing risk of lumpy repairs (roof, furnace years).
+
+Saved inputs, presets and preset files from before the change are migrated on load (`src/utils/inputMigration.ts`): the insurance share is split out of the old combined maintenance figure, and half of the old aging uplift is added to the growth rate, so the old base case becomes the new one.
 
 ## Summary Tier Logic
 

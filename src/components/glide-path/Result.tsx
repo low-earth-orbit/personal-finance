@@ -1,23 +1,8 @@
 "use client";
 
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  Center,
-  Divider,
-  Group,
-  Loader,
-  SimpleGrid,
-  Stack,
-  Text,
-  ThemeIcon,
-  Title,
-} from "@mantine/core";
+import { Alert, Badge, Button, Card, Group, Loader, Stack, Text, Title } from "@mantine/core";
 import {
   IconInfoCircle,
-  IconChartLine,
   IconTrendingDown,
   IconTrendingUp,
   IconMinus,
@@ -27,6 +12,7 @@ import {
   IconRefresh,
 } from "@tabler/icons-react";
 import GlidePathChart from "./GlidePathChart";
+import { Eyebrow, Figure, FigureStrip, Notice } from "@/components/shared/Figures";
 import FieldLabel from "@/components/shared/FieldLabel";
 import { formatCAD } from "@/utils/format";
 import {
@@ -70,8 +56,8 @@ const SAME_ALLOCATION_NOTE = "The optimized glide path is this same constant all
 const STALE_OPACITY = 0.55;
 
 const DIR_COLOR: Record<SlopeDir, string> = {
-  Rising: "teal",
-  Falling: "indigo",
+  Rising: "ledger",
+  Falling: "ink",
   Flat: "gray",
   "n/a": "gray",
 };
@@ -104,7 +90,7 @@ function GlideShape({
     <Stack gap={compact ? 4 : "xs"}>
       <Group gap="xs" wrap="wrap">
         <Badge
-          variant="light"
+          variant="outline"
           color={DIR_COLOR[result.accumDir]}
           leftSection={slopeIcon(result.accumDir)}
           size={compact ? "sm" : "lg"}
@@ -112,7 +98,7 @@ function GlideShape({
           Accumulation: {result.accumDir}
         </Badge>
         <Badge
-          variant="light"
+          variant="outline"
           color={DIR_COLOR[result.retireDir]}
           leftSection={slopeIcon(result.retireDir)}
           size={compact ? "sm" : "lg"}
@@ -175,22 +161,14 @@ function MetricItem({
   flagged?: boolean;
 }) {
   return (
-    <Stack gap={2}>
-      <Text size="sm" component="div">
-        <FieldLabel label={label} helperText={help} />
-      </Text>
-      <Group gap={6} wrap="nowrap">
-        <Text fw={700} fz="lg">
-          {value}
-        </Text>
-        {flagged && <IconAlertTriangle size={15} color="var(--mantine-color-yellow-6)" />}
-      </Group>
-      {note && (
-        <Text size="xs" c="dimmed">
-          {note}
-        </Text>
-      )}
-    </Stack>
+    <Figure
+      size="sm"
+      label={<FieldLabel label={label} helperText={help} />}
+      value={value}
+      note={note}
+      tone={flagged ? "warn" : undefined}
+      info={flagged ? <IconAlertTriangle size={14} color="var(--pf-warn)" /> : undefined}
+    />
   );
 }
 
@@ -209,10 +187,10 @@ function CompactStat({
       <Text size="sm" c="dimmed">
         {label}
       </Text>
-      <Text size="sm" fw={600}>
+      <Text size="sm" ff="var(--pf-font-figures)" fw={500}>
         {value}
       </Text>
-      {flagged && <IconAlertTriangle size={13} color="var(--mantine-color-yellow-6)" />}
+      {flagged && <IconAlertTriangle size={13} color="var(--pf-warn)" />}
     </Group>
   );
 }
@@ -266,7 +244,7 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
   }
 
   return (
-    <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
+    <FigureStrip>
       <MetricItem
         label="CE income"
         help={METRIC_HELP.ce}
@@ -300,7 +278,7 @@ function OutcomeMetrics({ stats, compact = false }: { stats: OptionStats; compac
         value={bequestValue}
         note="median, today's dollars"
       />
-    </SimpleGrid>
+    </FigureStrip>
   );
 }
 
@@ -334,16 +312,18 @@ export default function Result({
 
   if (computing && !result) {
     return (
-      <Center mih={400}>
-        <Stack align="center" gap="md">
-          <Loader size="xl" />
-          <Text size="sm" c="dimmed" ta="center">
+      <Stack gap="sm" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }} aria-live="polite">
+        <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
+        <Group gap="sm" wrap="nowrap" align="center">
+          <Loader size="sm" color="ink" />
+          <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
             Running the optimizer…
-            <br />
-            This may take a few moments.
           </Text>
-        </Stack>
-      </Center>
+        </Group>
+        <Text c="dimmed" maw="36rem">
+          This may take a few moments.
+        </Text>
+      </Stack>
     );
   }
 
@@ -351,23 +331,19 @@ export default function Result({
     // Below lg the result sits above the form; an empty placeholder there only pushes the form
     // down, so it is shown beside the form on wide screens only.
     return (
-      <Center mih={400} visibleFrom="lg">
-        <Stack align="center" gap="md">
-          <ThemeIcon size={56} variant="light" color="teal" radius="xl">
-            <IconChartLine size={30} />
-          </ThemeIcon>
-          <Stack gap={4} align="center">
-            <Text fw={600}>Ready to optimize</Text>
-            <Text size="sm" c="dimmed" ta="center" maw={300}>
-              Fill in your details, then click{" "}
-              <Text span fw={600}>
-                Generate allocation paths
-              </Text>{" "}
-              to run the model on these inputs.
-            </Text>
-          </Stack>
-        </Stack>
-      </Center>
+      <Stack gap="xs" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }} visibleFrom="lg">
+        <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
+        <Text fz={{ base: 22, sm: 26 }} fw={600} lh={1.2} style={{ letterSpacing: "-0.01em" }}>
+          Ready to optimize
+        </Text>
+        <Text c="dimmed" maw="36rem">
+          Fill in your details, then click{" "}
+          <Text span fw={600} c="var(--pf-ink)">
+            Generate allocation paths
+          </Text>{" "}
+          to run the model on these inputs.
+        </Text>
+      </Stack>
     );
   }
 
@@ -457,8 +433,8 @@ export default function Result({
       )}
       {stale && (
         <Group gap="xs" wrap="nowrap" aria-live="polite">
-          <IconRefresh size={16} color="var(--mantine-color-orange-6)" style={{ flexShrink: 0 }} />
-          <Text size="sm" c="orange" fw={600}>
+          <IconRefresh size={16} color="var(--pf-warn)" style={{ flexShrink: 0 }} />
+          <Text size="sm" c="rust" fw={600}>
             {hasErrors
               ? "Inputs changed: fix the highlighted fields, then generate again."
               : "Inputs changed. Generate allocation paths to refresh this result."}
@@ -477,87 +453,64 @@ export default function Result({
         data-stale={stale || undefined}
       >
         {planNeedsAdjustment && (
-          <Card withBorder radius="md" padding="md">
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="yellow" variant="light" size={34} radius="xl">
-                <IconAlertTriangle size={19} />
-              </ThemeIcon>
-              <Stack gap={2}>
-                <Text fw={600}>High shortfall in this scenario</Text>
-                {hasHighDrawdownRisk && (
-                  <Text size="sm" c="dimmed">
-                    Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. In
-                    the model, a later retirement, lower spending or more saving reduces it.
-                  </Text>
-                )}
-                {!hasHighDrawdownRisk && hasHighFullPathRisk && (
-                  <Text size="sm" c="dimmed">
-                    Full-path shortfall is {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
-                    pre-retirement market luck has a meaningful effect.
-                  </Text>
-                )}
-              </Stack>
-            </Group>
-          </Card>
+          <Notice
+            tone="warn"
+            icon={<IconAlertTriangle size={18} />}
+            title="High shortfall in this scenario"
+          >
+            {hasHighDrawdownRisk && (
+              <>
+                Drawdown shortfall is {DRAWDOWN_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher. In the
+                model, a later retirement, lower spending or more saving reduces it.
+              </>
+            )}
+            {!hasHighDrawdownRisk && hasHighFullPathRisk && (
+              <>
+                Full-path shortfall is {FULLPATH_RISK_HIGHLIGHT_THRESHOLD * 100}% or higher, so
+                pre-retirement market luck has a meaningful effect.
+              </>
+            )}
+          </Notice>
         )}
 
         {result.overFunded && (
-          <Card withBorder radius="md" padding="md">
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="blue" variant="light" size={34} radius="xl">
-                <IconInfoCircle size={19} />
-              </ThemeIcon>
-              <Stack gap={2}>
-                <Text fw={600}>This scenario is over-funded</Text>
-                <Text size="sm" c="dimmed">
-                  Every allocation gives about the same income for these inputs, so the model has no
-                  best weight.
-                </Text>
-              </Stack>
-            </Group>
-          </Card>
+          <Notice icon={<IconInfoCircle size={18} />} title="This scenario is over-funded">
+            Every allocation gives about the same income for these inputs, so the model has no best
+            weight.
+          </Notice>
         )}
 
         {reco.inconclusive && (
-          <Card
-            withBorder
-            radius="md"
-            padding="lg"
-            style={{
-              borderColor: "var(--mantine-color-yellow-5)",
-              borderWidth: 2,
-            }}
-          >
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="yellow" variant="light" size={38} radius="xl">
-                <IconAlertTriangle size={22} />
-              </ThemeIcon>
-              <Stack gap={2}>
-                <Text size="xs" fw={700} c="yellow.7" tt="uppercase">
-                  Comparison inconclusive
-                </Text>
-                <Title order={3} fz="lg">
-                  CE income is tail-dominated
-                </Title>
-                <Text size="sm" c="dimmed">
-                  Near-zero income in bad-luck paths overwhelms CE income, so it cannot reliably
-                  distinguish these allocations. Compare their shortfall rates below.
-                </Text>
-              </Stack>
+          <Stack gap="xs" pt="md" style={{ borderTop: "1px solid var(--pf-warn)" }}>
+            <Eyebrow>Comparison inconclusive</Eyebrow>
+            <Group gap="sm" wrap="nowrap" align="center">
+              <IconAlertTriangle size={24} color="var(--pf-warn)" style={{ flexShrink: 0 }} />
+              <Title order={3} fz={{ base: 22, sm: 26 }} style={{ letterSpacing: "-0.01em" }}>
+                CE income is tail-dominated
+              </Title>
             </Group>
-          </Card>
+            <Text size="sm" c="dimmed" maw="46rem">
+              Near-zero income in bad-luck paths overwhelms CE income, so it cannot reliably
+              distinguish these allocations. Compare their shortfall rates below.
+            </Text>
+          </Stack>
         )}
 
         {showNeutralOptions ? (
           (glideIsConstant ? [constant] : [glide, constant]).map((option) => (
-            <Card key={option.kind} withBorder radius="md" padding="lg">
+            <Card
+              key={option.kind}
+              withBorder
+              radius="md"
+              padding="lg"
+              style={{ borderTop: "1px solid var(--pf-ink)" }}
+            >
               <Stack gap="md">
-                <Title order={3} fz="lg">
+                <Title order={3} fz={{ base: 22, sm: 26 }} style={{ letterSpacing: "-0.01em" }}>
                   {option.title}
                 </Title>
                 <ShapeSummary kind={option.kind} input={input} result={result} flatPct={flatPct} />
                 <FundingLine stats={option.stats} />
-                <Divider />
                 <OutcomeMetrics stats={option.stats} />
                 {glideIsConstant && (
                   <Text size="xs" c="dimmed">
@@ -573,35 +526,31 @@ export default function Result({
             <Card
               withBorder
               radius="md"
-              padding="lg"
-              style={{
-                borderColor: "var(--mantine-color-teal-5)",
-                borderWidth: 2,
-              }}
+              padding="md"
+              style={{ borderTop: "1px solid var(--pf-ink)" }}
             >
               <Stack gap="md">
-                <Group gap="sm" wrap="nowrap" align="flex-start">
-                  <ThemeIcon color="teal" size={38} radius="xl">
-                    <IconCheck size={22} />
-                  </ThemeIcon>
-                  <Stack gap={0}>
-                    <Text size="xs" fw={700} c="teal" tt="uppercase">
-                      Model&apos;s preferred allocation
-                    </Text>
-                    <Title order={3} fz="lg">
+                <Stack gap="xs">
+                  <Eyebrow>Model&apos;s preferred allocation</Eyebrow>
+                  <Group gap="sm" wrap="nowrap" align="center">
+                    <IconCheck size={28} color="var(--pf-accent)" style={{ flexShrink: 0 }} />
+                    <Title
+                      order={3}
+                      fz={{ base: 26, sm: 34 }}
+                      lh={1.1}
+                      style={{ letterSpacing: "-0.02em" }}
+                    >
                       {primary.title}
                     </Title>
-                  </Stack>
-                </Group>
+                  </Group>
+                </Stack>
 
                 <ShapeSummary kind={primary.kind} input={input} result={result} flatPct={flatPct} />
                 <FundingLine stats={primary.stats} />
 
-                <Divider />
-
                 <OutcomeMetrics stats={primary.stats} />
 
-                <Text size="xs" c="dimmed">
+                <Text size="sm" c="dimmed" maw="46rem">
                   {reasonText} Research output under this model&apos;s assumptions, not personal
                   advice.
                 </Text>
@@ -610,13 +559,14 @@ export default function Result({
 
             {/* Secondary — the alternative, compact. */}
             {!glideIsConstant && (
-              <Card withBorder radius="md" padding="md">
+              <Card
+                withBorder
+                radius="md"
+                padding="md"
+                style={{ borderTop: "1px solid var(--pf-hairline)" }}
+              >
                 <Stack gap="xs">
-                  <Group justify="space-between" align="center" wrap="nowrap">
-                    <Text size="sm" fw={600} c="dimmed">
-                      Alternative — {secondary.title}
-                    </Text>
-                  </Group>
+                  <Eyebrow>Alternative — {secondary.title}</Eyebrow>
                   <ShapeSummary
                     kind={secondary.kind}
                     input={input}
@@ -632,20 +582,14 @@ export default function Result({
         )}
 
         {hasRoomToAdjustPlan && (
-          <Card withBorder radius="md" padding="md">
-            <Group gap="sm" wrap="nowrap" align="flex-start">
-              <ThemeIcon color="teal" variant="light" size={34} radius="xl">
-                <IconInfoCircle size={19} />
-              </ThemeIcon>
-              <Stack gap={2}>
-                <Text fw={600}>Low shortfall in this scenario</Text>
-                <Text size="sm" c="dimmed">
-                  Drawdown shortfall is below 5%, so these inputs have slack: an earlier retirement
-                  or higher spending would also pass in the model.
-                </Text>
-              </Stack>
-            </Group>
-          </Card>
+          <Notice
+            tone="accent"
+            icon={<IconInfoCircle size={18} />}
+            title="Low shortfall in this scenario"
+          >
+            Drawdown shortfall is below 5%, so these inputs have slack: an earlier retirement or
+            higher spending would also pass in the model.
+          </Notice>
         )}
 
         <GlidePathChart
@@ -656,11 +600,21 @@ export default function Result({
       </Stack>
 
       {onReroll && (
-        <Stack gap={4} align="center" mt="xs">
+        <Group
+          justify="space-between"
+          align="center"
+          gap="md"
+          py="md"
+          style={{ borderTop: "1px solid var(--pf-hairline)" }}
+        >
+          <Text size="sm" c="dimmed" style={{ flex: "1 1 16rem" }}>
+            {seed > 0
+              ? `Showing simulation sample #${seed + 1}. Compare it with the prior result to gauge stability.`
+              : "Optional stability check: rerun the same plan with a different simulation sample."}
+          </Text>
           <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
+            variant="default"
+            size="sm"
             leftSection={<IconArrowsShuffle size={14} />}
             onClick={onReroll}
             loading={rerolling}
@@ -668,12 +622,7 @@ export default function Result({
           >
             Test another simulation sample
           </Button>
-          <Text size="xs" c="dimmed" ta="center" maw={440}>
-            {seed > 0
-              ? `Showing simulation sample #${seed + 1}. Compare it with the prior result to gauge stability.`
-              : "Optional stability check: rerun the same plan with a different simulation sample."}
-          </Text>
-        </Stack>
+        </Group>
       )}
     </Stack>
   );

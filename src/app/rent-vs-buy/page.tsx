@@ -16,6 +16,8 @@ export default function RentVsBuyPage() {
         title="Is it better to rent or buy?"
         subtitle="A simple and sensible calculator for comparing renting vs owning a home."
         showHomeLink
+        eyebrow="01 / Rent vs Buy"
+        tags={["Monte Carlo", "30-year horizon"]}
       />
       <main>
         <RentVsBuyApp />

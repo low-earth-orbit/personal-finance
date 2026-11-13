@@ -16,6 +16,9 @@ export default function AllocatorPage() {
         title="Where to invest: TFSA, RRSP or Non-Reg?"
         subtitle="Explore a tax-aware split across TFSA, RRSP, and non-registered accounts."
         showHomeLink
+        eyebrow="05 / Allocator"
+        status="preview"
+        tags={["One lump sum, now", "BC · ON · NB"]}
       />
       <main>
         <AllocatorApp />

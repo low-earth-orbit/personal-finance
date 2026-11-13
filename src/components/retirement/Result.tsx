@@ -4,6 +4,7 @@ import { Alert, Box, Card, Center, Group, Loader, Stack, Text } from "@mantine/c
 import { IconInfoCircle } from "@tabler/icons-react";
 import Headline from "./Headline";
 import ProjectionChart from "./ProjectionChart";
+import JumpToResult from "@/components/shared/JumpToResult";
 import { formatCAD } from "@/utils/format";
 import { incomePhases, type IncomePhase } from "@/utils/retirement/projection";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
@@ -12,20 +13,18 @@ interface ResultProps {
   input: RetirementInput;
   /** Computed in Main; null while inputs are incomplete/invalid. */
   result: RetirementResult | null;
-  /** Headline year-1 withdrawal rate (fraction); null when no feasible plan. */
-  planSWR: number | null;
   /** Inputs are valid but the first simulation hasn't returned yet. */
   loading?: boolean;
 }
 
-const TEAL = "var(--mantine-color-teal-6)";
-const INDIGO = "var(--mantine-color-indigo-5)";
+const ACCENT = "var(--pf-accent)";
+const INK = "var(--pf-ink)";
 
-// Diagonal hatch over a light indigo fill — marks the portion of portfolio
+// Diagonal accent hatch over a light surface fill — marks the portion of portfolio
 // spending that's trimmed in weak markets (the flexible cut), vs. solid = firm.
-const INDIGO_HATCH = {
-  backgroundColor: "var(--mantine-color-indigo-1)",
-  backgroundImage: `repeating-linear-gradient(45deg, ${INDIGO} 0, ${INDIGO} 2px, transparent 2px, transparent 5px)`,
+const INK_HATCH = {
+  backgroundColor: "var(--pf-surface)",
+  backgroundImage: `repeating-linear-gradient(45deg, ${ACCENT} 0, ${ACCENT} 2px, transparent 2px, transparent 5px)`,
 };
 
 function LegendItem({
@@ -46,9 +45,7 @@ function LegendItem({
           w={10}
           h={10}
           style={
-            hatch
-              ? { borderRadius: 2, ...INDIGO_HATCH }
-              : { borderRadius: 2, backgroundColor: color }
+            hatch ? { borderRadius: 2, ...INK_HATCH } : { borderRadius: 2, backgroundColor: color }
           }
         />
         <Text size="xs" c="dimmed">
@@ -92,9 +89,9 @@ function IncomeBar({
         backgroundColor: "var(--mantine-color-gray-2)",
       }}
     >
-      <Box style={{ width: `${guaranteedPct}%`, backgroundColor: TEAL }} />
-      <Box style={{ width: `${firmPortfolioPct}%`, backgroundColor: INDIGO }} />
-      {cutPct > 0 && <Box style={{ width: `${cutPct}%`, ...INDIGO_HATCH }} />}
+      <Box style={{ width: `${guaranteedPct}%`, backgroundColor: INK }} />
+      <Box style={{ width: `${firmPortfolioPct}%`, backgroundColor: ACCENT }} />
+      {cutPct > 0 && <Box style={{ width: `${cutPct}%`, ...INK_HATCH }} />}
     </Box>
   );
 }
@@ -161,10 +158,15 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
   const floorIncome = targetGrossIncome * (1 - flexPct / 100);
 
   return (
-    <Card withBorder radius="md" padding="md">
-      <Text size="sm" fw={600} mb="sm">
-        Retirement income {formatCAD(targetGrossIncome)} /yr
-      </Text>
+    <Stack gap="sm" pt="md" style={{ borderTop: "1px solid var(--pf-hairline)" }}>
+      <Group justify="space-between" align="baseline">
+        <Text fw={600} fz="lg">
+          Retirement income
+        </Text>
+        <Text ff="var(--pf-font-figures)" fw={500}>
+          {formatCAD(targetGrossIncome)} /yr
+        </Text>
+      </Group>
 
       {!single ? (
         <Stack gap="md">
@@ -180,8 +182,8 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
             />
           ))}
           <Group gap="xl">
-            <LegendItem color={TEAL} label="Guaranteed (CPP/OAS/pension)" />
-            <LegendItem color={INDIGO} label="From your savings" />
+            <LegendItem color={INK} label="Guaranteed (CPP/OAS/pension)" />
+            <LegendItem color={ACCENT} label="From your savings" />
             {isFlexible && <LegendItem hatch label={`Trimmed in weak markets (−${flexPct}%)`} />}
           </Group>
         </Stack>
@@ -195,12 +197,12 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
           />
           <Group mt="sm" gap="xl">
             <LegendItem
-              color={TEAL}
+              color={INK}
               label="Guaranteed (CPP/OAS/pension)"
               value={formatCAD(only.guaranteed)}
             />
             <LegendItem
-              color={INDIGO}
+              color={ACCENT}
               label="From your portfolio"
               value={formatCAD(only.portfolio)}
             />
@@ -216,11 +218,11 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
           measured against the lower floor.
         </Text>
       )}
-    </Card>
+    </Stack>
   );
 }
 
-export default function Result({ input, result, planSWR, loading = false }: ResultProps) {
+export default function Result({ input, result, loading = false }: ResultProps) {
   if (!result && loading) {
     return (
       <Card withBorder radius="md" padding="lg">
@@ -238,9 +240,18 @@ export default function Result({ input, result, planSWR, loading = false }: Resu
     );
   }
 
+  const age = result.earliestRetirementAge;
+  const jumpText =
+    age === null
+      ? "Doesn't reach the target yet"
+      : result.yearsUntilRetirement === 0
+        ? `Retire now · ${input.targetSuccessRate}% confidence`
+        : `Retire at ${age} · ${input.targetSuccessRate}% confidence`;
+
   return (
     <Stack gap="lg">
-      <Headline input={input} result={result} planSWR={planSWR} />
+      <JumpToResult targetId="result">{jumpText}</JumpToResult>
+      <Headline input={input} result={result} />
       <IncomeSummary input={input} result={result} />
       <ProjectionChart input={input} result={result} />
     </Stack>

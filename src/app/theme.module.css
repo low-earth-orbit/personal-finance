@@ -1,0 +1,265 @@
+/*
+ * Ledger overrides for Mantine components. Mantine's own styles sit in the `mantine` cascade layer
+ * (globals.css), so these unlayered rules win without extra specificity.
+ */
+
+/*
+ * Rule budget: one ink rule opens a column (first form section, result block). Below it, sections
+ * are set apart by whitespace and their headings, with hairlines only where rows of data need
+ * them. Cards are plain sections, not boxes; pass a `borderTop` style where one needs a rule.
+ */
+.card {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+/* Form accordions become numbered ledger sections: 01 Rent, 02 Property, ... */
+.accordion {
+  counter-reset: pf-section;
+}
+
+.accordionItem {
+  counter-increment: pf-section;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  border-top: 1px solid var(--pf-hairline);
+}
+
+.accordionItem:first-of-type {
+  border-top-color: var(--pf-ink);
+}
+
+.accordionItem + .accordionItem {
+  margin-top: var(--mantine-spacing-xs);
+}
+
+.accordionItem[data-active] {
+  background: transparent;
+}
+
+.accordionControl {
+  padding-inline: 0;
+  background: transparent;
+}
+
+@media (hover: hover) {
+  .accordionControl:hover {
+    background: transparent;
+  }
+}
+
+.accordionLabel {
+  display: flex;
+  align-items: baseline;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Collapsed sections recap their values at the right of the header (see SectionSummary). */
+.sectionSummary {
+  flex: 1;
+  min-width: 0;
+  margin-inline: 1rem 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: end;
+  font-family: var(--pf-font-figures);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--pf-muted);
+}
+
+.accordionItem[data-active] .sectionSummary {
+  display: none;
+}
+
+.accordion[data-variant="contained"] .accordionLabel::before {
+  content: counter(pf-section, decimal-leading-zero);
+  font-family: var(--pf-font-figures);
+  font-size: 0.8125rem;
+  font-weight: 400;
+  color: var(--pf-accent);
+  margin-inline-end: 0.75rem;
+}
+
+.accordionContent {
+  padding-inline: 0;
+}
+
+/* Alerts: a short coloured bar at the side instead of a tinted box. */
+.alert {
+  background: transparent;
+  border: 0;
+  border-inline-start: 2px solid var(--alert-color);
+  border-radius: 0;
+  padding-block: 0.25rem;
+  padding-inline: 0.875rem 0;
+}
+
+.alertTitle {
+  font-weight: 600;
+}
+
+.badge {
+  font-family: var(--pf-font-figures);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+
+.button {
+  font-weight: 500;
+}
+
+/* Every dialog title reads as a section heading. */
+.modalTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* Figures in inputs line up like a ledger column. */
+.numberInput {
+  font-family: var(--pf-font-figures);
+  font-size: 0.9375rem;
+  text-align: right;
+}
+
+/*
+ * Steppers read as one attached control: a single hairline on the input's edge, no split between
+ * the up and down halves.
+ */
+.controls {
+  border-inline-start: 1px solid var(--pf-border);
+}
+
+.control {
+  border: 0;
+}
+
+/* Keep right-aligned figures clear of a right section (e.g. a unit or loader). */
+[data-with-right-section] > .numberInput {
+  padding-inline-end: calc(var(--input-right-section-size) + 0.5rem);
+}
+
+.selectInput {
+  font-size: 0.9375rem;
+}
+
+/*
+ * In-flow bordered panels become plain sections. Floating surfaces (chart tooltips, popovers) do
+ * not pass `withBorder`, so they keep their box.
+ */
+.paper[data-with-border] {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding-inline: 0;
+}
+
+/* A panel nested in a ruled section only needs a hairline. */
+.card .paper[data-with-border],
+.paper[data-with-border] .paper[data-with-border] {
+  border-top: 1px solid var(--pf-hairline);
+  padding-bottom: 0;
+}
+
+/*
+ * Tailwind's preflight strips list markers and Mantine does not restore them, so draw ledger
+ * markers: mono numbers for ordered lists, a dash for unordered ones.
+ */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: pf-li;
+}
+
+.listItem {
+  position: relative;
+  padding-inline-start: 1.75rem;
+  counter-increment: pf-li;
+}
+
+.listItem::before {
+  position: absolute;
+  inset-inline-start: 0;
+  font-family: var(--pf-font-figures);
+  font-size: 0.8125em;
+  line-height: inherit;
+}
+
+ol.list > .listItem::before {
+  content: counter(pf-li, decimal-leading-zero);
+  color: var(--pf-accent);
+}
+
+ul.list > .listItem::before {
+  content: "—";
+  color: var(--pf-muted);
+}
+
+/*
+ * An outlined control whose active segment fills it edge to edge. There is no border: the outline is
+ * an inset outline painted over the segments, so the active chip runs underneath it. With a real
+ * border and a chip clipped inside it, the two curves meet at the rounded corners and leave a faint
+ * light anti-aliasing seam.
+ */
+.segmented {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  overflow: hidden;
+  outline: 1px solid var(--pf-ink);
+  outline-offset: -1px;
+}
+
+.segmentedIndicator {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* The active segment sits on an ink fill; see variantColorResolver in theme.ts. */
+.segmentedLabel[data-active] {
+  color: var(--pf-on-ink);
+}
+
+/*
+ * Keyboard focus. Mantine's outer 2px ink ring is clipped by the root's overflow and invisible on
+ * the ink-filled active segment, so draw it inside the segment instead, light on ink.
+ */
+.segmentedInput:focus-visible + .segmentedLabel {
+  outline: 2px solid var(--pf-ink);
+  outline-offset: -3px;
+}
+
+.segmentedInput:focus-visible + .segmentedLabel[data-active] {
+  outline-color: var(--pf-on-ink);
+}
+
+.table {
+  --table-border-color: var(--pf-hairline);
+  font-variant-numeric: tabular-nums;
+}
+
+.th {
+  font-family: var(--pf-font-figures);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mantine-color-dimmed);
+  border-bottom: 1px solid var(--pf-ink);
+}
+
+.td {
+  font-family: var(--pf-font-figures);
+}
+
+/* Controls inside a figure cell keep the UI face. */
+.td button {
+  font-family: var(--mantine-font-family);
+}

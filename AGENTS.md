@@ -15,6 +15,8 @@ python3 -m unittest discover -s analysis -p 'test_*.py' -v
 
 `dev`/`build` set `NODE_OPTIONS=--max-old-space-size=8192`. Turbopack dev server grows over session — restart on OOM. Always use `npm run …`.
 
+The Turbopack on-disk dev cache is disabled in `next.config.ts` (`turbopackFileSystemCacheForDev: false`): a corrupt cache twice made `next dev` unusable (runaway worker processes; `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`). If dev ever misbehaves, stop it and `rm -rf .next`. Don't run `npm run build` against a `.next` that a dev server is using; build in a copy if you need both.
+
 Types: **TypeScript** `.ts`/`.tsx`. Shared domain types: `src/types.ts`.
 
 ## Agent Workflow
@@ -65,15 +67,17 @@ No peer-review step: do not spawn reviewer/verifier subagents or second-opinion 
 
 ## Architecture
 
-**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, Lato font) → `providers.tsx` (MantineProvider, teal theme, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
+**App entry (`src/app/`):** `layout.tsx` (root HTML, Mantine, Source Sans 3) → `providers.tsx` (MantineProvider, Ledger theme from `theme.ts`, localStorage color scheme) → `page.tsx` (hub SimpleGrid). Tools use `next/dynamic({ ssr: false })` inside `"use client"` wrappers to avoid hydration mismatches with localStorage state.
 
 **CSS:** Tailwind v4 + Mantine via `@layer(tailwind-base, mantine, tailwind-utilities)` — Tailwind preflight never overrides Mantine.
+
+**Design system ("Ledger"):** ink on paper, rules instead of boxes — and few of them: one 1px ink rule opens each column (first form section, result block), later sections get a hairline or just whitespace, form rows are unruled, and alerts/`Notice` use a short side bar. Don't add full-width rules to separate things a heading already separates. `src/app/theme.ts` defines `ledger` (green accent), `rust` (warnings) and `ink` (virtual light/dark) palettes, primary color `ink`; `theme.module.css` restyles Card/Accordion/Alert/Table/NumberInput globally. Shared tokens (`--pf-ink`, `--pf-accent`, `--pf-warn`, `--pf-hairline`, …) live in `globals.css` with dark overrides — use them for chart strokes and inline styles, not Mantine `teal`/`indigo`. Figures, eyebrows and table cells use `--pf-font-figures` (the text face with tabular numerals) — set it with `ff="var(--pf-font-figures)"` or in CSS, and don't use `ff="monospace"`. Form fields render as label-left rows (`UserInputFormItem`, `fieldRowClassNames`); pass `layout="stacked"` inside popovers. Ink-coloured variants get scheme-aware text from `variantColorResolver` (`--pf-on-ink` on filled, `--pf-ink` on subtle/outline) — don't patch dark mode per component. Result building blocks live in `shared/Figures.tsx` (`Eyebrow`, `FigureStrip`/`Figure`, `Notice`), with `SectionSummary` for collapsed accordion recaps, `FieldHeader` + `fieldRowClasses.block` for full-width controls, and `ToolNotes` for the prose section under a tool.
 
 **UI (`src/components/`):**
 
 - `shared/`: `Header`, `Footer`, `DisclaimerModal`, `FieldLabel`, `UserInputFormItem` (Mantine NumberInput + optional `$`/`%` toggle), `UserInputRangeItem` (base + ±2σ expand)
 - `rent-vs-buy/Main.tsx`: state container; persists all state to localStorage via `storage.ts`
-- `Result.tsx` → `NetWorthChart.tsx`: dispatches MC to Web Worker, renders chart + Summary Alert + data table + CSV
+- `Result.tsx` → `NetWorthChart.tsx`: dispatches MC to Web Worker, renders chart + Summary Alert + CSV
 
 **Calc (`src/utils/`):** `math.ts`, `monteCarlo.ts` (`runMonteCarlo()` → P25/median/P75 + `medianGap` + `renterWinPct`), `presets.ts`, `validation.ts`, `format.ts`, `storage.ts`.
 

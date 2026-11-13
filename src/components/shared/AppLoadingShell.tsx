@@ -30,10 +30,10 @@ export default function AppLoadingShell() {
       style={{ minHeight: "60vh" }}
     >
       <Grid gap="xl">
-        <Grid.Col span={{ base: 12, lg: 6 }}>
+        <Grid.Col span={{ base: 12, lg: 5 }}>
           <LoadingPanel showLabel />
         </Grid.Col>
-        <Grid.Col span={{ base: 12, lg: 6 }}>
+        <Grid.Col span={{ base: 12, lg: 7 }}>
           <LoadingPanel />
         </Grid.Col>
       </Grid>

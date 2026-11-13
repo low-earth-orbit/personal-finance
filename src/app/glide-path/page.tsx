@@ -16,6 +16,9 @@ export default function GlidePathPage() {
         title="Lifetime Allocation"
         subtitle="A research model of how stock allocation could change over a lifetime."
         showHomeLink
+        eyebrow="03 / Lifetime Allocation"
+        status="new"
+        tags={["Research model", "CRRA utility"]}
       />
       <main>
         <GlidePathApp />

@@ -16,6 +16,9 @@ export default function AcbPage() {
         title="ACB Calculator"
         subtitle="Upload a Wealthsimple activity export to compute the adjusted cost basis of your non-registered holdings."
         showHomeLink
+        eyebrow="04 / ACB"
+        status="preview"
+        tags={["Wealthsimple · Questrade · IBKR", "Parsed in your browser"]}
       />
       <main>
         <AcbApp />

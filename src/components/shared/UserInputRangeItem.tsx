@@ -1,6 +1,7 @@
-import { Anchor, Group, NumberInput, Stack, Text } from "@mantine/core";
+import { Button, Group, NumberInput, Stack, Text } from "@mantine/core";
 import { IconArrowBackUp, IconPlusMinus } from "@tabler/icons-react";
 import FieldLabel from "./FieldLabel";
+import { fieldRowClassNames, fieldRowClasses } from "./fieldRow";
 import type { FieldConstraint, FieldValue } from "@/types";
 
 const fmt = (n: FieldValue) => String(Number(Number(n).toFixed(2)));
@@ -10,6 +11,8 @@ interface UserInputRangeItemProps {
   sigmaField: string;
   label: string;
   helperText?: string;
+  /** Short note shown under the field, e.g. what the value applies to. */
+  additionalText?: string;
   baseValue: FieldValue;
   sigma: FieldValue;
   baseConstraint: FieldConstraint;
@@ -27,6 +30,7 @@ export default function UserInputRangeItem({
   sigmaField,
   label,
   helperText,
+  additionalText,
   baseValue,
   sigma,
   baseConstraint,
@@ -45,40 +49,40 @@ export default function UserInputRangeItem({
   const rangeKnown = baseValue !== "" && baseValue != null && sigma !== "" && sigma != null;
 
   const composedLabel = (
-    <Group justify="space-between" wrap="nowrap" gap="xs">
+    <Group justify="flex-start" wrap="wrap" gap="xs">
       <FieldLabel label={label} helperText={helperText} />
-      <Anchor
-        component="button"
-        type="button"
-        size="xs"
-        c="dimmed"
-        onClick={onToggleExpand}
+      <Button
+        variant={expanded ? "filled" : "default"}
+        size="compact-xs"
+        onClick={(event) => {
+          // The toggle sits inside the field's <label>; don't let the click focus the input.
+          event.preventDefault();
+          onToggleExpand();
+        }}
         disabled={disabled}
-        underline="never"
         aria-label={
           expanded ? `Reset uncertainty range for ${label}` : `Add uncertainty range for ${label}`
         }
         aria-expanded={expanded}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center" }}>
-          {expanded ? (
-            <>
-              <IconArrowBackUp stroke={2} size={12} aria-hidden="true" /> Reset
-            </>
+        leftSection={
+          expanded ? (
+            <IconArrowBackUp stroke={2} size={12} aria-hidden="true" />
           ) : (
-            <>
-              <IconPlusMinus stroke={2} size={12} aria-hidden="true" /> Range
-            </>
-          )}
-        </span>
-      </Anchor>
+            <IconPlusMinus stroke={2} size={12} aria-hidden="true" />
+          )
+        }
+        styles={{ root: { minHeight: 24 }, section: { marginInlineEnd: 4 } }}
+      >
+        {expanded ? "Reset" : "Range"}
+      </Button>
     </Group>
   );
 
   return (
-    <Stack gap={4}>
+    <Stack gap={0} className={fieldRowClasses.frame}>
       <NumberInput
         id={baseField}
+        classNames={fieldRowClassNames}
         label={composedLabel}
         value={baseValue}
         onChange={onBaseChange}
@@ -92,8 +96,16 @@ export default function UserInputRangeItem({
         clampBehavior="none"
         styles={{ label: { display: "block" } }}
       />
+      {additionalText && (
+        <Text size="xs" c="dimmed" mt={4}>
+          {additionalText}
+        </Text>
+      )}
       {expanded && (
-        <>
+        <div className={`${fieldRowClasses.custom} ${fieldRowClasses.subRow}`}>
+          <Text size="xs" c="dimmed" aria-live="polite">
+            {rangeKnown ? `range ${fmt(low)}% to ${fmt(high)}%` : "range —"}
+          </Text>
           <NumberInput
             id={sigmaField}
             aria-label={`${label} uncertainty — 95% confidence spread`}
@@ -115,10 +127,7 @@ export default function UserInputRangeItem({
             clampBehavior="none"
             allowNegative={false}
           />
-          <Text size="xs" c="dimmed" aria-live="polite">
-            {rangeKnown ? `range ${fmt(low)}% to ${fmt(high)}%` : "range —"}
-          </Text>
-        </>
+        </div>
       )}
     </Stack>
   );

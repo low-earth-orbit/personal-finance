@@ -107,8 +107,9 @@ describe("allocator InputForm", () => {
       }),
     );
 
-    expect(screen.getByLabelText("Effective RRSP withdrawal tax rate")).toBeInTheDocument();
-    expect(screen.getByLabelText("Capital gains tax rate at retirement")).toHaveValue("15%");
+    // Inputs are addressed by id: each label now also wraps an info button with the same text.
+    expect(document.getElementById("retirementWithdrawalRatePct")).toBeInTheDocument();
+    expect(document.getElementById("capitalGainsTaxRatePct")).toHaveValue("15%");
     expect(screen.queryByText("Derive from income")).not.toBeInTheDocument();
     expect(
       screen.queryByLabelText("Expected annual taxable retirement income"),

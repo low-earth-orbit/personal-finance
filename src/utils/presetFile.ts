@@ -1,4 +1,5 @@
 import { DEFAULTS } from "./presets";
+import { migrateInput } from "./inputMigration";
 import type { Preset, UserInput, UserInputKey } from "../types";
 
 /** A preset as stored in an exported file: no id, values limited to known inputs. */
@@ -51,7 +52,8 @@ export function parsePresetFile(text: string): PresetFileEntry[] {
     const { label, values } = item as { label?: unknown; values?: unknown };
     if (typeof label !== "string" || !label.trim()) continue;
     if (!values || typeof values !== "object") continue;
-    const raw = values as Record<string, unknown>;
+    // Files exported by an older version use older inputs; migrate before keeping known keys.
+    const raw = migrateInput(values as Record<string, unknown>) as Record<string, unknown>;
     const clean = { ...DEFAULTS };
     let known = 0;
     for (const k of keys) {

@@ -22,7 +22,7 @@ const AccountSection = ({ group, accountLabel }: AccountSectionProps) => {
     .sort((a, b) => a - b);
 
   return (
-    <Paper withBorder p="md" radius="md">
+    <Paper withBorder pt="md">
       <Stack gap="sm">
         <Title order={3} fz="lg">
           {header}
@@ -31,9 +31,9 @@ const AccountSection = ({ group, accountLabel }: AccountSectionProps) => {
         {marginYears.length > 0 && (
           <Stack gap="xs">
             <Title order={4} fz="md">
-              Margin Interest Paid
+              Margin interest paid
             </Title>
-            <Table striped withTableBorder>
+            <Table verticalSpacing="sm" horizontalSpacing={0}>
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Tax Year</Table.Th>

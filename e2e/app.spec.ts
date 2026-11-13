@@ -11,7 +11,9 @@ test.beforeEach(async ({ context }) => {
 test("hub landing page lists the available tools", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Personal Finance" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "The numbers behind the big decisions." }),
+  ).toBeVisible();
 
   // The rent-vs-buy tool is linked from the hub.
   await expect(page.getByRole("link", { name: /rent vs buy/i })).toBeVisible();

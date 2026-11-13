@@ -7,6 +7,15 @@ describe("mortgage validation", () => {
     expect(validateUserInput(DEFAULTS)).toEqual({});
   });
 
+  test("caps the expected investment return at 10%", () => {
+    expect(validateUserInput({ ...DEFAULTS, investmentReturnRate: 10 }).investmentReturnRate).toBe(
+      undefined,
+    );
+    expect(
+      validateUserInput({ ...DEFAULTS, investmentReturnRate: 10.5 }).investmentReturnRate,
+    ).toBeTruthy();
+  });
+
   test("allows insured mortgages down to the price-based minimum", () => {
     // $1M: 5% of $500k + 10% of $500k = 7.5%.
     expect(validateUserInput({ ...DEFAULTS, downPaymentPercentage: 7.5 })).toEqual({});
