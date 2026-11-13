@@ -8,7 +8,7 @@
   align-items: center;
   gap: 6px;
   min-height: 44px;
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -21,7 +21,7 @@
 }
 
 .eyebrow {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   color: var(--pf-accent);
 }
@@ -40,7 +40,7 @@
 }
 
 .tags {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;

@@ -124,7 +124,7 @@ export default function UserInputFormItem({
             value={unit}
             onChange={setUnit}
             aria-label={unitAriaLabel}
-            ff="monospace"
+            ff="var(--pf-font-figures)"
             styles={{
               root: { flexShrink: 0 },
               // Fixed whole-pixel segment widths keep the chip edges off sub-pixel positions.

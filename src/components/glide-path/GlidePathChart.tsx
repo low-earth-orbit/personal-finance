@@ -164,7 +164,11 @@ export default function GlidePathChart({
         style={{ width: "100%", minWidth: 0 }}
       >
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart data={data} margin={{ top: 16, right: 12, bottom: 28, left: 0 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 16, right: 12, bottom: 28, left: 0 }}
+            accessibilityLayer={false}
+          >
             <ReferenceArea
               x1={retireAge}
               x2={lastAge}

@@ -131,9 +131,6 @@ export const theme = createTheme({
     dark,
   },
   fontFamily: "var(--font-sans), system-ui, sans-serif",
-  // Figures use the text face with tabular numerals; a monospace face made numbers and % look
-  // like code. The token name is kept so existing `ff="monospace"` call sites stay valid.
-  fontFamilyMonospace: "var(--font-sans), system-ui, sans-serif",
   headings: {
     fontFamily: "var(--font-sans), system-ui, sans-serif",
     fontWeight: "600",

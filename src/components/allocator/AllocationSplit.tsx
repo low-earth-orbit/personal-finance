@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Anchor, Group, Stack, Table, Text, Title } from "@mantine/core";
 import { IconInfoCircle } from "@tabler/icons-react";
 import classes from "./AllocationSplit.module.css";
+import ledger from "@/components/shared/Ledger.module.css";
 import { Eyebrow } from "@/components/shared/Figures";
 import { formatCAD } from "@/utils/format";
 import { taxOwed } from "@/utils/allocator/tax";
@@ -14,10 +15,10 @@ interface Row {
   amount: number;
 }
 
-/** A dollar figure inside a sentence, set in mono like the rest of the ledger. */
+/** A dollar figure inside a sentence, set in the figures face like the rest of the ledger. */
 function Amount({ children }: { children: ReactNode }) {
   return (
-    <Text span inherit ff="monospace" c="var(--pf-ink)">
+    <Text span inherit ff="var(--pf-font-figures)" c="var(--pf-ink)">
       {children}
     </Text>
   );
@@ -132,7 +133,7 @@ export default function AllocationSplit({
         <Eyebrow>Approximate account split</Eyebrow>
         <Title order={2} fz={{ base: 28, sm: 34 }} lh={1.15} style={{ letterSpacing: "-0.02em" }}>
           Invest about{" "}
-          <Text span inherit ff="monospace" fw={500} c="ledger">
+          <Text span inherit ff="var(--pf-font-figures)" fw={500} c="ledger">
             {formatApproxCAD(input.lumpSum, displayIncrement)}
           </Text>
         </Title>
@@ -287,7 +288,7 @@ export default function AllocationSplit({
           part of the split above. The search uses finer internal precision than the rounded
           display.
         </Text>
-        <details>
+        <details className={ledger.disclosure}>
           <summary className={classes.summary}>Show calculation detail</summary>
           <Stack gap="sm" mt="sm">
             {allocation.rrspDeductNow > 0 && (
@@ -323,7 +324,7 @@ export default function AllocationSplit({
             market uncertainty. Small assumption changes can change the split. Check your
             contribution room and tax details before relying on it.
           </Text>
-          <Anchor href="#model-assumptions" size="sm" ff="monospace" c="ledger" py={6}>
+          <Anchor href="#model-assumptions" size="sm" ff="var(--pf-font-figures)" c="ledger" py={6}>
             Review detailed assumptions →
           </Anchor>
         </Stack>

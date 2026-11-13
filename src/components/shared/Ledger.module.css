@@ -1,7 +1,7 @@
-/* Shared Ledger building blocks: mono eyebrow labels, the key-figure strip, ruled notes. */
+/* Shared Ledger building blocks: eyebrow labels, the key-figure strip, ruled notes, disclosures. */
 
 .eyebrow {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -39,7 +39,7 @@
 }
 
 .figureValue {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 1.625rem;
   font-weight: 500;
   line-height: 1.15;
@@ -119,4 +119,45 @@
   border-bottom: 1px solid var(--pf-ink);
   font-size: 1.5rem;
   letter-spacing: -0.01em;
+}
+
+/*
+ * A native <details> that reads like the accordion rows: no browser triangle, a chevron after the
+ * label (pointing down when closed, up when open). data-wide pushes the chevron to the far edge.
+ */
+.disclosure > summary {
+  display: flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.5rem;
+  list-style: none;
+  cursor: pointer;
+}
+
+.disclosure[data-wide] > summary {
+  width: auto;
+  justify-content: space-between;
+}
+
+.disclosure > summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure > summary::after {
+  content: "";
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: translateY(-25%) rotate(45deg);
+}
+
+.disclosure[open] > summary::after {
+  transform: translateY(25%) rotate(-135deg);
+}
+
+.disclosure > summary:focus-visible {
+  outline: 2px solid var(--pf-ink);
+  outline-offset: 2px;
 }

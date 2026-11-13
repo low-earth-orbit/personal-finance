@@ -67,7 +67,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: end;
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   font-weight: 400;
   color: var(--pf-muted);
@@ -79,7 +79,7 @@
 
 .accordion[data-variant="contained"] .accordionLabel::before {
   content: counter(pf-section, decimal-leading-zero);
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   font-weight: 400;
   color: var(--pf-accent);
@@ -105,7 +105,7 @@
 }
 
 .badge {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-weight: 500;
   letter-spacing: 0.06em;
 }
@@ -123,7 +123,7 @@
 
 /* Figures in inputs line up like a ledger column. */
 .numberInput {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.9375rem;
   text-align: right;
 }
@@ -187,7 +187,7 @@
 .listItem::before {
   position: absolute;
   inset-inline-start: 0;
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125em;
   line-height: inherit;
 }
@@ -246,7 +246,7 @@ ul.list > .listItem::before {
 }
 
 .th {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.06em;
@@ -256,7 +256,7 @@ ul.list > .listItem::before {
 }
 
 .td {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
 }
 
 /* Controls inside a figure cell keep the UI face. */

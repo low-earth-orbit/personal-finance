@@ -17,6 +17,9 @@
   --pf-accent-soft: rgb(15 92 69 / 14%);
   --pf-warn: #9a4a0b;
   --pf-warn-soft: #fbf1e9;
+  /* Figures, eyebrows and tables use the text face with tabular numerals (body sets them); a
+     monospace face made numbers and % look like code. */
+  --pf-font-figures: var(--font-sans), system-ui, sans-serif;
 }
 
 [data-mantine-color-scheme="dark"] {

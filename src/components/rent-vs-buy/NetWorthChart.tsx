@@ -386,7 +386,11 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The summary above gives the headline result, and the full year-by-year data can be downloaded as a CSV.`}
       >
         <ResponsiveContainer width="100%" height={400}>
-          <ComposedChart data={chartData} margin={{ top: 25, right: 50, left: 0, bottom: 20 }}>
+          <ComposedChart
+            data={chartData}
+            margin={{ top: 25, right: 50, left: 0, bottom: 20 }}
+            accessibilityLayer={false}
+          >
             <XAxis
               dataKey="year"
               label={{

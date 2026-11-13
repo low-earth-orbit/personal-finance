@@ -162,7 +162,7 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
         <Text fw={600} fz="lg">
           Retirement income
         </Text>
-        <Text ff="monospace" fw={500}>
+        <Text ff="var(--pf-font-figures)" fw={500}>
           {formatCAD(targetGrossIncome)} /yr
         </Text>
       </Group>

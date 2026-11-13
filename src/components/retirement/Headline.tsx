@@ -42,7 +42,7 @@ export default function Headline({ input, result }: HeadlineProps) {
         <Group gap="md" align="baseline" wrap="wrap">
           <Title
             order={2}
-            ff="monospace"
+            ff="var(--pf-font-figures)"
             fw={600}
             fz={36}
             lh={1.1}

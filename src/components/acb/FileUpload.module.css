@@ -49,7 +49,7 @@
 
 .fileName > :first-child {
   overflow: hidden;
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.875rem;
   text-overflow: ellipsis;
   white-space: nowrap;

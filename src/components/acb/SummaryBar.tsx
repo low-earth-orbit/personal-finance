@@ -18,10 +18,16 @@ type StatProps = {
 
 const Stat = ({ label, value }: StatProps) => (
   <div>
-    <Text size="xs" c="dimmed" ff="monospace" tt="uppercase" style={{ letterSpacing: "0.06em" }}>
+    <Text
+      size="xs"
+      c="dimmed"
+      ff="var(--pf-font-figures)"
+      tt="uppercase"
+      style={{ letterSpacing: "0.06em" }}
+    >
       {label}
     </Text>
-    <Text ff="monospace" fz="xl" fw={500}>
+    <Text ff="var(--pf-font-figures)" fz="xl" fw={500}>
       {value}
     </Text>
   </div>

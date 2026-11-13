@@ -11,7 +11,7 @@
 }
 
 .listHeaderCell {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -40,7 +40,7 @@
 }
 
 .number {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.875rem;
   color: var(--pf-accent);
 }

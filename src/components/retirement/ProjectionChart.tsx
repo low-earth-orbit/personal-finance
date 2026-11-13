@@ -135,7 +135,11 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
         style={{ width: "100%", minWidth: 0, marginTop: 12 }}
       >
         <ResponsiveContainer width="100%" height={360}>
-          <ComposedChart data={data} margin={{ top: 24, right: 8, bottom: 28, left: 0 }}>
+          <ComposedChart
+            data={data}
+            margin={{ top: 24, right: 8, bottom: 28, left: 0 }}
+            accessibilityLayer={false}
+          >
             <ReferenceArea
               x1={retireAge}
               x2={lastAge}

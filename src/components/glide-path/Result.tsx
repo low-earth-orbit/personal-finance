@@ -187,7 +187,7 @@ function CompactStat({
       <Text size="sm" c="dimmed">
         {label}
       </Text>
-      <Text size="sm" ff="monospace" fw={500}>
+      <Text size="sm" ff="var(--pf-font-figures)" fw={500}>
         {value}
       </Text>
       {flagged && <IconAlertTriangle size={13} color="var(--pf-warn)" />}

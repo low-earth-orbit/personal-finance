@@ -44,20 +44,20 @@
 }
 
 .share {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   color: var(--pf-muted);
 }
 
 .amount {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 1.0625rem;
   font-weight: 500;
   text-align: end;
 }
 
 .mono {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
 }
 
 .columns {
@@ -92,7 +92,7 @@ ol.ruledList > li {
 
 ol.ruledList > li::before {
   content: counter(pf-step);
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 0.8125rem;
   line-height: 1.75;
   color: var(--pf-accent);
@@ -112,7 +112,7 @@ ul.ruledList > li {
 }
 
 .totalValue {
-  font-family: var(--mantine-font-family-monospace);
+  font-family: var(--pf-font-figures);
   font-size: 1.75rem;
   font-weight: 500;
   line-height: 1.15;
