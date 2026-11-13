@@ -184,7 +184,7 @@ export default function GlidePathChart({
               domain={["dataMin", "dataMax"]}
               ticks={ageTicks}
               tickMargin={8}
-              label={{ value: "Age", position: "bottom", fontSize: 12 }}
+              label={{ value: "Age", position: "bottom", fontSize: 12, fill: "var(--pf-muted)" }}
               {...CHART_AXIS}
             />
             <YAxis

@@ -26,7 +26,6 @@ const TOOLS: Tool[] = [
     description:
       "A quick reality check on the earliest age you could retire, based on your savings and target income.",
     href: "/retirement",
-    status: "new",
   },
   {
     title: "Lifetime Allocation",

@@ -191,6 +191,7 @@ export const theme = createTheme({
       defaultProps: { color: "ink", withItemsBorders: false },
       classNames: {
         root: classes.segmented,
+        input: classes.segmentedInput,
         label: classes.segmentedLabel,
         indicator: classes.segmentedIndicator,
       },

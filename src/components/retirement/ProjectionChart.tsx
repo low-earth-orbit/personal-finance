@@ -155,7 +155,7 @@ export default function ProjectionChart({ input, result }: ProjectionChartProps)
               domain={["dataMin", "dataMax"]}
               ticks={ageTicks}
               tickMargin={8}
-              label={{ value: "Age", position: "bottom", fontSize: 12 }}
+              label={{ value: "Age", position: "bottom", fontSize: 12, fill: "var(--pf-muted)" }}
               {...CHART_AXIS}
               interval={0}
             />

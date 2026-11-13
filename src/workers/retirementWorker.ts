@@ -1,4 +1,4 @@
-import { computePlan } from "../utils/retirement/monteCarlo";
+import { computeRetirement } from "../utils/retirement/monteCarlo";
 import type { RetirementWorkerRequest } from "../utils/retirement/types";
 
 // `self` is the DedicatedWorkerGlobalScope inside a Web Worker.
@@ -8,5 +8,5 @@ const ctx = self as unknown as Worker;
 // runs here rather than on the main thread, where it would stall typing.
 ctx.onmessage = (event: MessageEvent<RetirementWorkerRequest>) => {
   const { requestId, input } = event.data;
-  ctx.postMessage({ requestId, ...computePlan(input) });
+  ctx.postMessage({ requestId, result: computeRetirement(input) });
 };

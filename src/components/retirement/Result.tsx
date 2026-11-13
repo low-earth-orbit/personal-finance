@@ -12,8 +12,6 @@ interface ResultProps {
   input: RetirementInput;
   /** Computed in Main; null while inputs are incomplete/invalid. */
   result: RetirementResult | null;
-  /** Headline year-1 withdrawal rate (fraction); null when no feasible plan. */
-  planSWR: number | null;
   /** Inputs are valid but the first simulation hasn't returned yet. */
   loading?: boolean;
 }
@@ -223,7 +221,7 @@ function IncomeSummary({ input, result }: { input: RetirementInput; result: Reti
   );
 }
 
-export default function Result({ input, result, planSWR, loading = false }: ResultProps) {
+export default function Result({ input, result, loading = false }: ResultProps) {
   if (!result && loading) {
     return (
       <Card withBorder radius="md" padding="lg">
@@ -243,7 +241,7 @@ export default function Result({ input, result, planSWR, loading = false }: Resu
 
   return (
     <Stack gap="lg">
-      <Headline input={input} result={result} planSWR={planSWR} />
+      <Headline input={input} result={result} />
       <IncomeSummary input={input} result={result} />
       <ProjectionChart input={input} result={result} />
     </Stack>

@@ -1,25 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Box,
-  Button,
-  Collapse,
-  Group,
-  Paper,
-  ScrollArea,
-  Skeleton,
-  Stack,
-  Table,
-  Text,
-  Title,
-  VisuallyHidden,
-} from "@mantine/core";
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconDownload,
-  IconHeart,
-  IconScale,
-} from "@tabler/icons-react";
+import { Box, Button, Group, Paper, Skeleton, Stack, Text, Title } from "@mantine/core";
+import { IconDownload, IconHeart, IconScale } from "@tabler/icons-react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ComposedChart,
@@ -284,7 +265,6 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
   const [mcData, setMcData] = useState<MonteCarloYear[] | null>(null);
   const [breakEven, setBreakEven] = useState<BreakEven | null>(null);
   const [debouncedInput] = useDebouncedValue(userInput, 300);
-  const [tableOpen, setTableOpen] = useState(false);
 
   useEffect(() => {
     workerRef.current = new Worker(new URL("../../workers/monteCarloWorker.ts", import.meta.url));
@@ -403,7 +383,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
       </Text>
       <div
         role="img"
-        aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The data table below provides the same information in accessible text form.`}
+        aria-label={`Net worth projection chart comparing renting versus buying over ${SIMULATION_HORIZON_YEARS} years using ${NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations. The summary above gives the headline result, and the full year-by-year data can be downloaded as a CSV.`}
       >
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart data={chartData} margin={{ top: 25, right: 50, left: 0, bottom: 20 }}>
@@ -413,6 +393,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
                 value: "Year",
                 position: "bottom",
                 fontSize: 12,
+                fill: "var(--pf-muted)",
               }}
               {...CHART_AXIS}
             />
@@ -598,23 +579,7 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
         modelling error, uncertain inputs, and real-world complexity.
       </Text>
 
-      <Group justify="space-between" align="center" mt="xs">
-        <Button
-          variant="default"
-          size="sm"
-          aria-expanded={tableOpen}
-          aria-controls="net-worth-data-table"
-          leftSection={
-            tableOpen ? (
-              <IconChevronUp size={14} aria-hidden="true" />
-            ) : (
-              <IconChevronDown size={14} aria-hidden="true" />
-            )
-          }
-          onClick={() => setTableOpen((o) => !o)}
-        >
-          {tableOpen ? "Hide" : "Show"} data table
-        </Button>
+      <Group justify="flex-end" align="center" mt="xs">
         <Button
           size="sm"
           leftSection={<IconDownload size={14} aria-hidden="true" />}
@@ -623,96 +588,6 @@ export default function NetWorthChart({ userInput }: { userInput: UserInput }) {
           Download CSV
         </Button>
       </Group>
-
-      <Collapse expanded={tableOpen}>
-        <div id="net-worth-data-table">
-          <ScrollArea>
-            <Table fz="xs" style={{ minWidth: 620 }}>
-              <caption
-                style={{
-                  captionSide: "top",
-                  textAlign: "left",
-                  fontSize: "0.75rem",
-                  color: "var(--mantine-color-dimmed)",
-                  paddingBottom: 4,
-                }}
-              >
-                Year-by-year net worth comparison: Renting vs buying (
-                {NUM_SIMULATIONS.toLocaleString()} Monte Carlo simulations)
-              </caption>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th scope="col">Year</Table.Th>
-                  <Table.Th scope="col" ta="right" c="ledger">
-                    Rent median
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right" c="ledger">
-                    <abbr title="25th percentile">Rent P25</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right" c="ledger">
-                    <abbr title="75th percentile">Rent P75</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right" c="ink">
-                    Buy median
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right" c="ink">
-                    <abbr title="25th percentile">Buy P25</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right" c="ink">
-                    <abbr title="75th percentile">Buy P75</abbr>
-                  </Table.Th>
-                  <Table.Th scope="col" ta="right">
-                    Renter win %<VisuallyHidden> (% of simulations)</VisuallyHidden>
-                  </Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {chartData.map((d) => (
-                  <Table.Tr
-                    key={d.year}
-                    style={
-                      d.year === userInput.holdingPeriod
-                        ? { fontWeight: 600, backgroundColor: "var(--pf-surface)" }
-                        : undefined
-                    }
-                  >
-                    <Table.Td>
-                      {d.year}
-                      {d.year === userInput.holdingPeriod && (
-                        <>
-                          {" "}
-                          <span aria-hidden="true">★</span>
-                          <VisuallyHidden> (sale year)</VisuallyHidden>
-                        </>
-                      )}
-                    </Table.Td>
-                    <Table.Td ta="right">{formatCADCompact(d.renterMedian)}</Table.Td>
-                    <Table.Td ta="right" c="dimmed">
-                      {formatCADCompact(d.renterP25)}
-                    </Table.Td>
-                    <Table.Td ta="right" c="dimmed">
-                      {formatCADCompact(d.renterP75)}
-                    </Table.Td>
-                    <Table.Td ta="right">{formatCADCompact(d.ownerMedian)}</Table.Td>
-                    <Table.Td ta="right" c="dimmed">
-                      {formatCADCompact(d.ownerP25)}
-                    </Table.Td>
-                    <Table.Td ta="right" c="dimmed">
-                      {formatCADCompact(d.ownerP75)}
-                    </Table.Td>
-                    <Table.Td ta="right">
-                      {d.renterWinPct != null ? `${Math.round(d.renterWinPct * 100)}%` : "—"}
-                    </Table.Td>
-                  </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </ScrollArea>
-          <Text size="xs" c="dimmed" mt={4}>
-            <span aria-hidden="true">★</span> Sale year (holding period)
-          </Text>
-        </div>
-      </Collapse>
     </Stack>
   );
 }

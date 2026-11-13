@@ -227,6 +227,19 @@ ul.list > .listItem::before {
   color: var(--pf-on-ink);
 }
 
+/*
+ * Keyboard focus. Mantine's outer 2px ink ring is clipped by the root's overflow and invisible on
+ * the ink-filled active segment, so draw it inside the segment instead, light on ink.
+ */
+.segmentedInput:focus-visible + .segmentedLabel {
+  outline: 2px solid var(--pf-ink);
+  outline-offset: -3px;
+}
+
+.segmentedInput:focus-visible + .segmentedLabel[data-active] {
+  outline-color: var(--pf-on-ink);
+}
+
 .table {
   --table-border-color: var(--pf-hairline);
   font-variant-numeric: tabular-nums;

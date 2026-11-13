@@ -2,18 +2,15 @@ import { Alert, Group, Stack, Text, Title } from "@mantine/core";
 import { Eyebrow, Figure, FigureStrip } from "@/components/shared/Figures";
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { formatCADCompact } from "@/utils/format";
-import SwrTechnicalNote from "./SwrTechnicalNote";
 import { lastGuaranteedStartAge } from "@/utils/retirement/projection";
 import type { RetirementInput, RetirementResult } from "@/utils/retirement/types";
 
 interface HeadlineProps {
   input: RetirementInput;
   result: RetirementResult;
-  /** Year-1 withdrawal rate (fraction); null when no feasible plan. */
-  planSWR: number | null;
 }
 
-export default function Headline({ input, result, planSWR }: HeadlineProps) {
+export default function Headline({ input, result }: HeadlineProps) {
   if (result.earliestRetirementAge === null) {
     return (
       <Alert
@@ -91,15 +88,6 @@ export default function Headline({ input, result, planSWR }: HeadlineProps) {
             size="sm"
             value={`${formatCADCompact(result.guaranteedIncome)} /yr`}
             note={`all started by age ${lastGuaranteedStartAge(input)}`}
-          />
-        )}
-        {planSWR != null && (
-          <Figure
-            label="Year-1 withdrawal"
-            size="sm"
-            value={`${(planSWR * 100).toFixed(1)}%`}
-            note="of savings"
-            info={<SwrTechnicalNote input={input} />}
           />
         )}
         {medianLeft != null && (

@@ -74,6 +74,4 @@ export interface RetirementWorkerRequest {
 export interface RetirementWorkerResponse {
   requestId: number;
   result: RetirementResult;
-  /** Year-1 withdrawal rate (fraction); null when no feasible plan. */
-  planSWR: number | null;
 }

@@ -68,7 +68,7 @@ export default function UserInputRangeItem({
             <IconPlusMinus stroke={2} size={12} aria-hidden="true" />
           )
         }
-        styles={{ section: { marginInlineEnd: 4 } }}
+        styles={{ root: { minHeight: 24 }, section: { marginInlineEnd: 4 } }}
       >
         {expanded ? "Reset" : "Range"}
       </Button>

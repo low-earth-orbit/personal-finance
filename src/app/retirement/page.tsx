@@ -18,7 +18,6 @@ export default function RetirementPage() {
         subtitle="Estimate the earliest age your savings can support the retirement you want."
         showHomeLink
         eyebrow="02 / Retirement"
-        status="new"
         tags={["Monte Carlo", "Today's dollars", "CPP + OAS"]}
       />
       <main>

@@ -8,7 +8,7 @@ import Result from "./Result";
 import ColumnHeader from "@/components/shared/ColumnHeader";
 import layout from "@/components/shared/TwoColumn.module.css";
 import { DEFAULTS } from "@/utils/retirement/presets";
-import { computePlan } from "@/utils/retirement/monteCarlo";
+import { computeRetirement } from "@/utils/retirement/monteCarlo";
 import { loadInput, saveInput } from "@/utils/retirement/storage";
 import { validateRetirementInput } from "@/utils/retirement/validation";
 import type {
@@ -19,11 +19,6 @@ import type {
 } from "@/utils/retirement/types";
 import type { FieldValue } from "@/types";
 
-interface Plan {
-  result: RetirementResult;
-  planSWR: number | null;
-}
-
 // Without Worker support (e.g. the unit-test DOM), compute on the main thread instead.
 const hasWorker = typeof Worker !== "undefined";
 
@@ -31,7 +26,7 @@ export default function Main() {
   const [input, setInput] = useState<RetirementInput>(() => loadInput());
   const workerRef = useRef<Worker | null>(null);
   const requestIdRef = useRef(0);
-  const [workerPlan, setWorkerPlan] = useState<Plan | null>(null);
+  const [workerResult, setWorkerResult] = useState<RetirementResult | null>(null);
   const [workerFailed, setWorkerFailed] = useState(false);
 
   const errors = validateRetirementInput(input);
@@ -46,15 +41,15 @@ export default function Main() {
   const [prevValid, setPrevValid] = useState(debouncedValid);
   if (prevValid !== debouncedValid) {
     setPrevValid(debouncedValid);
-    if (!debouncedValid) setWorkerPlan(null);
+    if (!debouncedValid) setWorkerResult(null);
   }
 
   useEffect(() => {
     if (!hasWorker) return;
     const worker = new Worker(new URL("../../workers/retirementWorker.ts", import.meta.url));
     worker.onmessage = (event: MessageEvent<RetirementWorkerResponse>) => {
-      const { requestId, result, planSWR } = event.data;
-      if (requestId === requestIdRef.current) setWorkerPlan({ result, planSWR });
+      const { requestId, result } = event.data;
+      if (requestId === requestIdRef.current) setWorkerResult(result);
     };
     // A worker that fails to load or throws falls back to the main thread.
     worker.onerror = () => setWorkerFailed(true);
@@ -69,10 +64,14 @@ export default function Main() {
     workerRef.current.postMessage({ requestId: requestIdRef.current, input: debouncedInput });
   }, [debouncedInput, debouncedValid]);
 
-  // While a newer request is in flight the previous plan stays on screen.
+  // While a newer request is in flight the previous result stays on screen.
   const onMainThread = !hasWorker || workerFailed;
-  const plan = !debouncedValid ? null : onMainThread ? computePlan(debouncedInput) : workerPlan;
-  const loading = debouncedValid && plan == null;
+  const result = !debouncedValid
+    ? null
+    : onMainThread
+      ? computeRetirement(debouncedInput)
+      : workerResult;
+  const loading = debouncedValid && result == null;
 
   function handleChange(key: RetirementInputKey, value: FieldValue) {
     setInput((prev) => {
@@ -101,12 +100,7 @@ export default function Main() {
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 7 }} className={layout.result}>
           <ColumnHeader title="Result" note="Updates as you change inputs" />
-          <Result
-            input={input}
-            result={plan?.result ?? null}
-            planSWR={plan?.planSWR ?? null}
-            loading={loading}
-          />
+          <Result input={input} result={result} loading={loading} />
         </Grid.Col>
       </Grid>
     </Container>

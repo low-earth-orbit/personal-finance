@@ -26,12 +26,18 @@ export default function FieldLabel({ label, helperText }: FieldLabelProps) {
         <Popover.Target>
           <button
             type="button"
+            // Mantine's focus ring (ink), not the browser's blue one.
+            className="mantine-focus-auto"
             style={{
               display: "inline-flex",
               cursor: "pointer",
               background: "none",
               border: "none",
-              padding: 0,
+              // A 25px hit area around the 13px icon; the negative margin keeps the layout unchanged.
+              padding: 6,
+              margin: -6,
+              borderRadius: 4,
+              outlineOffset: 0,
               color: "inherit",
             }}
             aria-label={`More information about ${label}`}

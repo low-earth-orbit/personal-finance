@@ -71,24 +71,3 @@ export function Notice({ icon, title, children, tone = "ink" }: NoticeProps) {
     </div>
   );
 }
-
-/** A ruled row of small labelled cells, e.g. the value at each step of a schedule. */
-export function CellStrip({
-  cells,
-  label,
-}: {
-  cells: { key: string | number; label: ReactNode; value: ReactNode; shaded?: boolean }[];
-  /** Accessible name for the group. */
-  label: string;
-}) {
-  return (
-    <div className={classes.cells} role="group" aria-label={label}>
-      {cells.map((cell) => (
-        <div key={cell.key} className={classes.cell} data-shaded={cell.shaded || undefined}>
-          <span className={classes.cellLabel}>{cell.label}</span>
-          <span className={classes.cellValue}>{cell.value}</span>
-        </div>
-      ))}
-    </div>
-  );
-}

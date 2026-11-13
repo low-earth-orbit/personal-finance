@@ -157,7 +157,7 @@ export default function InputForm({
                       { value: 0.5, label: "Half" },
                       { value: 1, label: "Flexible" },
                     ]}
-                    styles={{ markLabel: { fontSize: 11 } }}
+                    styles={{ markLabel: { fontSize: 12, color: "var(--pf-muted)" } }}
                     label={(v) => v.toFixed(2)}
                   />
                 </Box>
