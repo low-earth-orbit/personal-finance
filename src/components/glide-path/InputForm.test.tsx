@@ -24,11 +24,27 @@ function renderForm(input: Partial<GlidePathInput> = {}) {
   );
 }
 
+/** "Spending & risk" starts collapsed; open it to reach its controls. */
+function openSpendingAndRisk() {
+  fireEvent.click(screen.getByRole("button", { name: "Spending & risk" }));
+}
+
 describe("glide-path InputForm guidance", () => {
-  it("shows unfamiliar model controls inline", () => {
+  it("starts with Spending & risk collapsed", () => {
     renderForm();
 
-    expect(screen.getByRole("group", { name: "Risk aversion" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Spending & risk" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    expect(screen.queryByRole("group", { name: "Risk aversion" })).toBeNull();
+  });
+
+  it("shows unfamiliar model controls inline", async () => {
+    renderForm();
+    openSpendingAndRisk();
+
+    expect(await screen.findByRole("group", { name: "Risk aversion" })).toBeInTheDocument();
     expect(
       screen.getByText(/The percentage of the current portfolio drawn each year/i),
     ).toBeInTheDocument();
@@ -71,8 +87,9 @@ describe("glide-path InputForm guidance", () => {
 
   it("places a custom risk-aversion input in a selected popover", async () => {
     renderForm({ gamma: 4.5 });
+    openSpendingAndRisk();
 
-    const custom = screen.getByRole("button", { name: "Custom" });
+    const custom = await screen.findByRole("button", { name: "Custom" });
     expect(custom).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(custom);

@@ -298,7 +298,7 @@ export default function InputForm({
           Show split
         </Button>
       )}
-      <FormResetButton onReset={onReset} confirm mt="lg" mb={0} />
+      <FormResetButton onReset={onReset} mt="lg" mb={0} />
     </>
   );
 }

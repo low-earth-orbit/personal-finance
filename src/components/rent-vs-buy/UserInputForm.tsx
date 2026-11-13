@@ -80,13 +80,6 @@ export default function UserInputForm({
 
   const rentalYield = formatPercentage((userInput.monthlyRent * 12) / userInput.initialHomePrice);
 
-  // Every owner cost grows at the one owner cost growth rate; each helper says so, with the number.
-  const growthRate = summaryValue(userInput.ownerCostGrowthRate);
-  const costGrowth =
-    growthRate === "—"
-      ? "Rises each year with owner cost growth."
-      : `Rises ${growthRate}%/yr with owner cost growth.`;
-
   // While a field is mid-edit it can transiently be "" or 0. Show a placeholder
   // rather than a misleading "$0/mo" (empty amortization) or "NaN" (empty price).
   // calculateMonthlyMortgagePayment itself soft-fails, so this is display-only.
@@ -133,7 +126,7 @@ export default function UserInputForm({
             <Button variant="subtle" color="gray" onClick={closeReset}>
               Cancel
             </Button>
-            <Button color="red" onClick={confirmReset}>
+            <Button color="rust" onClick={confirmReset}>
               Reset all
             </Button>
           </Group>
@@ -195,7 +188,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="propertyTaxRate"
                 label="Property tax"
-                labelHelperText={`Your annual property tax, in dollars or as a % of today's home value: typically 0.5–1.5%, lower in the big metros. ${costGrowth}`}
+                labelHelperText={`Your annual property tax, in dollars or as a % of today's home value: typically 0.5–1.5%, lower in the big metros.`}
                 value={userInput.propertyTaxRate}
                 onChange={bind("propertyTaxRate")}
                 error={errors.propertyTaxRate}
@@ -210,7 +203,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="condoFeesPerMonth"
                 label="Condo fees"
-                labelHelperText={`Monthly condo or strata fees in today's dollars; $0 for a house. ${costGrowth}`}
+                labelHelperText={`Monthly condo or strata fees in today's dollars; $0 for a house.`}
                 value={userInput.condoFeesPerMonth}
                 onChange={bind("condoFeesPerMonth")}
                 error={errors.condoFeesPerMonth}
@@ -223,7 +216,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="maintPct"
                 label="Maintenance"
-                labelHelperText={`Yearly repairs and replacements (roof, furnace, appliances), in dollars or as a % of today's home value: about 1% for a house and 0.5% for a condo unit, less where land is expensive. Excludes condo fees and insurance. ${costGrowth}`}
+                labelHelperText={`Yearly repairs and replacements (roof, furnace, appliances), in dollars or as a % of today's home value: about 1% for a house and 0.5% for a condo unit, less where land is expensive. Excludes condo fees and insurance.`}
                 value={userInput.maintPct}
                 onChange={bind("maintPct")}
                 error={errors.maintPct}
@@ -238,7 +231,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="insurancePct"
                 label="Home insurance"
-                labelHelperText={`Your yearly home insurance premium minus the tenant insurance you'd pay as a renter, in dollars or as a % of today's home value. ${costGrowth}`}
+                labelHelperText={`Your yearly home insurance premium minus the tenant insurance you'd pay as a renter, in dollars or as a % of today's home value.`}
                 value={userInput.insurancePct}
                 onChange={bind("insurancePct")}
                 error={errors.insurancePct}
@@ -330,7 +323,7 @@ export default function UserInputForm({
                 {perturbed("investmentReturnRate", "investmentReturnSigma", {
                   label: "Compound return",
                   helperText:
-                    "Expected pre-tax compound annual return after fund fees, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio (XGRO).",
+                    "Expected pre-tax compound annual return after fund fees, including dividends and capital gains. The default is based on long-term capital market assumptions for a diversified growth portfolio.",
                 })}
                 {perturbed("dividendYield", "dividendYieldSigma", {
                   label: "Annual yield",

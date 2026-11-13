@@ -68,7 +68,7 @@ export default function InputForm({
 
   return (
     <>
-      <Accordion multiple defaultValue={["you", "retirement", "prefs"]} variant="contained">
+      <Accordion multiple defaultValue={["you", "retirement"]} variant="contained">
         <Accordion.Item value="you">
           <Accordion.Control>
             About you
@@ -277,7 +277,7 @@ export default function InputForm({
       >
         Generate allocation paths
       </Button>
-      <FormResetButton onReset={onReset} confirm mb={0} />
+      <FormResetButton onReset={onReset} mb={0} />
     </>
   );
 }

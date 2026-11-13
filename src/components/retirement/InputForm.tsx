@@ -111,7 +111,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
 
   return (
     <>
-      <Accordion multiple defaultValue={["you", "goals", "assumptions"]} variant="contained">
+      <Accordion multiple defaultValue={["you", "goals"]} variant="contained">
         <Accordion.Item value="you">
           <Accordion.Control>
             About you
@@ -398,7 +398,7 @@ export default function InputForm({ input, errors, onChange, onReset }: InputFor
           </Accordion.Panel>
         </Accordion.Item>
       </Accordion>
-      <FormResetButton onReset={onReset} confirm mb={0} />
+      <FormResetButton onReset={onReset} mb={0} />
     </>
   );
 }

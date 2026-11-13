@@ -101,9 +101,21 @@ const INK_TEXT_VARIANTS = new Set(["subtle", "transparent", "light", "outline"])
  * Ink flips between schemes (near-black in light, near-white in dark), but Mantine derives a
  * variant's text colour from fixed shades: filled ink gets light-mode contrast text, and text-only
  * variants get a shade that vanishes on the dark ground. Point both at scheme-aware tokens.
+ *
+ * Filled rust (destructive actions, e.g. confirming a reset) has the same problem: in dark mode
+ * Mantine fills it with a light shade but keeps white text. Use the warn token with ink-contrast
+ * text, which reads in both schemes.
  */
 const variantColorResolver: VariantColorsResolver = (input) => {
   const resolved = defaultVariantColorsResolver(input);
+  if (input.color === "rust" && input.variant === "filled") {
+    return {
+      ...resolved,
+      background: "var(--pf-warn)",
+      hover: "color-mix(in srgb, var(--pf-warn) 85%, var(--pf-ink))",
+      color: "var(--pf-on-ink)",
+    };
+  }
   if (input.color !== "ink") return resolved;
   if (input.variant === "filled") return { ...resolved, color: "var(--pf-on-ink)" };
   if (INK_TEXT_VARIANTS.has(input.variant)) {
