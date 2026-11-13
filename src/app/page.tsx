@@ -47,6 +47,13 @@ const TOOLS: Tool[] = [
     href: "/allocator",
     status: "preview",
   },
+  {
+    title: "Safe withdrawal rates",
+    description:
+      "How much you can withdraw each year, by stock/bond mix and retirement length, from your own market assumptions.",
+    href: "/swr",
+    status: "new",
+  },
 ];
 
 function ToolRow({ tool, index }: { tool: Tool; index: number }) {
