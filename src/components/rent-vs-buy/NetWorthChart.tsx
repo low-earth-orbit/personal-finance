@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Box, Button, Group, Paper, Skeleton, Stack, Text, Title } from "@mantine/core";
-import { IconDownload, IconHeart, IconScale } from "@tabler/icons-react";
+import { IconDownload, IconHeart } from "@tabler/icons-react";
 import { useDebouncedValue } from "@mantine/hooks";
 import {
   ComposedChart,
@@ -52,15 +52,15 @@ const INPUT_LABELS = {
   holdingPeriod: "Holding period (years)",
   rentIncreaseRate: "Rent increase rate (%/yr)",
   homePriceGrowthRate: "Home price growth (%/yr)",
-  ownerCostGrowthRate: "Cost inflation (%/yr)",
+  ownerCostGrowthRate: "Owner cost growth (%/yr)",
   investmentReturnRate: "Compound investment return (%/yr)",
   dividendYield: "Dividend yield (%)",
   dividendTaxRate: "Dividend tax rate (%)",
   capitalGainTaxRate: "Capital gain tax rate (%)",
   taxShelteredPct: "Tax-sheltered (%)",
   propertyTaxRate: "Property tax rate (%)",
-  maintPct: "Maintenance (%/yr)",
-  maintAgingPct: "Building aging (%/yr)",
+  maintPct: "Maintenance (% of price/yr)",
+  insurancePct: "Home insurance (% of price/yr)",
   condoFeesPerMonth: "Condo fees ($/month)",
   buyerClosingCostsPct: "Buyer closing costs (%)",
   sellerClosingCostsPct: "Seller closing costs (%)",
@@ -204,16 +204,17 @@ export function Summary({
   const body = `${sims} ${gap} ${breakEvenLine}${close}`;
 
   const leadYear = buyingLeadYear(data, decision.year);
-  const verdictColor =
-    winnerPct < 60 ? "var(--pf-muted)" : renterFavored ? "var(--pf-accent)" : "var(--pf-ink)";
+  const verdictColor = renterFavored ? "var(--pf-accent)" : "var(--pf-ink)";
 
   return (
     <Stack gap="md" pt="md" style={{ borderTop: "1px solid var(--pf-ink)" }}>
       <Eyebrow>Result · sale at year {decision.year}</Eyebrow>
       <Group gap="sm" wrap="nowrap" align="center">
-        <span data-testid="verdict-icon" style={{ display: "inline-flex", color: verdictColor }}>
-          {winnerPct >= 60 ? <IconHeart size={26} /> : <IconScale size={26} />}
-        </span>
+        {winnerPct >= 60 && (
+          <span data-testid="verdict-icon" style={{ display: "inline-flex", color: verdictColor }}>
+            <IconHeart size={26} />
+          </span>
+        )}
         <Title order={2} fz={{ base: 26, sm: 34 }} lh={1.1} style={{ letterSpacing: "-0.02em" }}>
           {title}
         </Title>

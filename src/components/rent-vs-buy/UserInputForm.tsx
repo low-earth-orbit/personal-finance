@@ -29,6 +29,7 @@ interface UserInputFormProps {
 interface PerturbedOptions {
   label: string;
   helperText?: string;
+  additionalText?: string;
   disabled?: boolean;
 }
 
@@ -56,13 +57,14 @@ export default function UserInputForm({
   const perturbed = (
     baseField: UserInputKey,
     sigmaField: SigmaKey,
-    { label, helperText, disabled }: PerturbedOptions,
+    { label, helperText, additionalText, disabled }: PerturbedOptions,
   ) => (
     <UserInputRangeItem
       baseField={baseField}
       sigmaField={sigmaField}
       label={label}
       helperText={helperText}
+      additionalText={additionalText}
       baseValue={userInput[baseField]}
       sigma={userInput[sigmaField]}
       baseConstraint={c(baseField)}
@@ -78,14 +80,12 @@ export default function UserInputForm({
 
   const rentalYield = formatPercentage((userInput.monthlyRent * 12) / userInput.initialHomePrice);
 
-  // Combined nominal growth of maintenance + condo fees (stacks
-  // multiplicatively: inflation × aging). Shown in the aging helper so the
-  // two knobs read as one effective number.
-  const maintTotalGrowth =
-    (1 + userInput.ownerCostGrowthRate / 100) * (1 + userInput.maintAgingPct / 100) - 1;
-  const maintTotalText = Number.isFinite(maintTotalGrowth)
-    ? `Maintenance + fees grow ≈${formatPercentage(maintTotalGrowth)}/yr in total (stacks with cost inflation).`
-    : null;
+  // Every owner cost grows at the one owner cost growth rate; each helper says so, with the number.
+  const growthRate = summaryValue(userInput.ownerCostGrowthRate);
+  const costGrowth =
+    growthRate === "—"
+      ? "Rises each year with owner cost growth."
+      : `Rises ${growthRate}%/yr with owner cost growth.`;
 
   // While a field is mid-edit it can transiently be "" or 0. Show a placeholder
   // rather than a misleading "$0/mo" (empty amortization) or "NaN" (empty price).
@@ -195,7 +195,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="propertyTaxRate"
                 label="Property tax"
-                labelHelperText="Current annual property tax. Switch between dollar amount and rate (% of today's home value). Typical range: 0.5–1.5% depending on municipality."
+                labelHelperText={`Your annual property tax, in dollars or as a % of today's home value: typically 0.5–1.5%, lower in the big metros. ${costGrowth}`}
                 value={userInput.propertyTaxRate}
                 onChange={bind("propertyTaxRate")}
                 error={errors.propertyTaxRate}
@@ -210,7 +210,7 @@ export default function UserInputForm({
               <UserInputFormItem
                 id="condoFeesPerMonth"
                 label="Condo fees"
-                labelHelperText="Monthly condo or strata fees in today's dollars. Set to $0 for detached homes."
+                labelHelperText={`Monthly condo or strata fees in today's dollars; $0 for a house. ${costGrowth}`}
                 value={userInput.condoFeesPerMonth}
                 onChange={bind("condoFeesPerMonth")}
                 error={errors.condoFeesPerMonth}
@@ -222,8 +222,8 @@ export default function UserInputForm({
 
               <UserInputFormItem
                 id="maintPct"
-                label="Maintenance & insurance"
-                labelHelperText="Annual repairs and insurance. Toggle % of today's home price or $/yr. Excludes condo fees. Typically 0.5–1% for condos and 1–2% for detached homes."
+                label="Maintenance"
+                labelHelperText={`Yearly repairs and replacements (roof, furnace, appliances), in dollars or as a % of today's home value: about 1% for a house and 0.5% for a condo unit, less where land is expensive. Excludes condo fees and insurance. ${costGrowth}`}
                 value={userInput.maintPct}
                 onChange={bind("maintPct")}
                 error={errors.maintPct}
@@ -231,25 +231,30 @@ export default function UserInputForm({
                 percentToggle={{
                   base: userInput.initialHomePrice,
                   defaultUnit: "%",
-                  unitAriaLabel: "Maintenance and Insurance input unit",
+                  unitAriaLabel: "Maintenance input unit",
                 }}
               />
 
               <UserInputFormItem
-                id="maintAgingPct"
-                label="Building aging"
-                labelHelperText={`Extra yearly rise from building deterioration, on top of cost inflation.${maintTotalText ? ` ${maintTotalText}` : ""} Default 1%/yr matches the AHS maintenance-only age gradient (see methodology note). 0% for new builds. Does not apply to property tax.`}
-                value={userInput.maintAgingPct}
-                onChange={bind("maintAgingPct")}
-                error={errors.maintAgingPct}
-                suffix="%"
-                {...c("maintAgingPct")}
+                id="insurancePct"
+                label="Home insurance"
+                labelHelperText={`Your yearly home insurance premium minus the tenant insurance you'd pay as a renter, in dollars or as a % of today's home value. ${costGrowth}`}
+                value={userInput.insurancePct}
+                onChange={bind("insurancePct")}
+                error={errors.insurancePct}
+                {...c("insurancePct")}
+                percentToggle={{
+                  base: userInput.initialHomePrice,
+                  defaultUnit: "$",
+                  unitAriaLabel: "Home insurance input unit",
+                }}
               />
 
               {perturbed("ownerCostGrowthRate", "ownerCostGrowthSigma", {
-                label: "Cost inflation",
+                label: "Owner cost growth",
                 helperText:
-                  "General price inflation for property tax, insurance, condo fees, and baseline maintenance. Maintenance and condo fees grow an extra building-aging uplift on top (see Building aging).",
+                  "How fast property tax, condo fees, maintenance and insurance rise each year. A little above inflation: repairs are mostly skilled labour, buildings age, and municipal budgets have grown faster than prices.",
+                additionalText: "Applies to property tax, condo fees, maintenance and insurance.",
               })}
 
               <UserInputFormItem

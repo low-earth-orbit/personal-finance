@@ -58,6 +58,7 @@ interface Scenario {
   /** Annual return volatility, set by the entered return (the portfolio's risk level). */
   investmentVolPct: number;
   maintenanceMean: number;
+  insuranceMean: number;
   propertyTaxMean: number;
   dividendYieldMean: number;
 }
@@ -89,7 +90,7 @@ function drawScenario(userInput: UserInput, normalRandom: Normal): Scenario {
       userInput.investmentReturnRate + normalRandom() * userInput.investmentReturnSigma,
     rentIncreaseMean: userInput.rentIncreaseRate + normalRandom() * userInput.rentIncreaseSigma,
     ownerCostGrowthMean:
-      (userInput.ownerCostGrowthRate ?? 2.5) +
+      (userInput.ownerCostGrowthRate ?? 3) +
       normalRandom() * (userInput.ownerCostGrowthSigma ?? 0.75),
     mortgageRateMean:
       userInput.annualMortgageInterestRate + normalRandom() * userInput.mortgageRateSigma,
@@ -98,6 +99,7 @@ function drawScenario(userInput: UserInput, normalRandom: Normal): Scenario {
     // doesn't change how risky the portfolio is year to year.
     investmentVolPct: investmentAnnualVolPct(userInput.investmentReturnRate),
     maintenanceMean: Math.max(0, userInput.maintPct),
+    insuranceMean: Math.max(0, userInput.insurancePct),
     propertyTaxMean: Math.max(0, userInput.propertyTaxRate),
     dividendYieldMean: Math.max(
       0,
@@ -235,13 +237,11 @@ function simulatePath(
   const renterPortfolio = newPortfolio(initialPortfolio, shelteredFrac);
   const ownerPortfolio = newPortfolio(0, shelteredFrac);
   let annualRent = userInput.monthlyRent * 12;
-  // Year-0 anchored operating costs. Each grows with realized owner cost growth,
-  // independent of rent growth and home price appreciation. Maintenance and
-  // condo fees grow an extra deterministic `maintAgingPct` per year as the
-  // building ages (envelope aging lands in fees for apartments).
+  // Year-0 anchored operating costs. All four grow with the same realized owner cost growth,
+  // independent of rent growth and home price appreciation.
   let annualPropertyTax = (userInput.initialHomePrice * scenario.propertyTaxMean) / 100;
   let annualMaintenance = (userInput.initialHomePrice * scenario.maintenanceMean) / 100;
-  const maintAgingFactor = 1 + (userInput.maintAgingPct ?? 0) / 100;
+  let annualInsurance = (userInput.initialHomePrice * scenario.insuranceMean) / 100;
   let monthlyCondoFees = userInput.condoFeesPerMonth ?? 0;
   let remainingYears = userInput.amortization;
   let currentMortgageRate = mortgageRates[0];
@@ -282,7 +282,11 @@ function simulatePath(
     }
 
     const ownersCashOutflow =
-      annualMortgagePayment + annualPropertyTax + annualMaintenance + monthlyCondoFees * 12;
+      annualMortgagePayment +
+      annualPropertyTax +
+      annualMaintenance +
+      annualInsurance +
+      monthlyCondoFees * 12;
     const surplus = ownersCashOutflow - annualRent;
 
     const r = yr.investmentReturn / 100;
@@ -303,8 +307,9 @@ function simulatePath(
     const ownerCostGrowth = 1 + yr.ownerCostGrowth / 100;
     annualRent = annualRent * rentGrowth;
     annualPropertyTax = annualPropertyTax * ownerCostGrowth;
-    annualMaintenance = annualMaintenance * ownerCostGrowth * maintAgingFactor;
-    monthlyCondoFees = monthlyCondoFees * ownerCostGrowth * maintAgingFactor;
+    annualMaintenance = annualMaintenance * ownerCostGrowth;
+    annualInsurance = annualInsurance * ownerCostGrowth;
+    monthlyCondoFees = monthlyCondoFees * ownerCostGrowth;
 
     const renterNetWorth = afterTaxValue(renterPortfolio, capGainTaxFrac);
     const ownerNetWorth =

@@ -11,6 +11,8 @@ interface UserInputRangeItemProps {
   sigmaField: string;
   label: string;
   helperText?: string;
+  /** Short note shown under the field, e.g. what the value applies to. */
+  additionalText?: string;
   baseValue: FieldValue;
   sigma: FieldValue;
   baseConstraint: FieldConstraint;
@@ -28,6 +30,7 @@ export default function UserInputRangeItem({
   sigmaField,
   label,
   helperText,
+  additionalText,
   baseValue,
   sigma,
   baseConstraint,
@@ -93,6 +96,11 @@ export default function UserInputRangeItem({
         clampBehavior="none"
         styles={{ label: { display: "block" } }}
       />
+      {additionalText && (
+        <Text size="xs" c="dimmed" mt={4}>
+          {additionalText}
+        </Text>
+      )}
       {expanded && (
         <div className={`${fieldRowClasses.custom} ${fieldRowClasses.subRow}`}>
           <Text size="xs" c="dimmed" aria-live="polite">

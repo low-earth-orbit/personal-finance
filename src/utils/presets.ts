@@ -19,7 +19,10 @@ export const DEFAULTS = {
   // Rents track incomes (~3%) in the long run, less for one ageing unit under provincial
   // increase limits, and asking rents are falling today.
   rentIncreaseRate: 2.6,
-  ownerCostGrowthRate: 2.5,
+  // One rate for property tax, condo fees, maintenance and insurance: a little above ~2.1%
+  // inflation, because repairs and rebuilding are mostly skilled labour (wages outpace prices),
+  // buildings age over the hold, and municipal levies have grown faster than prices.
+  ownerCostGrowthRate: 3,
   // ~2.1% inflation + ~0.4% real. Below the last 40 years (falling rates and a price-to-income
   // ratio that doubled can't repeat) and held back near term (CREA: +0.2% 2026, +1.2% 2027);
   // above inflation because real incomes still grow and land stays scarce.
@@ -30,10 +33,12 @@ export const DEFAULTS = {
   // Effective rate on market value: 0.3-0.7% in the big metros where homes cost this much,
   // 1%+ in smaller cities.
   propertyTaxRate: 0.7,
-  // Repairs and replacements (~1% of value) plus the owner-over-tenant insurance gap (~0.2%).
-  // Land doesn't wear out, so the share of price is lower for a $1M home than a cheap one.
-  maintPct: 1.2,
-  maintAgingPct: 1,
+  // Repairs and replacements. Land doesn't wear out, so the share of price is lower for a $1M
+  // home than a cheap one.
+  maintPct: 1,
+  // Home insurance less the tenant insurance a renter would pay: ~0.2% for a house, ~0.1% for a
+  // condo unit (the building is insured through the condo fees).
+  insurancePct: 0.2,
   condoFeesPerMonth: 0,
   downPaymentPercentage: 20,
   annualMortgageInterestRate: 4.5,
@@ -73,7 +78,8 @@ export const PRESETS: Preset[] = [
       homePriceGrowthRate: 1.5,
       monthlyRent: 2550,
       initialHomePrice: 650000,
-      maintPct: 0.5,
+      maintPct: 0.4,
+      insurancePct: 0.1,
       condoFeesPerMonth: 550,
       // 0.77% statutory rate on frozen 2016 assessments, about 0.5% of today's market value.
       propertyTaxRate: 0.49,
@@ -95,8 +101,8 @@ export const PRESETS: Preset[] = [
       homePriceGrowthRate: 2.7,
       monthlyRent: 4000,
       initialHomePrice: 1225000,
-      // Most of the value is land, so upkeep is a smaller share of price than the 1.2% default.
-      maintPct: 1,
+      // Most of the value is land, so upkeep is a smaller share of price than the 1% default.
+      maintPct: 0.8,
       // Same frozen-2016-assessment effect as the condo.
       propertyTaxRate: 0.5,
       // Ontario + Toronto land transfer tax ~3.4% plus legal; rebates are small at this price.
@@ -115,7 +121,8 @@ export const PRESETS: Preset[] = [
       homePriceGrowthRate: 1.5,
       monthlyRent: 2750,
       initialHomePrice: 700000,
-      maintPct: 0.8,
+      maintPct: 0.7,
+      insurancePct: 0.1,
       condoFeesPerMonth: 450,
       propertyTaxRate: 0.3,
       // Property transfer tax: ~2% repeat buyer, under 1% with the first-time buyer exemption.
@@ -137,7 +144,7 @@ export const PRESETS: Preset[] = [
       rentIncreaseRate: 2.8,
       monthlyRent: 2500,
       initialHomePrice: 735000,
-      maintPct: 1.5,
+      maintPct: 1.3,
       propertyTaxRate: 0.67,
       // No land transfer tax: land titles fees, legal, inspection.
       buyerClosingCostsPct: 0.6,
@@ -159,7 +166,8 @@ export const PRESETS: Preset[] = [
       rentIncreaseRate: 2.4,
       monthlyRent: 2100,
       initialHomePrice: 430000,
-      maintPct: 0.8,
+      maintPct: 0.7,
+      insurancePct: 0.1,
       condoFeesPerMonth: 330,
       propertyTaxRate: 0.7,
       // Welcome tax ~1.1% at this price, plus notary.
@@ -179,7 +187,7 @@ export const PRESETS: Preset[] = [
       homePriceGrowthRate: 2.2,
       monthlyRent: 2800,
       initialHomePrice: 575000,
-      maintPct: 1.5,
+      maintPct: 1.3,
       // ~1.135% urban rate; the assessment cap resets to market value on sale.
       propertyTaxRate: 1.1,
       // 1.5% deed transfer tax, no first-time buyer rebate, plus legal.

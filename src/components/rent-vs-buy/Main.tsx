@@ -9,6 +9,7 @@ import type { ImportSummary } from "./ManagePresetsModal";
 import type { PresetFileEntry } from "@/utils/presetFile";
 import { DEFAULTS, PRESETS, INPUT_UNCERTAINTIES, getActivePreset } from "@/utils/presets";
 import { validateUserInput } from "@/utils/validation";
+import { migrateInput } from "@/utils/inputMigration";
 import {
   loadInput,
   saveInput,
@@ -35,9 +36,10 @@ const PERTURBED_FIELDS: UserInputKey[] = [
   "dividendYield",
 ];
 
+// Saved inputs and presets may come from an older version; migrate them before filling defaults.
 const normalizeInput = (values?: Partial<UserInput> | null): UserInput => ({
   ...DEFAULTS,
-  ...(values ?? {}),
+  ...migrateInput(values ?? {}),
 });
 
 const newPresetId = () =>
