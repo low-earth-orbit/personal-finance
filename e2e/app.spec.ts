@@ -12,7 +12,10 @@ test("hub landing page lists the available tools", async ({ page }) => {
   await page.goto("/");
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "The numbers behind the big decisions." }),
+    page.getByRole("heading", {
+      level: 1,
+      name: "Free personal finance calculators for Canadians",
+    }),
   ).toBeVisible();
 
   // The rent-vs-buy tool is linked from the hub.
@@ -24,7 +27,7 @@ test("allocator requires input review before showing the split", async ({ page }
 
   await expect(
     page.getByRole("heading", {
-      name: "Where to invest: TFSA, RRSP or Non-Reg?",
+      name: "Where to Invest: TFSA, RRSP or Non-Reg?",
     }),
   ).toBeVisible();
   await expect(page.getByText("Review your numbers first")).toBeVisible();
@@ -69,7 +72,7 @@ test("retirement planner shows an earliest retirement age and chart", async ({ p
 test("swr shows the safe withdrawal rate table", async ({ page }) => {
   await page.goto("/swr");
 
-  await expect(page.getByRole("heading", { name: "Safe withdrawal rates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Safe Withdrawal Rates" })).toBeVisible();
   const table = page.getByRole("table");
   await expect(table).toBeVisible();
   await expect(table.getByRole("row").filter({ hasText: "60/40" })).toBeVisible();
@@ -105,7 +108,7 @@ test("lifetime allocation generates a recommendation under both return models", 
 test("expected return tool recomputes from user inputs", async ({ page }) => {
   await page.goto("/expected-return");
 
-  await expect(page.getByRole("heading", { name: "Expected stock returns" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Expected Stock Returns" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "4.2% a year" })).toBeVisible();
   await expect(page.getByRole("table", { name: /By region and view/ })).toBeVisible();
 

@@ -10,7 +10,11 @@ const Footer = () => {
           Not financial advice — general educational information, provided as-is.
         </Text>
         <Text size="sm" c="dimmed">
-          © 2023–{currentYear} Leo Hong · Source on{" "}
+          © 2023–{currentYear}{" "}
+          <Anchor href="https://leohong.dev" target="_blank" rel="noreferrer" c="ledger">
+            Leo Hong
+          </Anchor>{" "}
+          · Source on{" "}
           <Anchor
             href="https://github.com/low-earth-orbit/personal-finance"
             target="_blank"

@@ -1,14 +1,10 @@
-import { Container, Grid, Paper, Skeleton, Stack, Text } from "@mantine/core";
+import { Container, Grid, Paper, Skeleton, Stack } from "@mantine/core";
 
-function LoadingPanel({ showLabel = false }: { showLabel?: boolean }) {
+// Skeleton only: no visible text, so the placeholder can't be indexed as page copy.
+function LoadingPanel() {
   return (
     <Paper withBorder radius="md" p="lg" mih={360}>
       <Stack gap="md">
-        {showLabel && (
-          <Text size="sm" c="dimmed">
-            Loading calculator...
-          </Text>
-        )}
         <Skeleton height={32} width="55%" radius="sm" animate={false} />
         <Skeleton height={44} radius="sm" animate={false} />
         <Skeleton height={44} radius="sm" animate={false} />
@@ -31,7 +27,7 @@ export default function AppLoadingShell() {
     >
       <Grid gap="xl">
         <Grid.Col span={{ base: 12, lg: 5 }}>
-          <LoadingPanel showLabel />
+          <LoadingPanel />
         </Grid.Col>
         <Grid.Col span={{ base: 12, lg: 7 }}>
           <LoadingPanel />

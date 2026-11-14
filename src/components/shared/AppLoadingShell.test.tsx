@@ -13,6 +13,5 @@ describe("AppLoadingShell", () => {
       "aria-busy",
       "true",
     );
-    expect(screen.getByText("Loading calculator...")).toBeVisible();
   });
 });

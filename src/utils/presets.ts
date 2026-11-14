@@ -93,7 +93,7 @@ export const PRESETS: Preset[] = [
     // is $1.6M). Rent is a judgment call: 3-bed listings average $3,300-3,650, a home at this
     // price rents above that.
     id: "toronto-house",
-    label: "Toronto House",
+    label: "Toronto house",
     values: {
       ...DEFAULTS,
       // A little above national and well above the condo: scarce land, and house prices are
@@ -114,7 +114,7 @@ export const PRESETS: Preset[] = [
     // City of Vancouver ~700 sq ft 1-bed+den. GVR apartment benchmark $673k metro (Oct 2026),
     // roughly $635k East / $750k West; Rentals.ca average asking rent $2,754.
     id: "vancouver",
-    label: "Vancouver Condo",
+    label: "Vancouver condo",
     values: {
       ...DEFAULTS,
       // Same shape as Toronto: benchmark -6% y/y, loose supply near term, recovery later.

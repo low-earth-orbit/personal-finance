@@ -10,5 +10,8 @@ describe("Footer", () => {
 
     const github = screen.getByRole("link", { name: "GitHub" });
     expect(github).toHaveAttribute("href", "https://github.com/low-earth-orbit/personal-finance");
+
+    const site = screen.getByRole("link", { name: "Leo Hong" });
+    expect(site).toHaveAttribute("href", "https://leohong.dev");
   });
 });

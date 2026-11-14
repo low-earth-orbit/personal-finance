@@ -22,7 +22,7 @@ const TOOLS: Tool[] = [
     href: "/rent-vs-buy",
   },
   {
-    title: "When can I retire?",
+    title: "When Can I Retire?",
     description:
       "A quick reality check on the earliest age you could retire, based on your savings and target income.",
     href: "/retirement",
@@ -42,20 +42,20 @@ const TOOLS: Tool[] = [
     status: "preview",
   },
   {
-    title: "Where to invest: TFSA, RRSP or Non-Reg?",
+    title: "Where to Invest: TFSA, RRSP or Non-Reg?",
     description: "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
     href: "/allocator",
     status: "preview",
   },
   {
-    title: "Safe withdrawal rates",
+    title: "Safe Withdrawal Rates",
     description:
       "How much you can withdraw each year, by stock/bond mix and retirement length, from your own market assumptions.",
     href: "/swr",
     status: "new",
   },
   {
-    title: "Expected stock returns",
+    title: "Expected Stock Returns",
     description:
       "Estimate a long-run return for a global stock portfolio from yields, growth, valuations and history.",
     href: "/expected-return",
@@ -99,8 +99,8 @@ export default function HomePage() {
     <>
       <Header
         hero
-        title="The numbers behind the big decisions."
-        subtitle="Free, simple personal finance calculators for Canadians — compare renting vs buying, plan for retirement, and more."
+        title="Free personal finance calculators for Canadians"
+        subtitle="The numbers behind the big decisions: compare renting vs buying, plan for retirement, and more."
       />
       <main>
         <Container size="xl">

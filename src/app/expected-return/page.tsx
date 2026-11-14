@@ -5,7 +5,8 @@ import ExpectedReturnApp from "@/components/expected-return/ExpectedReturnApp";
 import Notes from "@/components/expected-return/Notes";
 
 export const metadata: Metadata = {
-  title: "Expected stock returns",
+  alternates: { canonical: "/expected-return" },
+  title: "Expected Stock Returns",
   description:
     "Estimate the long-run expected return of a global stock portfolio from yields, growth, valuations and history.",
 };
@@ -14,8 +15,8 @@ export default function ExpectedReturnPage() {
   return (
     <>
       <Header
-        title="Expected stock returns"
-        subtitle="What return should you plan on for a global stock portfolio?"
+        title="Expected Stock Returns"
+        subtitle="What return should you plan on for a global stock portfolio? Built from yields, earnings growth, valuations and history, after fund costs."
         showHomeLink
         eyebrow="07 / Expected return"
         status="preview"
