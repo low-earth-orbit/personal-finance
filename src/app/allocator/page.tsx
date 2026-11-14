@@ -5,7 +5,8 @@ import Footer from "@/components/shared/Footer";
 import Header from "@/components/shared/Header";
 
 export const metadata: Metadata = {
-  title: "Where to invest: TFSA, RRSP or Non-Reg?",
+  alternates: { canonical: "/allocator" },
+  title: "Where to Invest: TFSA, RRSP or Non-Reg?",
   description: "Explore a tax-aware split across TFSA, RRSP, and non-registered accounts.",
 };
 
@@ -13,8 +14,8 @@ export default function AllocatorPage() {
   return (
     <>
       <Header
-        title="Where to invest: TFSA, RRSP or Non-Reg?"
-        subtitle="Explore a tax-aware split across TFSA, RRSP, and non-registered accounts."
+        title="Where to Invest: TFSA, RRSP or Non-Reg?"
+        subtitle="Split one lump sum across TFSA, RRSP and non-registered accounts, using your available room and tax rates."
         showHomeLink
         eyebrow="05 / Allocator"
         status="preview"

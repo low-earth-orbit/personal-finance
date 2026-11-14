@@ -5,7 +5,8 @@ import Notes from "@/components/swr/Notes";
 import SwrApp from "@/components/swr/SwrApp";
 
 export const metadata: Metadata = {
-  title: "Safe withdrawal rates",
+  alternates: { canonical: "/swr" },
+  title: "Safe Withdrawal Rates",
   description:
     "Safe withdrawal rates by stock/bond mix and retirement length, from your own return, volatility and correlation assumptions.",
 };
@@ -14,8 +15,8 @@ export default function SwrPage() {
   return (
     <>
       <Header
-        title="Safe withdrawal rates"
-        subtitle="How much can you withdraw each year, by stock/bond mix and retirement length?"
+        title="Safe Withdrawal Rates"
+        subtitle="How much can you withdraw each year, by stock/bond mix and retirement length? Built from your own return, volatility and correlation assumptions."
         showHomeLink
         eyebrow="06 / SWR"
         status="new"
